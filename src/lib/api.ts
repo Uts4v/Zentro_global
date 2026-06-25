@@ -1,0 +1,772 @@
+//lib/api.ts — Supabase only, no Django backend
+import { supabase } from "@/lib/supabase";
+
+// ── Types ────────────────────────────────────────────────────────────────────
+
+export interface MenuItem {
+  id: string;
+  merchant_id: string;
+  name: string;
+  description: string;
+  price: string;
+  image_url: string;
+  category: string;
+  is_available: boolean;
+  is_featured: boolean;
+  loyalty_reward: boolean;
+  points_per_item: number;
+  emoji: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type MenuItemInput = Omit<MenuItem, "id" | "merchant_id" | "created_at" | "updated_at">;
+
+export type OrderStatus =
+  | "pending"
+  | "confirmed"
+  | "preparing"
+  | "ready"
+  | "completed"
+  | "cancelled";
+
+export interface OrderItem {
+  id: string;
+  order_id: string;
+  menu_item_id: string;
+  name: string;
+  price: string;
+  quantity: number;
+  subtotal: string;
+}
+
+export interface Order {
+  id: string;
+  customer_id: string;
+  merchant_id: string;
+  status: OrderStatus;
+  total_amount: string;
+  points_earned: number;
+  notes: string;
+  created_at: string;
+  updated_at: string;
+  order_items: OrderItem[];
+  profiles?: { full_name: string | null };
+  merchant_profiles?: { store_name: string };
+}
+
+// Update the interface
+export interface CreateOrderPayload {
+  merchant_id: string;
+  items: { 
+    menu_item_id: string; 
+    quantity: number; 
+    name: string; 
+    price: number;
+    points_per_item: number; // ← add this
+  }[];
+  notes?: string;
+}
+
+export interface MerchantProfile {
+  id: string;
+  user_id: string;
+  store_name: string;
+  store_slug: string | null;
+  business_type: string | null;
+  address: string | null;
+  phone: string | null;
+  logo_url: string | null;
+  banner_url: string | null;
+  description: string | null;
+  is_approved: boolean;
+  is_open: boolean;
+}
+
+export interface PunchCard {
+  id: string;
+  customer_id: string;
+  merchant_id: string;
+  punch_count: number;
+  lifetime_punches: number;
+  punches_to_free: number;
+  free_reward_available: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CustomerProfile {
+  id: string;
+  full_name: string | null;
+  loyalty_points: number;
+  streak_days: number;
+  tier: string;
+  total_orders: number;
+}
+
+export interface Mission {
+  id: string;
+  merchant_id: string;
+  title: string;
+  description: string;
+  icon: string;
+  target_count: number;
+  reward_points: number;
+  mission_type: "order_count" | "spend_amount" | "visit_streak";
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface MissionView {
+  id: string;
+  title: string;
+  description: string;
+  icon: string;
+  target_count: number;
+  current_count: number;
+  reward_points: number;
+  is_completed: boolean;
+  mission_type: "order_count" | "spend_amount" | "visit_streak";
+}
+
+export interface Reward {
+  id: string;
+  merchant_id: string;
+  name: string;
+  description: string;
+  emoji: string;
+  points_cost: number;
+  stock: number;
+  is_active: boolean;
+  created_at: string;
+}
+
+export interface Redemption {
+  id: string;
+  customer_id: string;
+  reward_id: string;
+  points_spent: number;
+  code: string;
+  status: "pending" | "confirmed" | "expired";
+  expires_at: string;
+  confirmed_at: string | null;
+  created_at: string;
+}
+
+export interface LoyaltyRules {
+  id: string;
+  merchant_id: string;
+  points_per_npr: number;
+  streak_multiplier: number;
+  welcome_bonus: number;
+  birthday_bonus: number;
+  streak_min_amount: number;
+  updated_at: string;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+async function getCurrentUserId(): Promise<string> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) throw new Error("Not authenticated");
+  return user.id;
+}
+
+async function getMerchantProfile(userId: string): Promise<MerchantProfile> {
+  const { data, error } = await supabase
+    .from("merchant_profiles")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (error || !data) throw new Error("Merchant profile not found");
+  return data as MerchantProfile;
+}
+
+// ── Menu Items ────────────────────────────────────────────────────────────────
+
+export const menuApi = {
+  myItems: async (): Promise<MenuItem[]> => {
+    const userId = await getCurrentUserId();
+    const merchant = await getMerchantProfile(userId);
+    const { data, error } = await supabase
+      .from("menu_items")
+      .select("*")
+      .eq("merchant_id", merchant.id)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []) as MenuItem[];
+  },
+
+  create: async (input: Partial<MenuItemInput>): Promise<MenuItem> => {
+    const userId = await getCurrentUserId();
+    const merchant = await getMerchantProfile(userId);
+    const { data, error } = await supabase
+      .from("menu_items")
+      .insert({ ...input, merchant_id: merchant.id })
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data as MenuItem;
+  },
+
+  update: async (id: string, input: Partial<MenuItemInput>): Promise<MenuItem> => {
+    const { data, error } = await supabase
+      .from("menu_items")
+      .update({ ...input, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data as MenuItem;
+  },
+
+  delete: async (id: string): Promise<void> => {
+    const { error } = await supabase.from("menu_items").delete().eq("id", id);
+    if (error) throw new Error(error.message);
+  },
+
+  toggleAvailability: async (id: string): Promise<MenuItem> => {
+    const { data: current, error: fetchErr } = await supabase
+      .from("menu_items")
+      .select("is_available")
+      .eq("id", id)
+      .single();
+    if (fetchErr || !current) throw new Error("Item not found");
+    const { data, error } = await supabase
+      .from("menu_items")
+      .update({ is_available: !current.is_available, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data as MenuItem;
+  },
+
+  forMerchant: async (merchantId: string): Promise<MenuItem[]> => {
+    const { data, error } = await supabase
+      .from("menu_items")
+      .select("*")
+      .eq("merchant_id", merchantId)
+      .eq("is_available", true)
+      .order("category");
+    if (error) throw new Error(error.message);
+    return (data ?? []) as MenuItem[];
+  },
+};
+
+// ── Orders ────────────────────────────────────────────────────────────────────
+
+export const orderApi = {
+  myOrders: async (): Promise<Order[]> => {
+    const userId = await getCurrentUserId();
+    const { data, error } = await supabase
+      .from("orders")
+      .select("*, order_items(*), merchant_profiles(store_name)")
+      .eq("customer_id", userId)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []) as Order[];
+  },
+
+  storeOrders: async (filterStatus?: string): Promise<Order[]> => {
+    const userId = await getCurrentUserId();
+    const merchant = await getMerchantProfile(userId);
+    let query = supabase
+      .from("orders")
+      .select("*, order_items(*), profiles(full_name)")
+      .eq("merchant_id", merchant.id)
+      .order("created_at", { ascending: false });
+    if (filterStatus) query = query.eq("status", filterStatus);
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    return (data ?? []) as Order[];
+  },
+
+  create: async (payload: CreateOrderPayload): Promise<Order> => {
+    const userId = await getCurrentUserId();
+    const total = payload.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+    const pointsEarned = payload.items.reduce(
+  (sum, i) => sum + (i.points_per_item ?? 0) * i.quantity,
+  0
+);
+
+    const { data: order, error: orderErr } = await supabase
+      .from("orders")
+      .insert({
+        customer_id: userId,
+        merchant_id: payload.merchant_id,
+        status: "pending",
+        total_amount: total,
+        points_earned: pointsEarned,
+        notes: payload.notes ?? "",
+      })
+      .select()
+      .single();
+    if (orderErr || !order) throw new Error(orderErr?.message ?? "Failed to create order");
+
+    const orderItems = payload.items.map((i) => ({
+      order_id: order.id,
+      menu_item_id: i.menu_item_id,
+      name: i.name,
+      price: i.price,
+      quantity: i.quantity,
+      subtotal: i.price * i.quantity,
+    }));
+    const { error: itemsErr } = await supabase.from("order_items").insert(orderItems);
+    if (itemsErr) throw new Error(itemsErr.message);
+
+    return { ...order, order_items: orderItems } as Order;
+  },
+
+  updateStatus: async (id: string, status: OrderStatus): Promise<Order> => {
+    const { data, error } = await supabase
+      .from("orders")
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .select("*, order_items(*), profiles(full_name)")
+      .single();
+    if (error) throw new Error(error.message);
+
+// Change: if (status === "completed") {
+// To:
+if (status === "confirmed") {
+  if (data.points_earned > 0) {
+    await (supabase.rpc as any)("increment_points", {
+      user_id: data.customer_id,
+      pts: data.points_earned,
+    }).throwOnError();
+  }
+
+  await (supabase.rpc as any)("increment_punch_card", {
+    p_customer_id: data.customer_id,
+    p_merchant_id: data.merchant_id,
+  }).throwOnError();
+
+  await (supabase.rpc as any)("try_increment_streak", {
+    p_customer_id: data.customer_id,
+    p_merchant_id: data.merchant_id,
+    p_order_total: parseFloat(data.total_amount),
+  }).throwOnError();
+}
+    return data as Order;
+  },
+
+  cancel: async (id: string): Promise<Order> => {
+    const { data, error } = await supabase
+      .from("orders")
+      .update({ status: "cancelled", updated_at: new Date().toISOString() })
+      .eq("id", id)
+      .select("*, order_items(*)")
+      .single();
+    if (error) throw new Error(error.message);
+    return data as Order;
+  },
+
+  get: async (id: string): Promise<Order> => {
+    const { data, error } = await supabase
+      .from("orders")
+      .select("*, order_items(*), profiles(full_name), merchant_profiles(store_name)")
+      .eq("id", id)
+      .single();
+    if (error) throw new Error(error.message);
+    return data as Order;
+  },
+};
+
+// ── Merchant Profile ──────────────────────────────────────────────────────────
+
+export const merchantApi = {
+  me: async (): Promise<MerchantProfile> => {
+    const userId = await getCurrentUserId();
+    return getMerchantProfile(userId);
+  },
+
+  list: async (): Promise<MerchantProfile[]> => {
+    const { data, error } = await supabase
+      .from("merchant_profiles")
+      .select("*")
+      .order("store_name");
+    if (error) throw new Error(error.message);
+    return (data ?? []) as MerchantProfile[];
+  },
+
+  get: async (id: string): Promise<MerchantProfile> => {
+    const { data, error } = await supabase
+      .from("merchant_profiles")
+      .select("*")
+      .eq("id", id)
+      .single();
+    if (error) throw new Error(error.message);
+    return data as MerchantProfile;
+  },
+
+  update: async (input: Partial<MerchantProfile>): Promise<MerchantProfile> => {
+    const userId = await getCurrentUserId();
+    const merchant = await getMerchantProfile(userId);
+    const { data, error } = await supabase
+      .from("merchant_profiles")
+      .update(input)
+      .eq("id", merchant.id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data as MerchantProfile;
+  },
+};
+
+// ── Customer ──────────────────────────────────────────────────────────────────
+
+export const customerApi = {
+  profile: async (): Promise<CustomerProfile> => {
+    const userId = await getCurrentUserId();
+ 
+    // Fetch profile — columns: id, full_name, points, streak, tier
+// customerApi.profile — update the select and return:
+const { data, error } = await supabase
+  .from("profiles")
+  .select("id, full_name, points, streak, tier, last_streak_at, streak_free_earned")
+  .eq("id", userId)
+  .maybeSingle();
+
+if (error || !data) throw new Error(error?.message ?? "Profile not found");
+
+const { count } = await supabase
+  .from("orders")
+  .select("id", { count: "exact", head: true })
+  .eq("customer_id", userId)
+  .eq("status", "completed");
+
+return {
+  id: data.id,
+  full_name: data.full_name,
+  loyalty_points: data.points ?? 0,
+  streak_days: data.streak ?? 0,          // maps "streak" column → streak_days
+  tier: data.tier ?? "Bronze",
+  total_orders: count ?? 0,
+  last_streak_at: (data as any).last_streak_at ?? null,
+  streak_free_earned: (data as any).streak_free_earned ?? false,
+};
+  },
+
+   getPunchCard: async (merchantId: string): Promise<PunchCard | null> => {
+    const userId = await getCurrentUserId();
+ 
+    const { data, error } = await supabase
+      .from("punch_cards")
+      .select("*")
+      .eq("customer_id", userId)
+      .eq("merchant_id", merchantId)
+      .maybeSingle();
+ 
+    if (error) throw new Error(error.message);
+ 
+    if (!data) return null; // No orders placed at this merchant yet — caller shows 0/5
+ 
+    return {
+      ...data,
+      // Normalise nullable columns so UI never gets undefined
+      punch_count: data.punch_count ?? 0,
+      lifetime_punches: data.lifetime_punches ?? 0,
+      punches_to_free: data.punches_to_free ?? 5,
+      free_reward_available: data.free_reward_available ?? false,
+    } as PunchCard;
+  },
+
+  useFreeReward: async (merchantId: string): Promise<void> => {
+    const userId = await getCurrentUserId();
+    await (supabase.rpc as any)("use_free_reward", {
+      p_customer_id: userId,
+      p_merchant_id: merchantId,
+    }).throwOnError();
+  },
+};
+
+// ── Missions ──────────────────────────────────────────────────────────────────
+
+export const missionApi = {
+  myMissions: async (): Promise<MissionView[]> => {
+    const userId = await getCurrentUserId();
+
+    const { data: missions, error: mErr } = await supabase
+      .from("missions")
+      .select("*")
+      .eq("is_active", true);
+    if (mErr) throw new Error(mErr.message);
+
+    const { data: progress } = await supabase
+      .from("customer_missions")
+      .select("*")
+      .eq("customer_id", userId);
+
+    const progressMap = new Map((progress ?? []).map((p) => [p.mission_id, p]));
+
+    return (missions ?? []).map((m) => {
+      const p = progressMap.get(m.id);
+      return {
+        id: m.id,
+        title: m.title,
+        description: m.description,
+        icon: m.icon,
+        target_count: m.target_count,
+        current_count: p?.current_count ?? 0,
+        reward_points: m.reward_points,
+        is_completed: p?.is_completed ?? false,
+        mission_type: m.mission_type,
+      };
+    });
+  },
+
+  merchantMissions: async (): Promise<Mission[]> => {
+    const userId = await getCurrentUserId();
+    const merchant = await getMerchantProfile(userId);
+    const { data, error } = await supabase
+      .from("missions")
+      .select("*")
+      .eq("merchant_id", merchant.id)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []) as Mission[];
+  },
+
+  create: async (input: Omit<Mission, "id" | "merchant_id" | "created_at">): Promise<Mission> => {
+    const userId = await getCurrentUserId();
+    const merchant = await getMerchantProfile(userId);
+    const { data, error } = await supabase
+      .from("missions")
+      .insert({ ...input, merchant_id: merchant.id })
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data as Mission;
+  },
+
+  update: async (id: string, input: Partial<Mission>): Promise<Mission> => {
+    const { data, error } = await supabase
+      .from("missions")
+      .update(input)
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data as Mission;
+  },
+
+  delete: async (id: string): Promise<void> => {
+    const { error } = await supabase.from("missions").delete().eq("id", id);
+    if (error) throw new Error(error.message);
+  },
+};
+
+// ── Rewards ───────────────────────────────────────────────────────────────────
+
+export const rewardApi = {
+  list: async (merchantId?: string): Promise<Reward[]> => {
+    let query = supabase.from("rewards").select("*").eq("is_active", true);
+    if (merchantId) query = query.eq("merchant_id", merchantId);
+    const { data, error } = await query;
+    if (error) throw new Error(error.message);
+    return (data ?? []) as Reward[];
+  },
+
+  redeem: async (rewardId: string): Promise<Redemption> => {
+    const userId = await getCurrentUserId();
+
+    const { data: reward, error: rErr } = await supabase
+      .from("rewards")
+      .select("*")
+      .eq("id", rewardId)
+      .single();
+    if (rErr || !reward) throw new Error("Reward not found");
+
+    const { data: profile, error: pErr } = await supabase
+      .from("profiles")
+      .select("points")
+      .eq("id", userId)
+      .single();
+    if (pErr || !profile) throw new Error("Profile not found");
+    if (profile.points < reward.points_cost) throw new Error("Not enough points");
+
+    // Deduct points via security definer function
+    await (supabase.rpc as any)("deduct_points", {
+      target_user_id: userId,
+      amount: reward.points_cost,
+    }).throwOnError();
+
+    // Create redemption with 6-char code, expires in 10 min
+    const code = Math.random().toString(36).slice(2, 8).toUpperCase();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+    const { data: redemption, error: redErr } = await supabase
+      .from("redemptions")
+      .insert({
+        customer_id: userId,
+        reward_id: rewardId,
+        points_spent: reward.points_cost,
+        status: "pending",
+        code,
+        expires_at: expiresAt,
+      })
+      .select()
+      .single();
+    if (redErr || !redemption) throw new Error(redErr?.message ?? "Redemption failed");
+
+    return redemption as Redemption;
+  },
+};
+
+// ── Loyalty Rules + Merchant Rewards ─────────────────────────────────────────
+
+export const loyaltyApi = {
+  getRules: async (): Promise<LoyaltyRules> => {
+    const userId = await getCurrentUserId();
+    const merchant = await getMerchantProfile(userId);
+
+    const { data, error } = await supabase
+      .from("loyalty_rules")
+      .select("*")
+      .eq("merchant_id", merchant.id)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+
+    if (!data) {
+      return {
+        id: "",
+        merchant_id: merchant.id,
+        points_per_npr: 1,
+        streak_multiplier: 1.5,
+        welcome_bonus: 50,
+        birthday_bonus: 100,
+        streak_min_amount: 100,
+        updated_at: new Date().toISOString(),
+      };
+    }
+    return data as LoyaltyRules;
+  },
+
+  saveRules: async (
+    input: Pick<
+      LoyaltyRules,
+      "points_per_npr" | "streak_multiplier" | "welcome_bonus" | "birthday_bonus" | "streak_min_amount"
+    >
+  ): Promise<LoyaltyRules> => {
+    const userId = await getCurrentUserId();
+    const merchant = await getMerchantProfile(userId);
+    const { data, error } = await supabase
+      .from("loyalty_rules")
+      .upsert(
+        { ...input, merchant_id: merchant.id, updated_at: new Date().toISOString() },
+        { onConflict: "merchant_id" }
+      )
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data as LoyaltyRules;
+  },
+
+  getRewards: async (): Promise<Reward[]> => {
+    const userId = await getCurrentUserId();
+    const merchant = await getMerchantProfile(userId);
+    const { data, error } = await supabase
+      .from("rewards")
+      .select("*")
+      .eq("merchant_id", merchant.id)
+      .order("created_at", { ascending: false });
+    if (error) throw new Error(error.message);
+    return (data ?? []) as Reward[];
+  },
+
+  createReward: async (input: Omit<Reward, "id" | "merchant_id" | "created_at">): Promise<Reward> => {
+    const userId = await getCurrentUserId();
+    const merchant = await getMerchantProfile(userId);
+    const { data, error } = await supabase
+      .from("rewards")
+      .insert({ ...input, merchant_id: merchant.id })
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data as Reward;
+  },
+
+  updateReward: async (id: string, input: Partial<Reward>): Promise<Reward> => {
+    const { data, error } = await supabase
+      .from("rewards")
+      .update(input)
+      .eq("id", id)
+      .select()
+      .single();
+    if (error) throw new Error(error.message);
+    return data as Reward;
+  },
+
+  deleteReward: async (id: string): Promise<void> => {
+    const { error } = await supabase.from("rewards").delete().eq("id", id);
+    if (error) throw new Error(error.message);
+  },
+
+  generateRedemptionToken: async (rewardId: string): Promise<{ token: string; redemption_id: string }> => {
+    const token = Math.random().toString(36).slice(2, 8).toUpperCase();
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+    const { data, error } = await supabase
+      .from("redemptions")
+      .insert({
+        reward_id: rewardId,
+        status: "pending",
+        code: token,
+        expires_at: expiresAt,
+      })
+      .select("id")
+      .single();
+    if (error) throw new Error(error.message);
+    return { token, redemption_id: data.id };
+  },
+
+  confirmRedemption: async (code: string): Promise<{ customer_name: string; points_deducted: number }> => {
+    const { data: redemption, error: rErr } = await supabase
+      .from("redemptions")
+      .select("*, rewards(points_cost, name), customer_id")
+      .eq("code", code)
+      .eq("status", "pending")
+      .gt("expires_at", new Date().toISOString())
+      .maybeSingle();
+    if (rErr) throw new Error(rErr.message);
+    if (!redemption) throw new Error("Invalid or expired code");
+
+    const pointsCost = (redemption.rewards as any)?.points_cost ?? 0;
+
+    const { data: profile, error: pErr } = await supabase
+      .from("profiles")
+      .select("points, full_name")
+      .eq("id", redemption.customer_id)
+      .single();
+    if (pErr || !profile) throw new Error("Customer profile not found");
+    if (profile.points < pointsCost) throw new Error("Customer has insufficient points");
+
+    await (supabase.rpc as any)("deduct_points", {
+      target_user_id: redemption.customer_id,
+      amount: pointsCost,
+    }).throwOnError();
+
+    await supabase
+      .from("redemptions")
+      .update({ status: "confirmed", confirmed_at: new Date().toISOString() })
+      .eq("id", redemption.id);
+
+    return {
+      customer_name: profile.full_name ?? "Customer",
+      points_deducted: pointsCost,
+    };
+  },
+
+  getRedemptions: async (): Promise<Redemption[]> => {
+    const userId = await getCurrentUserId();
+    const merchant = await getMerchantProfile(userId);
+    const { data, error } = await supabase
+      .from("redemptions")
+      .select("*, rewards!inner(merchant_id, name)")
+      .eq("rewards.merchant_id", merchant.id)
+      .order("created_at", { ascending: false })
+      .limit(50);
+    if (error) throw new Error(error.message);
+    return (data ?? []) as Redemption[];
+  },
+};
