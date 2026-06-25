@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState, useEffect, useCallback } from "react";
-import { Check, RefreshCw, Loader2, Clock } from "lucide-react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Check, RefreshCw, Loader2, Clock, Bell } from "lucide-react";
 import { orderApi, type Order, type OrderStatus } from "@/lib/api";
 import { supabase } from "@/lib/supabase";
 
@@ -44,6 +44,29 @@ function MerchantOrders() {
   const [error, setError] = useState("");
   const [advancing, setAdvancing] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [newOrderIds, setNewOrderIds] = useState<Set<string>>(new Set());
+  const [connected, setConnected] = useState(false);
+  const audioRef = useRef<AudioContext | null>(null);
+  const knownOrderIds = useRef<Set<string>>(new Set());
+
+  // Play a subtle notification sound for new orders
+  function playNotification() {
+    try {
+      const ctx = new AudioContext();
+      const oscillator = ctx.createOscillator();
+      const gain = ctx.createGain();
+      oscillator.connect(gain);
+      gain.connect(ctx.destination);
+      oscillator.frequency.setValueAtTime(880, ctx.currentTime);
+      oscillator.frequency.setValueAtTime(1100, ctx.currentTime + 0.1);
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+      oscillator.start(ctx.currentTime);
+      oscillator.stop(ctx.currentTime + 0.4);
+    } catch {
+      // Audio not available — ignore
+    }
+  }
 
   const load = useCallback(async (silent = false) => {
     if (!silent) setLoading(true);
@@ -52,6 +75,10 @@ function MerchantOrders() {
     try {
       const data = await orderApi.storeOrders();
       setOrders(data);
+      // Initialise known IDs on first load
+      if (knownOrderIds.current.size === 0) {
+        data.forEach((o) => knownOrderIds.current.add(o.id));
+      }
     } catch (e: any) {
       setError(e.message);
     } finally {
@@ -62,18 +89,63 @@ function MerchantOrders() {
 
   useEffect(() => {
     load();
+  }, [load]);
 
-    // Realtime subscription — new orders appear instantly
+  useEffect(() => {
+    // Subscribe to ALL changes on orders table for this merchant
     const channel = supabase
-      .channel("merchant-orders")
+      .channel("merchant-orders-realtime", {
+        config: { presence: { key: "merchant" } },
+      })
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "orders" },
-        () => {
-          load(true); // silently refresh on any order change
+        { event: "INSERT", schema: "public", table: "orders" },
+        async (payload) => {
+          // New order — fetch full order with items and profile
+          try {
+            const newOrder = await orderApi.get(payload.new.id);
+            setOrders((prev) => {
+              // Only add if it belongs to this merchant's list
+              if (prev.some((o) => o.id === newOrder.id)) return prev;
+              return [newOrder, ...prev];
+            });
+            // Highlight and notify
+            if (!knownOrderIds.current.has(newOrder.id)) {
+              knownOrderIds.current.add(newOrder.id);
+              setNewOrderIds((prev) => new Set([...prev, newOrder.id]));
+              playNotification();
+              // Remove highlight after 5 seconds
+              setTimeout(() => {
+                setNewOrderIds((prev) => {
+                  const next = new Set(prev);
+                  next.delete(newOrder.id);
+                  return next;
+                });
+              }, 5000);
+            }
+          } catch {
+            load(true);
+          }
         }
       )
-      .subscribe();
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "orders" },
+        async (payload) => {
+          // Status updated — update in place
+          try {
+            const updated = await orderApi.get(payload.new.id);
+            setOrders((prev) =>
+              prev.map((o) => (o.id === updated.id ? updated : o))
+            );
+          } catch {
+            load(true);
+          }
+        }
+      )
+      .subscribe((status) => {
+        setConnected(status === "SUBSCRIBED");
+      });
 
     return () => {
       supabase.removeChannel(channel);
@@ -96,7 +168,9 @@ function MerchantOrders() {
 
   const grouped = {
     incoming: orders.filter((o) => o.status === "pending"),
-    active: orders.filter((o) => ["confirmed", "preparing", "ready"].includes(o.status)),
+    active: orders.filter((o) =>
+      ["confirmed", "preparing", "ready"].includes(o.status)
+    ),
     done: orders.filter((o) => ["completed", "cancelled"].includes(o.status)),
   };
 
@@ -112,17 +186,32 @@ function MerchantOrders() {
     <div className="space-y-8">
       <div className="flex items-end justify-between">
         <div>
-          <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Live queue</p>
+          <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+            Live queue
+          </p>
           <h1 className="font-display mt-1 text-5xl text-ink">Orders</h1>
         </div>
-        <button
-          onClick={() => load(true)}
-          disabled={refreshing}
-          className="inline-flex h-9 items-center gap-2 rounded-xl bg-mist px-4 text-xs font-medium text-ink disabled:opacity-50"
-        >
-          <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Realtime status indicator */}
+          <div className="flex items-center gap-1.5 rounded-full bg-mist px-3 py-1.5">
+            <span
+              className={`h-2 w-2 rounded-full ${
+                connected ? "bg-emerald-500 animate-pulse" : "bg-rose-400"
+              }`}
+            />
+            <span className="text-[10px] text-muted-foreground">
+              {connected ? "Live" : "Reconnecting…"}
+            </span>
+          </div>
+          <button
+            onClick={() => load(true)}
+            disabled={refreshing}
+            className="inline-flex h-9 items-center gap-2 rounded-xl bg-mist px-4 text-xs font-medium text-ink disabled:opacity-50"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? "animate-spin" : ""}`} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -133,21 +222,33 @@ function MerchantOrders() {
 
       <Column title="Incoming" count={grouped.incoming.length} accent>
         {grouped.incoming.map((o) => (
-          <OrderCard key={o.id} order={o} onAdvance={() => advance(o)} advancing={advancing === o.id} />
+          <OrderCard
+            key={o.id}
+            order={o}
+            onAdvance={() => advance(o)}
+            advancing={advancing === o.id}
+            isNew={newOrderIds.has(o.id)}
+          />
         ))}
         {grouped.incoming.length === 0 && <Empty text="No new orders" />}
       </Column>
 
       <Column title="In progress" count={grouped.active.length}>
         {grouped.active.map((o) => (
-          <OrderCard key={o.id} order={o} onAdvance={() => advance(o)} advancing={advancing === o.id} />
+          <OrderCard
+            key={o.id}
+            order={o}
+            onAdvance={() => advance(o)}
+            advancing={advancing === o.id}
+            isNew={false}
+          />
         ))}
         {grouped.active.length === 0 && <Empty text="Nothing brewing" />}
       </Column>
 
       <Column title="Completed today" count={grouped.done.length}>
         {grouped.done.map((o) => (
-          <OrderCard key={o.id} order={o} advancing={false} />
+          <OrderCard key={o.id} order={o} advancing={false} isNew={false} />
         ))}
         {grouped.done.length === 0 && <Empty text="Day's just starting" />}
       </Column>
@@ -156,15 +257,9 @@ function MerchantOrders() {
 }
 
 function Column({
-  title,
-  count,
-  accent,
-  children,
+  title, count, accent, children,
 }: {
-  title: string;
-  count: number;
-  accent?: boolean;
-  children: React.ReactNode;
+  title: string; count: number; accent?: boolean; children: React.ReactNode;
 }) {
   return (
     <section>
@@ -190,26 +285,27 @@ function Empty({ text }: { text: string }) {
 }
 
 function OrderCard({
-  order,
-  onAdvance,
-  advancing,
+  order, onAdvance, advancing, isNew,
 }: {
-  order: Order;
-  onAdvance?: () => void;
-  advancing: boolean;
+  order: Order; onAdvance?: () => void; advancing: boolean; isNew: boolean;
 }) {
   const next = NEXT_STATUS[order.status];
   const mins = Math.floor(
     (Date.now() - new Date(order.created_at).getTime()) / 60_000
   );
-
-  // Customer name from joined profiles table
   const customerName = order.profiles?.full_name ?? "Customer";
 
   return (
-    <article className="glass-strong rounded-3xl p-5">
+    <article className={`glass-strong rounded-3xl p-5 transition-all ${
+      isNew ? "ring-2 ring-ember shadow-ember animate-pulse" : ""
+    }`}>
       <div className="flex items-start justify-between">
         <div>
+          {isNew && (
+            <div className="mb-1 inline-flex items-center gap-1 rounded-full bg-ember-soft px-2 py-0.5 text-[10px] font-medium text-ember">
+              <Bell className="h-2.5 w-2.5" /> New order!
+            </div>
+          )}
           <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
             #{order.id.slice(0, 8)}
           </p>
@@ -223,9 +319,7 @@ function OrderCard({
       <ul className="mt-4 space-y-1.5">
         {(order.order_items ?? []).map((item) => (
           <li key={item.id} className="flex items-center justify-between text-sm">
-            <span className="text-ink">
-              {item.quantity}× {item.name}
-            </span>
+            <span className="text-ink">{item.quantity}× {item.name}</span>
             <span className="text-muted-foreground">
               NPR {Number(item.subtotal).toLocaleString()}
             </span>

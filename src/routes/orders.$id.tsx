@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { type OrderStatus } from "@/lib/store";
 import { MobileShell, TopBar } from "@/components/MobileShell";
-import { ArrowLeft, Check, Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, Check, Loader2 } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { requireAuth } from "@/lib/auth-guard";
 import { orderApi, type Order } from "@/lib/api";
+import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/orders/$id")({
   beforeLoad: requireAuth,
@@ -12,20 +13,29 @@ export const Route = createFileRoute("/orders/$id")({
   component: OrderPage,
 });
 
-const STEPS: { key: OrderStatus; label: string }[] = [
-  { key: "pending", label: "Placed" },
-  { key: "confirmed", label: "Accepted" },
-  { key: "preparing", label: "Brewing" },
-  { key: "ready", label: "Ready" },
-  { key: "completed", label: "Picked up" },
+const STEPS: { key: OrderStatus; label: string; emoji: string }[] = [
+  { key: "pending",   label: "Order placed",   emoji: "🧾" },
+  { key: "confirmed", label: "Accepted",        emoji: "✅" },
+  { key: "preparing", label: "Brewing",         emoji: "☕" },
+  { key: "ready",     label: "Ready for pickup",emoji: "🔔" },
+  { key: "completed", label: "Picked up",       emoji: "🎉" },
 ];
+
+const STATUS_MESSAGE: Record<OrderStatus, string> = {
+  pending:   "Waiting for the merchant to confirm…",
+  confirmed: "Your order has been accepted!",
+  preparing: "Your order is being prepared…",
+  ready:     "Your order is ready — come pick it up! 🔔",
+  completed: "Enjoy! Thanks for ordering.",
+  cancelled: "This order was cancelled.",
+};
 
 function OrderPage() {
   const { id } = Route.useParams();
   const [order, setOrder] = useState<Order | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [refreshing, setRefreshing] = useState(false);
+  const [justUpdated, setJustUpdated] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -36,7 +46,6 @@ function OrderPage() {
       setError(e.message || "Failed to load order");
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   }, [id]);
 
@@ -44,18 +53,40 @@ function OrderPage() {
     load();
   }, [load]);
 
+  // Realtime subscription — updates status instantly without polling
   useEffect(() => {
-    if (!order || order.status === "completed" || order.status === "cancelled") return;
-    const interval = setInterval(() => {
-      orderApi.get(id).then(setOrder).catch(() => {});
-    }, 15000);
-    return () => clearInterval(interval);
-  }, [order?.status, id]);
+    const channel = supabase
+      .channel(`order-${id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "orders",
+          filter: `id=eq.${id}`,
+        },
+        async (payload) => {
+          // Fetch full order to get joined data (items, merchant name)
+          try {
+            const updated = await orderApi.get(payload.new.id);
+            setOrder(updated);
+            // Flash animation to show something changed
+            setJustUpdated(true);
+            setTimeout(() => setJustUpdated(false), 1500);
+          } catch {
+            // Fallback: use payload data directly
+            setOrder((prev) =>
+              prev ? { ...prev, status: payload.new.status as OrderStatus } : prev
+            );
+          }
+        }
+      )
+      .subscribe();
 
-  async function handleRefresh() {
-    setRefreshing(true);
-    await load();
-  }
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [id]);
 
   if (loading) {
     return (
@@ -87,7 +118,7 @@ function OrderPage() {
         <div className="px-5">
           <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
             {error || "Order not found"}
-            <button onClick={handleRefresh} className="ml-2 underline">Retry</button>
+            <button onClick={load} className="ml-2 underline">Retry</button>
           </div>
         </div>
       </MobileShell>
@@ -96,6 +127,7 @@ function OrderPage() {
 
   const currentIdx = STEPS.findIndex((s) => s.key === order.status);
   const isCancelled = order.status === "cancelled";
+  const isCompleted = order.status === "completed";
   const merchantName = order.merchant_profiles?.store_name;
 
   return (
@@ -103,18 +135,9 @@ function OrderPage() {
       <TopBar
         title={`Order #${order.id.slice(0, 8)}`}
         right={
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleRefresh}
-              className="glass grid h-9 w-9 place-items-center rounded-full"
-              disabled={refreshing}
-            >
-              <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-            </button>
-            <Link to="/" className="glass grid h-9 w-9 place-items-center rounded-full">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </div>
+          <Link to="/" className="glass grid h-9 w-9 place-items-center rounded-full">
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
         }
       />
 
@@ -123,56 +146,92 @@ function OrderPage() {
           Order #{order.id.slice(0, 8)}
         </p>
         <h1 className="font-display mt-1 text-4xl text-ink">
-          {isCancelled
-            ? "Order cancelled"
-            : order.status === "completed"
-            ? "Enjoy your order"
-            : "We're on it"}
+          {isCancelled ? "Order cancelled" : isCompleted ? "Enjoy your order" : "We're on it"}
         </h1>
         {merchantName && (
           <p className="mt-1 text-sm text-muted-foreground">from {merchantName}</p>
         )}
+
+        {/* Live status message */}
+        <div className={`mt-4 rounded-2xl px-4 py-3 text-sm transition-all ${
+          justUpdated
+            ? "bg-emerald-50 text-emerald-700 ring-2 ring-emerald-200"
+            : isCancelled
+            ? "bg-rose-50 text-rose-700"
+            : isCompleted
+            ? "bg-emerald-50 text-emerald-700"
+            : "bg-ember-soft text-ink"
+        }`}>
+          {justUpdated && <span className="mr-1.5">✨</span>}
+          {STATUS_MESSAGE[order.status]}
+        </div>
       </div>
 
-      {isCancelled ? (
-        <div className="mt-6 px-5">
-          <div className="glass-strong rounded-3xl p-5 text-center">
-            <p className="text-4xl">❌</p>
-            <p className="mt-3 text-sm text-muted-foreground">This order was cancelled</p>
-          </div>
-        </div>
-      ) : (
+      {/* Progress tracker */}
+      {!isCancelled && (
         <div className="mt-6 px-5">
           <div className="glass-strong rounded-3xl p-5">
-            <ol className="relative space-y-5">
+            <ol className="space-y-4">
               {STEPS.map((s, i) => {
                 const done = i <= currentIdx;
-                const active = i === currentIdx;
+                const active = i === currentIdx && !isCompleted;
                 return (
                   <li key={s.key} className="flex items-center gap-4">
-                    <div
-                      className={`grid h-9 w-9 shrink-0 place-items-center rounded-full transition-all ${
-                        done ? "bg-ink text-primary-foreground" : "bg-mist text-muted-foreground"
-                      } ${active ? "ring-4 ring-ember/20" : ""}`}
-                    >
-                      {done ? (
-                        <Check className="h-4 w-4" />
-                      ) : (
-                        <span className="text-xs">{i + 1}</span>
+                    <div className={`relative grid h-10 w-10 shrink-0 place-items-center rounded-full text-lg transition-all duration-500 ${
+                      done
+                        ? "bg-ink text-primary-foreground"
+                        : "bg-mist text-muted-foreground"
+                    } ${active ? "ring-4 ring-ember/30 scale-110" : ""}`}>
+                      {done && !active ? <Check className="h-4 w-4" /> : s.emoji}
+                      {/* Pulse dot for active step */}
+                      {active && (
+                        <span className="absolute -right-0.5 -top-0.5 h-3 w-3 rounded-full bg-ember">
+                          <span className="absolute inset-0 animate-ping rounded-full bg-ember opacity-75" />
+                        </span>
                       )}
                     </div>
-                    <div className="min-w-0 flex-1">
-                      <p className={`text-sm font-medium ${done ? "text-ink" : "text-muted-foreground"}`}>
+                    <div className="flex-1">
+                      <p className={`text-sm font-medium transition-colors ${
+                        done ? "text-ink" : "text-muted-foreground"
+                      }`}>
                         {s.label}
                       </p>
-                      {active && order.status !== "completed" && (
+                      {active && (
                         <p className="mt-0.5 text-xs text-ember">In progress…</p>
                       )}
                     </div>
+                    {done && !active && (
+                      <span className="text-[10px] text-muted-foreground">Done</span>
+                    )}
                   </li>
                 );
               })}
             </ol>
+
+            {/* Live indicator */}
+            <div className="mt-4 flex items-center gap-2 border-t border-border pt-3">
+              <span className="h-2 w-2 rounded-full bg-emerald-500">
+                <span className="block h-2 w-2 animate-ping rounded-full bg-emerald-500 opacity-75" />
+              </span>
+              <p className="text-[11px] text-muted-foreground">
+                Updates live — no need to refresh
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isCancelled && (
+        <div className="mt-6 px-5">
+          <div className="glass-strong rounded-3xl p-5 text-center">
+            <p className="text-4xl">❌</p>
+            <p className="mt-3 text-sm text-muted-foreground">This order was cancelled.</p>
+            <Link
+              to="/"
+              className="mt-4 inline-flex h-10 items-center justify-center rounded-full bg-ink px-5 text-xs font-medium text-primary-foreground"
+            >
+              Order again
+            </Link>
           </div>
         </div>
       )}
@@ -202,7 +261,7 @@ function OrderPage() {
 
       <div className="mt-4 px-5 pb-8">
         <div className="flex items-center justify-between rounded-2xl bg-ember-soft px-4 py-3">
-          <span className="text-xs text-ink">Earned</span>
+          <span className="text-xs text-ink">Points earned</span>
           <span className="font-display text-lg text-ember">+{order.points_earned} pts</span>
         </div>
       </div>
