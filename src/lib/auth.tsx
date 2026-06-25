@@ -45,8 +45,16 @@ type AuthContextType = {
   profile: Profile | null;
   merchantProfile: MerchantProfile | null;
   loading: boolean;
-  signUp: (email: string, password: string, name: string, meta?: SignUpMeta) => Promise<{ error: string | null }>;
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signUp: (
+    email: string,
+    password: string,
+    name: string,
+    meta?: SignUpMeta
+  ) => Promise<{ error: string | null }>;
+  signIn: (
+    email: string,
+    password: string
+  ) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   refreshMerchantProfile: () => Promise<void>;
@@ -54,15 +62,47 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser]                     = useState<User | null>(null);
-  const [session, setSession]               = useState<Session | null>(null);
-  const [profile, setProfile]               = useState<Profile | null>(null);
-  const [merchantProfile, setMerchantProfile] = useState<MerchantProfile | null>(null);
-  const [loading, setLoading]               = useState(true);
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
-  // Track in-flight fetches so we don't set loading=false prematurely
+async function ensureProfileExists(userId: string, user: User): Promise<void> {
+  const { data: existing } = await supabase
+    .from("profiles")
+    .select("id")
+    .eq("id", userId)
+    .maybeSingle();
+
+  if (existing) return; // already exists, nothing to do
+
+  const fullName =
+    user.user_metadata?.full_name ??
+    user.user_metadata?.name ??
+    null;
+
+  await supabase.from("profiles").insert({
+    id: userId,
+    full_name: fullName,
+    avatar_url: user.user_metadata?.avatar_url ?? null,
+    points: 0,
+    streak: 0,
+    tier: "Bronze",
+    role: "customer",
+  });
+}
+
+// ── Provider ──────────────────────────────────────────────────────────────────
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [user, setUser]                       = useState<User | null>(null);
+  const [session, setSession]                 = useState<Session | null>(null);
+  const [profile, setProfile]                 = useState<Profile | null>(null);
+  const [merchantProfile, setMerchantProfile] = useState<MerchantProfile | null>(null);
+  const [loading, setLoading]                 = useState(true);
+
+  // Counts how many parallel fetches are in flight.
+  // loading stays true until all of them settle.
   const pendingFetches = useRef(0);
+
+  // ── Profile fetch ───────────────────────────────────────────────────────────
 
   const fetchProfile = useCallback(async (userId: string) => {
     try {
@@ -71,17 +111,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .select("*")
         .eq("id", userId)
         .maybeSingle();
-      setProfile(data as Profile ?? {
-        id: userId, full_name: null, avatar_url: null,
-        points: 0, streak: 0, tier: "Bronze",
-      });
+      // Keep null if row genuinely doesn't exist yet —
+      // don't fabricate a fake "guest" object
+      setProfile((data as Profile) ?? null);
     } catch {
-      setProfile({ id: userId, full_name: null, avatar_url: null, points: 0, streak: 0, tier: "Bronze" });
+      setProfile(null);
     }
   }, []);
 
-  // Always fetch merchant profile by user_id — don't rely on user_metadata.role
-  // because that metadata may not be set for older accounts or OAuth signups
+  // ── Merchant profile fetch ──────────────────────────────────────────────────
+  // Always query by user_id — never trust user_metadata.role,
+  // which may be missing for OAuth or older accounts.
+
   const fetchMerchantProfile = useCallback(async (userId: string) => {
     try {
       const { data } = await supabase
@@ -89,12 +130,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .select("*")
         .eq("user_id", userId)
         .maybeSingle();
-      // data is null if not a merchant — that's fine
-      setMerchantProfile(data as MerchantProfile ?? null);
+      setMerchantProfile((data as MerchantProfile) ?? null);
     } catch {
       setMerchantProfile(null);
     }
   }, []);
+
+  // ── Public refresh helpers ──────────────────────────────────────────────────
 
   const refreshProfile = useCallback(async () => {
     if (user?.id) await fetchProfile(user.id);
@@ -104,73 +146,138 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (user?.id) await fetchMerchantProfile(user.id);
   }, [user, fetchMerchantProfile]);
 
+  // ── Core auth effect ────────────────────────────────────────────────────────
+  // onAuthStateChange is the single source of truth.
+  // INITIAL_SESSION fires on every page load after localStorage is read,
+  // so we never need a separate getSession() call.
+
   useEffect(() => {
-    // onAuthStateChange fires INITIAL_SESSION first, then any subsequent events.
-    // We use this as the single source of truth — no separate getSession() call.
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, s) => {
-        setSession(s);
-        setUser(s?.user ?? null);
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(async (event, s) => {
+      setSession(s);
+      setUser(s?.user ?? null);
 
-        if (s?.user) {
-          // Both fetches must complete before loading = false
-          pendingFetches.current = 2;
+      if (s?.user) {
+        const userId = s.user.id;
+        const isOAuth =
+          s.user.app_metadata?.provider === "google" ||
+          s.user.app_metadata?.provider === "apple";
 
-          fetchProfile(s.user.id).finally(() => {
-            pendingFetches.current -= 1;
-            if (pendingFetches.current === 0) setLoading(false);
-          });
-
-          // Always check merchant_profiles — never gate on user_metadata.role
-          fetchMerchantProfile(s.user.id).finally(() => {
-            pendingFetches.current -= 1;
-            if (pendingFetches.current === 0) setLoading(false);
-          });
-        } else {
-          // Signed out
-          setProfile(null);
-          setMerchantProfile(null);
-          setLoading(false);
+        // For OAuth sign-ins, make sure a profiles row exists.
+        // Email signUp() creates it explicitly; OAuth skips that path.
+        // The DB trigger (handle_new_user) is the primary guard,
+        // but this is a reliable client-side fallback.
+        if (event === "SIGNED_IN" && isOAuth) {
+          await ensureProfileExists(userId, s.user);
         }
+
+        // Fire both fetches in parallel; keep loading=true until both finish
+        pendingFetches.current = 2;
+
+        fetchProfile(userId).finally(() => {
+          pendingFetches.current -= 1;
+          if (pendingFetches.current === 0) setLoading(false);
+        });
+
+        fetchMerchantProfile(userId).finally(() => {
+          pendingFetches.current -= 1;
+          if (pendingFetches.current === 0) setLoading(false);
+        });
+      } else {
+        // Signed out or no session
+        setProfile(null);
+        setMerchantProfile(null);
+        setLoading(false);
       }
-    );
+    });
 
     return () => subscription.unsubscribe();
   }, [fetchProfile, fetchMerchantProfile]);
 
-  const signUp = useCallback(async (
-    email: string, password: string, name: string, meta?: SignUpMeta
-  ) => {
-    const role = meta?.role || "customer";
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: { full_name: name, role, ...(meta?.store_name ? { store_name: meta.store_name } : {}) } },
-    });
-    if (error) return { error: error.message };
+  // ── Sign up ─────────────────────────────────────────────────────────────────
 
-    const { data: { user: u } } = await supabase.auth.getUser();
-    if (u) {
-      await supabase.from("profiles").upsert({
-        id: u.id, full_name: name, points: 0, streak: 0, tier: "Bronze", role,
+  const signUp = useCallback(
+    async (
+      email: string,
+      password: string,
+      name: string,
+      meta?: SignUpMeta
+    ): Promise<{ error: string | null }> => {
+      const role = meta?.role ?? "customer";
+
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: name,
+            role,
+            ...(meta?.store_name ? { store_name: meta.store_name } : {}),
+          },
+        },
       });
-      if (role === "merchant" && meta?.store_name) {
-        await supabase.from("merchant_profiles").insert({
-          user_id: u.id,
-          store_name: meta.store_name,
-          store_slug: meta.store_name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, ""),
-          is_approved: false,
-        });
-      }
-    }
-    return { error: null };
-  }, []);
 
-  const signIn = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) return { error: error.message };
-    return { error: null };
-  }, []);
+      if (error) return { error: error.message };
+
+      // Create DB rows immediately — don't wait for the email confirm redirect
+      const {
+        data: { user: u },
+      } = await supabase.auth.getUser();
+
+      if (u) {
+        await supabase.from("profiles").upsert(
+          {
+            id: u.id,
+            full_name: name,
+            avatar_url: null,
+            points: 0,
+            streak: 0,
+            tier: "Bronze",
+            role,
+          },
+          { onConflict: "id" }
+        );
+
+        if (role === "merchant" && meta?.store_name) {
+          await supabase.from("merchant_profiles").upsert(
+            {
+              user_id: u.id,
+              store_name: meta.store_name,
+              store_slug: meta.store_name
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, "-")
+                .replace(/(^-|-$)/g, ""),
+              is_approved: false,
+            },
+            { onConflict: "user_id" }
+          );
+        }
+      }
+
+      return { error: null };
+    },
+    []
+  );
+
+  // ── Sign in ─────────────────────────────────────────────────────────────────
+
+  const signIn = useCallback(
+    async (
+      email: string,
+      password: string
+    ): Promise<{ error: string | null }> => {
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) return { error: error.message };
+      return { error: null };
+    },
+    []
+  );
+
+  // ── Sign out ────────────────────────────────────────────────────────────────
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
@@ -180,11 +287,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setMerchantProfile(null);
   }, []);
 
+  // ── Context value ───────────────────────────────────────────────────────────
+
   return (
-    <AuthContext.Provider value={{
-      user, session, profile, merchantProfile, loading,
-      signUp, signIn, signOut, refreshProfile, refreshMerchantProfile,
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        profile,
+        merchantProfile,
+        loading,
+        signUp,
+        signIn,
+        signOut,
+        refreshProfile,
+        refreshMerchantProfile,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

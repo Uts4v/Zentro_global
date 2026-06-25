@@ -1,18 +1,20 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Home, ScanLine, Trophy, Gift, User } from "lucide-react";
+import { useAuth } from "@/lib/auth";
 import type { ReactNode } from "react";
 
 type NavItem = { to: string; label: string; icon: typeof Home; center?: boolean };
 const nav: NavItem[] = [
-  { to: "/", label: "Shop", icon: Home },
-  { to: "/missions", label: "Missions", icon: ScanLine },
-  { to: "/loyalty", label: "Card", icon: User, center: true },
-  { to: "/rewards", label: "Rewards", icon: Gift },
-  { to: "/leaderboard", label: "Ranks", icon: Trophy },
+  { to: "/",            label: "Shop",    icon: Home },
+  { to: "/missions",    label: "Missions", icon: ScanLine },
+  { to: "/loyalty",     label: "Card",    icon: User, center: true },
+  { to: "/rewards",     label: "Rewards", icon: Gift },
+  { to: "/leaderboard", label: "Ranks",   icon: Trophy },
 ];
 
 export function MobileShell({ children }: { children: ReactNode }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
+
   return (
     <div className="mx-auto flex min-h-dvh max-w-[480px] flex-col pb-28">
       {children}
@@ -52,24 +54,79 @@ export function MobileShell({ children }: { children: ReactNode }) {
   );
 }
 
+function getGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+function getInitial(name: string | null | undefined): string {
+  if (!name) return "✦";
+  return name.trim().charAt(0).toUpperCase();
+}
+
 export function TopBar({ title, right }: { title?: string; right?: ReactNode }) {
+  const { profile, loading } = useAuth();
+
+  const firstName = profile?.full_name?.split(" ")[0] ?? null;
+  const initial   = getInitial(profile?.full_name);
+  const greeting  = getGreeting();
+
   return (
-    <header className="sticky top-0 z-40 flex items-center justify-between px-5 pb-3 pt-5">
-      <Link to="/" className="font-display text-2xl tracking-tight text-ink">
-        zentro<span className="text-ember">.</span>
-      </Link>
-      {title && <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{title}</p>}
-      <div className="flex items-center gap-2">
-        {right}
-        <Link
-          to={"/profile" as any}
-          className="grid h-9 w-9 place-items-center rounded-full bg-ink text-xs font-medium text-primary-foreground"
-          aria-label="Profile"
-        >
-          ✦
+    <header className="sticky top-0 z-40 px-5 pb-3 pt-5">
+      <div className="flex items-center justify-between">
+        {/* Left: logo */}
+        <Link to="/" className="font-display text-2xl tracking-tight text-ink">
+          zentro<span className="text-ember">.</span>
         </Link>
+
+        {title && (
+          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
+            {title}
+          </p>
+        )}
+
+        {/* Right: avatar */}
+        <div className="flex items-center gap-2">
+          {right}
+          <Link
+            to={"/profile" as any}
+            aria-label="Profile"
+            className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full bg-ink text-xs font-medium text-primary-foreground overflow-hidden"
+          >
+            {profile?.avatar_url ? (
+              <img
+                src={profile.avatar_url}
+                alt={profile.full_name ?? ""}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <span>{initial}</span>
+            )}
+          </Link>
+        </div>
       </div>
+
+      {/* Welcome row — only shown on home page (no title passed) */}
+      {!title && (
+        <div className="mt-3">
+          {loading ? (
+            <div className="h-4 w-32 animate-pulse rounded-full bg-mist" />
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              {greeting}
+              {firstName ? (
+                <>
+                  ,{" "}
+                  <span className="font-medium text-ink">{firstName}</span>
+                </>
+              ) : null}{" "}
+              👋
+            </p>
+          )}
+        </div>
+      )}
     </header>
   );
 }
-
