@@ -13,3 +13,16 @@ export async function requireAuth() {
     });
   }
 }
+
+export async function requireMerchantAuth() {
+  if (typeof window === "undefined") return;
+
+  const session = await authReady;
+
+  if (!session) {
+    throw redirect({
+      to: "/auth/merchant" as any,
+      search: { redirect: window.location.pathname },
+    });
+  }
+}

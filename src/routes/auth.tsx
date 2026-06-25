@@ -1,9 +1,11 @@
+// routes/auth.tsx
 import { createFileRoute, Link, Outlet, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/lib/supabase";
 import { Loader2, Mail, Lock, User, ArrowRight } from "lucide-react";
 
+// ── Route definition — MUST be exported at top level ─────────────────────────
 export const Route = createFileRoute("/auth")({
   validateSearch: (search: Record<string, unknown>) => ({
     redirect: (search.redirect as string) || undefined,
@@ -12,39 +14,54 @@ export const Route = createFileRoute("/auth")({
   component: Auth,
 });
 
-function Auth() {
-  const [mode, setMode] = useState<"signin" | "signup">("signin");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [oauthLoading, setOauthLoading] = useState(false);
-  const { signIn, signUp } = useAuth();
-  const navigate = useNavigate();
-  const { redirect } = useSearch({ from: "/auth" });
+// ── Component ─────────────────────────────────────────────────────────────────
 
-  // FIX: Handle OAuth callback — Supabase redirects back with tokens in the URL hash.
-  // We detect a completed OAuth login here and redirect to the right page.
+function Auth() {
+  const [mode, setMode]         = useState<"signin" | "signup">("signin");
+  const [email, setEmail]       = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName]         = useState("");
+  const [error, setError]       = useState<string | null>(null);
+  const [success, setSuccess]   = useState<string | null>(null);
+  const [busy, setBusy]         = useState(false);
+  const [oauthLoading, setOauthLoading] = useState(false);
+  const { signIn, signUp }      = useAuth();
+  const navigate                = useNavigate();
+  const { redirect }            = useSearch({ from: "/auth" });
+
+  // Handle OAuth callback
   useEffect(() => {
     if (typeof window === "undefined") return;
-
     const hash = window.location.hash;
     if (!hash || !hash.includes("access_token")) return;
 
     setOauthLoading(true);
 
-    // Let Supabase process the hash and establish the session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (event === "SIGNED_IN" && session) {
+          subscription.unsubscribe();
+          window.history.replaceState(null, "", window.location.pathname);
+          navigate({ to: (redirect || "/") as any, replace: true });
+        }
+      }
+    );
+
+    const fallback = setTimeout(async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        // Clean the hash from URL
+        subscription.unsubscribe();
         window.history.replaceState(null, "", window.location.pathname);
-        navigate({ to: redirect || "/", replace: true });
+        navigate({ to: (redirect || "/") as any, replace: true });
       } else {
         setOauthLoading(false);
       }
-    });
+    }, 3000);
+
+    return () => {
+      clearTimeout(fallback);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -62,14 +79,29 @@ function Auth() {
           setSuccess("Account created! Check your email to confirm, then sign in.");
           setMode("signin");
         }
-      } else {
-        const { error: err } = await signIn(email, password);
-        if (err) {
-          setError(err);
-        } else {
-          navigate({ to: redirect || "/", replace: true });
-        }
+        return;
       }
+
+      const { error: err } = await signIn(email, password);
+      if (err) {
+        setError(err);
+        return;
+      }
+
+      // Wait for SIGNED_IN before navigating so requireAuth finds the session
+      await new Promise<void>((resolve) => {
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(
+          (event) => {
+            if (event === "SIGNED_IN") {
+              subscription.unsubscribe();
+              resolve();
+            }
+          }
+        );
+        setTimeout(resolve, 2000);
+      });
+
+      navigate({ to: (redirect || "/") as any, replace: true });
     } finally {
       setBusy(false);
     }
@@ -80,8 +112,7 @@ function Auth() {
     const { error: err } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        // FIX: redirect back to /auth so the useEffect above can process the session
-        redirectTo: `${window.location.origin}/auth`,
+        redirectTo: `${import.meta.env.VITE_APP_URL ?? window.location.origin}/auth`,
       },
     });
     if (err) setError(err.message);
@@ -92,13 +123,12 @@ function Auth() {
     const { error: err } = await supabase.auth.signInWithOAuth({
       provider: "apple",
       options: {
-        redirectTo: `${window.location.origin}/auth`,
+        redirectTo: `${import.meta.env.VITE_APP_URL ?? window.location.origin}/auth`,
       },
     });
     if (err) setError(err.message);
   };
 
-  // Show spinner while processing OAuth callback
   if (oauthLoading) {
     return (
       <div className="flex min-h-dvh items-center justify-center">
@@ -255,6 +285,8 @@ function Auth() {
   );
 }
 
+// ── Field component ───────────────────────────────────────────────────────────
+
 function Field({
   label,
   placeholder,
@@ -272,7 +304,9 @@ function Field({
 }) {
   return (
     <label className="block">
-      <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{label}</span>
+      <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+        {label}
+      </span>
       <div className="relative mt-1.5">
         {icon && (
           <span className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">

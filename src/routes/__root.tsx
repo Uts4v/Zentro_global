@@ -4,15 +4,78 @@ import {
   Link,
   createRootRouteWithContext,
   useRouter,
+  useNavigate,
+  useRouterState,
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
-import { AuthProvider } from "@/lib/auth";
+import { AuthProvider, useAuth } from "@/lib/auth";
+import { Loader2 } from "lucide-react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
+// Routes that never require auth
+const PUBLIC_ROUTES = [
+  "/auth",
+  "/auth/merchant",
+  "/auth/forgot-password",
+];
+
+// ── Auth gate — rendered inside AuthProvider so useAuth() works ───────────────
+function AuthGate() {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+
+  const isPublic   = PUBLIC_ROUTES.some((r) => pathname.startsWith(r));
+  const isMerchant = pathname.startsWith("/merchant");
+
+  useEffect(() => {
+    if (loading) return;
+    if (user) return;
+    if (isPublic) return;
+
+    // Not logged in and on a protected route → send to the right login page
+    if (isMerchant) {
+      navigate({
+        to: "/auth/merchant" as any,
+        search: { redirect: pathname },
+        replace: true,
+      });
+    } else {
+      navigate({
+        to: "/auth" as any,
+        search: { redirect: pathname },
+        replace: true,
+      });
+    }
+  }, [user, loading, isPublic, pathname]);
+
+  // While auth is initialising on a protected route, show a full-screen spinner
+  // so the page never flashes protected content before the redirect fires
+  if (loading && !isPublic) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // Auth done, not logged in, not a public route — spinner while redirect fires
+  if (!loading && !user && !isPublic) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  return <Outlet />;
+}
+
+// ── Not found ─────────────────────────────────────────────────────────────────
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center px-6">
@@ -33,6 +96,7 @@ function NotFoundComponent() {
   );
 }
 
+// ── Error boundary ────────────────────────────────────────────────────────────
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
@@ -58,6 +122,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
+// ── Route definition ──────────────────────────────────────────────────────────
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
     meta: [
@@ -105,7 +170,8 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <Outlet />
+        {/* AuthGate sits inside AuthProvider so useAuth() is available */}
+        <AuthGate />
       </AuthProvider>
     </QueryClientProvider>
   );
