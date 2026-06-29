@@ -1,11 +1,15 @@
-# orders/urls.py
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from .views import OrderViewSet
+"""
+orders/urls.py — mounted at /api/orders/
+"""
 
-router = DefaultRouter()
-router.register(r"", OrderViewSet, basename="order")
+from django.urls import path
+from . import views
 
 urlpatterns = [
-    path("", include(router.urls)),
+    path("my-orders/", views.my_orders, name="my-orders"),
+    path("store-orders/", views.store_orders, name="store-orders"),
+    path("create/", views.create_order, name="create-order"),
+    path("<int:pk>/", views.order_detail, name="order-detail"),
+    path("<int:pk>/update-status/", views.update_order_status, name="update-order-status"),
+    path("<int:pk>/cancel/", views.cancel_order, name="cancel-order"),
 ]

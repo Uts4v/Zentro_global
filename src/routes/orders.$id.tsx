@@ -5,7 +5,6 @@ import { ArrowLeft, Check, Loader2 } from "lucide-react";
 import { useEffect, useState, useCallback } from "react";
 import { requireAuth } from "@/lib/auth-guard";
 import { orderApi, type Order } from "@/lib/api";
-import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/orders/$id")({
   beforeLoad: requireAuth,
@@ -53,40 +52,28 @@ function OrderPage() {
     load();
   }, [load]);
 
-  // Realtime subscription — updates status instantly without polling
+  // Poll every 5 seconds for status updates while order is active
   useEffect(() => {
-    const channel = supabase
-      .channel(`order-${id}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "orders",
-          filter: `id=eq.${id}`,
-        },
-        async (payload) => {
-          // Fetch full order to get joined data (items, merchant name)
-          try {
-            const updated = await orderApi.get(payload.new.id);
-            setOrder(updated);
-            // Flash animation to show something changed
-            setJustUpdated(true);
-            setTimeout(() => setJustUpdated(false), 1500);
-          } catch {
-            // Fallback: use payload data directly
-            setOrder((prev) =>
-              prev ? { ...prev, status: payload.new.status as OrderStatus } : prev
-            );
-          }
-        }
-      )
-      .subscribe();
+    if (!order) return;
+    const terminal = ["completed", "cancelled"];
+    if (terminal.includes(order.status)) return; // stop polling once done
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [id]);
+    const interval = setInterval(async () => {
+      try {
+        const updated = await orderApi.get(id);
+        setOrder((prev) => {
+          if (!prev || prev.status === updated.status) return prev;
+          setJustUpdated(true);
+          setTimeout(() => setJustUpdated(false), 1500);
+          return updated;
+        });
+      } catch {
+        // Silent — next tick will retry
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [id, order?.status]);
 
   if (loading) {
     return (
@@ -128,12 +115,13 @@ function OrderPage() {
   const currentIdx = STEPS.findIndex((s) => s.key === order.status);
   const isCancelled = order.status === "cancelled";
   const isCompleted = order.status === "completed";
-  const merchantName = order.merchant_profiles?.store_name;
+  const orderLabel = String(order.id).slice(0, 8);
+  const merchantName = order.merchant_profiles?.business_name;
 
   return (
     <MobileShell>
       <TopBar
-        title={`Order #${order.id.slice(0, 8)}`}
+        title={`Order #${orderLabel}`}
         right={
           <Link to="/" className="glass grid h-9 w-9 place-items-center rounded-full">
             <ArrowLeft className="h-4 w-4" />
@@ -143,7 +131,7 @@ function OrderPage() {
 
       <div className="px-5">
         <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-          Order #{order.id.slice(0, 8)}
+          Order #{orderLabel}
         </p>
         <h1 className="font-display mt-1 text-4xl text-ink">
           {isCancelled ? "Order cancelled" : isCompleted ? "Enjoy your order" : "We're on it"}
@@ -208,13 +196,10 @@ function OrderPage() {
               })}
             </ol>
 
-            {/* Live indicator */}
             <div className="mt-4 flex items-center gap-2 border-t border-border pt-3">
-              <span className="h-2 w-2 rounded-full bg-emerald-500">
-                <span className="block h-2 w-2 animate-ping rounded-full bg-emerald-500 opacity-75" />
-              </span>
+              <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
               <p className="text-[11px] text-muted-foreground">
-                Updates live — no need to refresh
+                Updates every few seconds automatically
               </p>
             </div>
           </div>

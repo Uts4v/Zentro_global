@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { rewardApi, customerApi, type Reward } from "@/lib/api";
+import { useStore } from "@/lib/store";
 import { MobileShell, TopBar } from "@/components/MobileShell";
 import { Lock } from "lucide-react";
 import { requireAuth } from "@/lib/auth-guard";
@@ -12,6 +13,7 @@ export const Route = createFileRoute("/rewards")({
 });
 
 function Rewards() {
+  const { selectedMerchantId } = useStore();
   const [rewards, setRewards] = useState<Reward[]>([]);
   const [points, setPoints] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -19,18 +21,28 @@ function Rewards() {
   const [successId, setSuccessId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!selectedMerchantId) {
+      setRewards([]);
+      setPoints(0);
+      setLoading(false);
+      return;
+    }
+
+    setLoading(true);
     Promise.all([
-      rewardApi.list().then(setRewards).catch(() => setRewards([])),
-      customerApi.profile().then((p) => setPoints(p.loyalty_points)).catch(() => {}),
+      rewardApi.list(selectedMerchantId).then(setRewards).catch(() => setRewards([])),
+      customerApi.getWallet(selectedMerchantId).then((w) => setPoints(w?.points_balance ?? 0)).catch(() => {}),
     ]).finally(() => setLoading(false));
-  }, []);
+  }, [selectedMerchantId]);
 
   const handleRedeem = async (rewardId: string) => {
     setRedeeming(rewardId);
     try {
       await rewardApi.redeem(rewardId);
-      const profile = await customerApi.profile();
-      setPoints(profile.loyalty_points);
+      if (selectedMerchantId) {
+        const wallet = await customerApi.getWallet(selectedMerchantId);
+        setPoints(wallet?.points_balance ?? 0);
+      }
       setSuccessId(rewardId);
       setTimeout(() => setSuccessId(null), 2000);
     } catch (e: any) {
@@ -53,7 +65,12 @@ function Rewards() {
       </div>
 
       <div className="mt-6 grid grid-cols-2 gap-3 px-5 pb-8">
-        {loading && (
+        {!selectedMerchantId && !loading && (
+          <p className="col-span-2 text-center text-sm text-muted-foreground">
+            Scan a store QR code or open a merchant link to see rewards.
+          </p>
+        )}
+        {selectedMerchantId && loading && (
           <p className="col-span-2 text-center text-sm text-muted-foreground">Loading rewards…</p>
         )}
         {!loading && rewards.length === 0 && (

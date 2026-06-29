@@ -1,56 +1,48 @@
+import { useState, useEffect, useCallback } from "react";
 import { createFileRoute } from "@tanstack/react-router";
 import { useStore } from "@/lib/store";
-import { customerApi, missionApi, merchantApi, type PunchCard, type MissionView } from "@/lib/api";
+import { customerApi, missionApi, merchantApi, punchCardApi, transactionApi, type MissionView, type CustomerPunchCard, type PointTransaction } from "@/lib/api";
 import { MobileShell, TopBar } from "@/components/MobileShell";
-import { Flame, Sparkles, Gift } from "lucide-react";
 import { requireAuth } from "@/lib/auth-guard";
-import { useEffect, useState, useCallback } from "react";
+import { Flame, Sparkles, Gift } from "lucide-react";
 
 export const Route = createFileRoute("/loyalty")({
   beforeLoad: requireAuth,
-  head: () => ({
-    meta: [
-      { title: "Your loyalty card · Zentro" },
-      { name: "description", content: "Track your streak, points, and punch card." },
-    ],
-  }),
+  head: () => ({ meta: [{ title: "Loyalty · Zentro" }] }),
   component: Loyalty,
 });
 
-interface CustomerProfile {
-  loyalty_points: number;
+type WalletView = {
+  points_balance: number;
   streak_days: number;
-  total_orders: number;
-  tier: string;
+  order_count: number;
+  tier_level: string;
   full_name: string;
-  last_streak_at: string | null;
-  streak_free_earned: boolean;
-}
-
-// Default punch card shape when no row exists yet for this merchant
-const DEFAULT_PUNCH_CARD: PunchCard = {
-  id: "",
-  customer_id: "",
-  merchant_id: "",
-  punch_count: 0,
-  lifetime_punches: 0,
-  punches_to_free: 5,
-  free_reward_available: false,
-  created_at: "",
-  updated_at: "",
 };
+
+const DEFAULT_WALLET: WalletView = {
+  points_balance: 0,
+  streak_days: 0,
+  order_count: 0,
+  tier_level: "bronze",
+  full_name: "Customer",
+};
+
 
 function Loyalty() {
   const { selectedMerchantId, setSelectedMerchant } = useStore();
 
-  const [profile, setProfile] = useState<CustomerProfile | null>(null);
-  const [profileLoading, setProfileLoading] = useState(true);
+  const [walletView, setWalletView] = useState<WalletView>(DEFAULT_WALLET);
+  const [walletLoading, setWalletLoading] = useState(true);
   const [missions, setMissions] = useState<MissionView[]>([]);
   const [missionsLoading, setMissionsLoading] = useState(true);
-  const [punchCard, setPunchCard] = useState<PunchCard>(DEFAULT_PUNCH_CARD);
+  const [punchCards, setPunchCards] = useState<{ active: CustomerPunchCard[]; completed: CustomerPunchCard[] }>({ active: [], completed: [] });
   const [punchLoading, setPunchLoading] = useState(false);
-  const [usingFreeReward, setUsingFreeReward] = useState(false);
+  const [usingFreeReward, setUsingFreeReward] = useState<string | null>(null);
   const [punchError, setPunchError] = useState<string | null>(null);
+
+  const [transactions, setTransactions] = useState<PointTransaction[]>([]);
+  const [transactionsLoading, setTransactionsLoading] = useState(true);
 
   // FIX: Auto-select first merchant if none is selected
   useEffect(() => {
@@ -63,46 +55,61 @@ function Loyalty() {
       .catch(console.error);
   }, [selectedMerchantId, setSelectedMerchant]);
 
-  // Load profile on mount — this is the source of truth for points + streak
+  // Load merchant-scoped wallet + missions when merchant changes
   useEffect(() => {
-    setProfileLoading(true);
-    customerApi
-      .profile()
-      .then(setProfile)
-      .catch(console.error)
-      .finally(() => setProfileLoading(false));
+    if (!selectedMerchantId) {
+      setWalletView(DEFAULT_WALLET);
+      setWalletLoading(false);
+      setMissions([]);
+      setMissionsLoading(false);
+      return;
+    }
 
-    missionApi
-      .myMissions()
-      .then(setMissions)
-      .catch(() => setMissions([]))
-      .finally(() => setMissionsLoading(false));
-  }, []);
+    setWalletLoading(true);
+    setMissionsLoading(true);
+    setTransactionsLoading(true);
 
-  // Load punch card whenever selected merchant changes
+    Promise.all([
+      customerApi.profile().catch(() => null),
+      customerApi.getWallet(selectedMerchantId).catch(() => {
+        setSelectedMerchant(null);
+        return null;
+      }),
+      missionApi.myMissions(selectedMerchantId).catch(() => []),
+      transactionApi.customerList(selectedMerchantId).catch(() => []),
+    ])
+      .then(([profile, wallet, missionList, txList]) => {
+        setWalletView({
+          points_balance: wallet?.points_balance ?? 0,
+          streak_days: wallet?.streak_days ?? 0,
+          order_count: wallet?.order_count ?? 0,
+          tier_level: wallet?.tier_level ?? "bronze",
+          full_name: profile?.full_name ?? "Customer",
+        });
+        setMissions(missionList);
+        setTransactions(txList);
+      })
+      .finally(() => {
+        setWalletLoading(false);
+        setMissionsLoading(false);
+        setTransactionsLoading(false);
+      });
+  }, [selectedMerchantId]);
+
+  // Load punch cards whenever selected merchant changes
   const loadPunchCard = useCallback(async () => {
     if (!selectedMerchantId) {
-      setPunchCard(DEFAULT_PUNCH_CARD);
+      setPunchCards({ active: [], completed: [] });
       return;
     }
     setPunchLoading(true);
     setPunchError(null);
     try {
-      const data = await customerApi.getPunchCard(selectedMerchantId);
-      if (data) {
-        setPunchCard({
-          ...data,
-          punch_count: data.punch_count ?? 0,
-          punches_to_free: data.punches_to_free ?? 5,
-          free_reward_available: data.free_reward_available ?? false,
-        });
-      } else {
-        // No row yet — customer hasn't ordered from this merchant yet
-        setPunchCard({ ...DEFAULT_PUNCH_CARD, merchant_id: selectedMerchantId });
-      }
+      const data = await punchCardApi.customerList(selectedMerchantId);
+      setPunchCards(data);
     } catch (e: any) {
-      setPunchError("Couldn't load punch card.");
-      setPunchCard({ ...DEFAULT_PUNCH_CARD, merchant_id: selectedMerchantId ?? "" });
+      setPunchError("Couldn't load punch cards.");
+      setPunchCards({ active: [], completed: [] });
     } finally {
       setPunchLoading(false);
     }
@@ -112,29 +119,26 @@ function Loyalty() {
     loadPunchCard();
   }, [loadPunchCard]);
 
-  async function handleUseFreeReward() {
-    if (!selectedMerchantId || !punchCard.free_reward_available) return;
-    setUsingFreeReward(true);
+  async function handleUseFreeReward(id: string) {
+    if (!selectedMerchantId) return;
+    setUsingFreeReward(id);
     setPunchError(null);
     try {
-      await customerApi.useFreeReward(selectedMerchantId);
+      await punchCardApi.customerRedeem(id);
       await loadPunchCard();
     } catch (e: any) {
       setPunchError(e.message || "Failed to use free reward. Try again.");
     } finally {
-      setUsingFreeReward(false);
+      setUsingFreeReward(null);
     }
   }
 
   // Derived display values
-  const displayPoints = profile?.loyalty_points ?? 0;
-  const displayStreak = profile?.streak_days ?? 0;
-  const displayName = profile?.full_name ?? "Customer";
-  const displayTier = profile?.tier ?? "Bronze";
+  const displayPoints = walletView.points_balance;
+  const displayStreak = walletView.streak_days;
+  const displayName = walletView.full_name;
+  const displayTier = walletView.tier_level.charAt(0).toUpperCase() + walletView.tier_level.slice(1);
 
-  const punchCount = punchCard.punch_count;
-  const punchesNeeded = punchCard.punches_to_free;
-  const freeRewardReady = punchCard.free_reward_available;
 
   return (
     <MobileShell>
@@ -158,7 +162,7 @@ function Loyalty() {
 
           <div className="relative mt-10">
             <p className="text-xs text-white/60">Points balance</p>
-            {profileLoading ? (
+            {walletLoading ? (
               <div className="mt-1 h-16 w-32 animate-pulse rounded-2xl bg-white/10" />
             ) : (
               <p className="font-display mt-1 text-[72px] leading-none tracking-tight">
@@ -177,46 +181,29 @@ function Loyalty() {
               <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-white/60">
                 <Flame className="h-3 w-3 text-ember" /> Streak
               </div>
-              {profileLoading ? (
+              {walletLoading ? (
                 <div className="mt-1 h-8 w-20 animate-pulse rounded-xl bg-white/10" />
               ) : (
                 <>
                   <p className="font-display mt-1 text-3xl">
                     {displayStreak} {displayStreak === 1 ? "day" : "days"}
                   </p>
-                  {profile?.streak_free_earned ? (
-                    <p className="mt-1 text-[10px] text-amber-400">🎁 Free item ready!</p>
-                  ) : profile?.last_streak_at ? (
-                    (() => {
-                      const hoursLeft =
-                        12 -
-                        (Date.now() - new Date(profile.last_streak_at!).getTime()) / 3_600_000;
-                      return hoursLeft > 0 ? (
-                        <p className="mt-1 text-[10px] text-white/40">
-                          Next in {Math.ceil(hoursLeft)}h
-                        </p>
-                      ) : (
-                        <p className="mt-1 text-[10px] text-emerald-400">✓ Eligible now</p>
-                      );
-                    })()
-                  ) : (
-                    <p className="mt-1 text-[10px] text-white/40">Place an order to start</p>
-                  )}
+                  <p className="mt-1 text-[10px] text-white/40">At this store</p>
                 </>
               )}
             </div>
 
-            {/* Total orders */}
+            {/* Orders at this merchant */}
             <div className="rounded-2xl bg-white/8 p-3 backdrop-blur-md">
               <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest text-white/60">
                 <Sparkles className="h-3 w-3 text-white/60" /> Orders
               </div>
-              {profileLoading ? (
+              {walletLoading ? (
                 <div className="mt-1 h-8 w-20 animate-pulse rounded-xl bg-white/10" />
               ) : (
                 <>
-                  <p className="font-display mt-1 text-3xl">{profile?.total_orders ?? 0}</p>
-                  <p className="mt-1 text-[10px] text-white/40">lifetime</p>
+                  <p className="font-display mt-1 text-3xl">{walletView.order_count}</p>
+                  <p className="mt-1 text-[10px] text-white/40">at this store</p>
                 </>
               )}
             </div>
@@ -228,96 +215,125 @@ function Loyalty() {
               <p className="mt-0.5 text-sm font-medium">{displayName}</p>
             </div>
             <p className="font-mono text-[10px] tracking-widest text-white/40">
-              •••• {String(profile?.total_orders ?? 0).padStart(4, "0")}
+              •••• {String(walletView.order_count).padStart(4, "0")}
             </p>
           </div>
         </div>
       </section>
 
-      {/* Punch card */}
-      <section className="mt-6 px-5">
-        <div className="glass-strong rounded-3xl p-5">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Punch card</p>
-              <h3 className="font-display mt-1 text-2xl text-ink">
-                Buy {punchesNeeded}, get 1 free
-              </h3>
-              {!selectedMerchantId ? (
-                <p className="text-xs text-muted-foreground">Select a merchant to start</p>
-              ) : punchLoading ? (
-                <p className="text-xs text-muted-foreground">Loading…</p>
-              ) : freeRewardReady ? (
-                <p className="text-xs font-medium text-emerald-600">Free reward ready! 🎉</p>
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  {Math.max(punchesNeeded - punchCount, 0)} more order
-                  {punchesNeeded - punchCount !== 1 ? "s" : ""} to unlock
-                </p>
-              )}
-            </div>
-            <span className="font-display text-3xl text-ember">
-              {punchLoading ? (
-                <span className="inline-block h-8 w-12 animate-pulse rounded-xl bg-mist" />
-              ) : (
-                `${punchCount}/${punchesNeeded}`
-              )}
-            </span>
+      {/* Punch cards */}
+      <section className="mt-6 px-5 space-y-4">
+        {punchError && (
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            {punchError}
           </div>
+        )}
+        
+        {punchLoading && punchCards.active.length === 0 && punchCards.completed.length === 0 ? (
+          <div className="glass-strong rounded-3xl p-5 text-center">
+            <p className="text-xs text-muted-foreground animate-pulse">Loading punch cards...</p>
+          </div>
+        ) : [...punchCards.completed, ...punchCards.active].length === 0 ? (
+          <div className="glass-strong rounded-3xl p-5 text-center">
+            <p className="text-xs text-muted-foreground">No active punch cards for this merchant.</p>
+          </div>
+        ) : (
+          [...punchCards.completed, ...punchCards.active].map((card) => {
+            const config = card.punch_card!;
+            const punchesNeeded = config.stamps_required;
+            const punchCount = card.current_stamps;
+            const freeRewardReady = card.is_completed && !card.is_redeemed;
+            
+            return (
+              <div 
+                key={card.id} 
+                className="glass-strong rounded-3xl p-5 relative overflow-hidden"
+                style={config.color_scheme ? { 
+                  backgroundColor: `${config.color_scheme}1A`,
+                  borderColor: `${config.color_scheme}33`
+                } : undefined}
+              >
+                {(config.background_image || config.animated_gif_background) && (
+                  <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
+                    <img 
+                      src={config.animated_gif_background || config.background_image} 
+                      alt=""
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+                
+                <div className="relative z-10">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-[11px] uppercase tracking-[0.2em]" 
+                        style={{ color: config.color_scheme || 'inherit', opacity: 0.8 }}>
+                        {config.mode === 'per_streak' ? 'Streak Card' : 'Punch Card'}
+                      </p>
+                      <h3 className="font-display mt-1 text-2xl text-ink">
+                        {config.name}
+                      </h3>
+                      {freeRewardReady ? (
+                        <p className="text-xs font-medium text-emerald-600">Reward ready! 🎉</p>
+                      ) : (
+                        <p className="text-xs text-muted-foreground">
+                          {config.reward_text}
+                        </p>
+                      )}
+                    </div>
+                    <span className="font-display text-3xl" style={{ color: config.color_scheme || '#FF5A36' }}>
+                      {punchCount}/{punchesNeeded}
+                    </span>
+                  </div>
 
-          {/* Punch dots */}
-          <div
-            className="mt-4 grid gap-2"
-            style={{ gridTemplateColumns: `repeat(${punchesNeeded}, 1fr)` }}
-          >
-            {Array.from({ length: punchesNeeded }).map((_, i) => {
-              const filled = i < punchCount;
-              const isFreeSlot = i === punchesNeeded - 1;
-              return (
-                <div
-                  key={i}
-                  className={`grid aspect-square place-items-center rounded-2xl text-lg transition-all duration-300 ${
-                    filled
-                      ? freeRewardReady && isFreeSlot
-                        ? "bg-gradient-to-br from-amber-400 to-orange-500 shadow-md"
-                        : "bg-ink"
-                      : "border-2 border-dashed border-border bg-mist"
-                  }`}
-                >
-                  {filled ? (
-                    isFreeSlot && freeRewardReady ? (
-                      <Gift className="h-4 w-4 text-white" />
-                    ) : (
-                      <span className="text-sm text-white">✓</span>
-                    )
-                  ) : (
-                    <span className="text-muted-foreground/40">·</span>
+                  <div
+                    className="mt-4 grid gap-2"
+                    style={{ gridTemplateColumns: `repeat(${punchesNeeded}, 1fr)` }}
+                  >
+                    {Array.from({ length: punchesNeeded }).map((_, i) => {
+                      const filled = i < punchCount || freeRewardReady;
+                      const isFreeSlot = i === punchesNeeded - 1;
+                      return (
+                        <div
+                          key={i}
+                          className={`grid aspect-square place-items-center rounded-2xl text-lg transition-all duration-300 ${
+                            filled
+                              ? freeRewardReady && isFreeSlot
+                                ? "shadow-md"
+                                : "bg-ink/90"
+                              : "border-2 border-dashed border-border bg-mist"
+                          }`}
+                          style={filled && freeRewardReady && isFreeSlot && config.color_scheme ? { backgroundColor: config.color_scheme } : {}}
+                        >
+                          {filled ? (
+                            isFreeSlot && freeRewardReady ? (
+                              <Gift className="h-4 w-4 text-white" />
+                            ) : (
+                              <span className="text-sm">{config.stamp_icon || "✨"}</span>
+                            )
+                          ) : (
+                            <span className="text-xs text-muted-foreground/30">{i + 1}</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {freeRewardReady && (
+                    <button
+                      onClick={() => handleUseFreeReward(card.id)}
+                      disabled={usingFreeReward === card.id}
+                      className="mt-4 w-full rounded-2xl bg-ink py-3 text-sm font-medium text-primary-foreground shadow-sm transition-opacity disabled:opacity-50"
+                      style={config.color_scheme ? { backgroundColor: config.color_scheme } : undefined}
+                    >
+                      {usingFreeReward === card.id ? "Redeeming..." : "Redeem Free Reward"}
+                    </button>
                   )}
                 </div>
-              );
-            })}
-          </div>
-
-          {punchError && (
-            <p className="mt-3 text-center text-xs text-rose-500">{punchError}</p>
-          )}
-
-          {freeRewardReady && selectedMerchantId ? (
-            <button
-              onClick={handleUseFreeReward}
-              disabled={usingFreeReward}
-              className="mt-4 w-full rounded-2xl bg-gradient-to-r from-amber-400 to-orange-500 py-3 text-sm font-medium text-white transition-transform disabled:opacity-60 active:scale-[0.98]"
-            >
-              {usingFreeReward ? "Redeeming…" : "🎁 Redeem free item with staff"}
-            </button>
-          ) : (
-            <p className="mt-4 text-center text-xs text-muted-foreground">
-              {selectedMerchantId
-                ? `${punchCount} of ${punchesNeeded} orders completed ✨`
-                : "Select a store then place orders to earn punches ✨"}
-            </p>
-          )}
-        </div>
+              </div>
+            );
+          })
+        )}
       </section>
 
       {/* Missions */}
@@ -384,20 +400,51 @@ function Loyalty() {
         <div className="glass rounded-3xl p-5">
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-ink">Progress to Platinum</p>
-            <p className="text-xs text-muted-foreground">{displayPoints}/1000 pts</p>
+            <p className="text-xs text-muted-foreground">{displayPoints}/5000 pts</p>
           </div>
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-mist">
             <div
               className="h-full rounded-full gradient-ember transition-all"
-              style={{ width: `${Math.min((displayPoints / 1000) * 100, 100)}%` }}
+              style={{ width: `${Math.min((displayPoints / 5000) * 100, 100)}%` }}
             />
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
-            {1000 - displayPoints > 0
-              ? `${1000 - displayPoints} pts to unlock Platinum perks.`
-              : "You reached Platinum! 🎉"}
+            {5000 - displayPoints > 0
+              ? `${5000 - displayPoints} pts to unlock Platinum perks at this store.`
+              : "You reached Platinum at this store! 🎉"}
           </p>
         </div>
+      </section>
+
+      {/* Point Transactions */}
+      <section className="mt-4 px-5 pb-8">
+        <h3 className="font-display mb-3 px-2 text-xl text-ink">Recent Transactions</h3>
+        {transactionsLoading ? (
+          <div className="glass rounded-3xl p-6 text-center">
+            <p className="text-xs text-muted-foreground animate-pulse">Loading...</p>
+          </div>
+        ) : transactions.length === 0 ? (
+          <div className="glass rounded-3xl p-6 text-center">
+            <p className="text-xs text-muted-foreground">No recent transactions at this store.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {transactions.slice(0, 5).map((tx) => (
+              <div key={tx.id} className="glass rounded-2xl p-4 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-ink capitalize">{tx.transaction_type.toLowerCase().replace("_", " ")}</p>
+                  <p className="text-[10px] text-muted-foreground">{new Date(tx.created_at).toLocaleDateString()}</p>
+                </div>
+                <div className="text-right">
+                  <p className={`text-sm font-bold ${tx.points >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                    {tx.points > 0 ? "+" : ""}{tx.points} pts
+                  </p>
+                  <p className="text-[10px] text-muted-foreground">Balance: {tx.balance_after}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </MobileShell>
   );

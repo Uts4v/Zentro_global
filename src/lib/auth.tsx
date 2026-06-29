@@ -1,3 +1,12 @@
+/**
+ * src/lib/auth.tsx
+ *
+ * Django JWT auth context — drop-in replacement for the Supabase version.
+ * Stores access + refresh tokens in localStorage.
+ * Auto-refreshes the access token before it expires (simplejwt 15 min in prod,
+ * 1 day in dev — we refresh when < 2 min remain).
+ */
+
 import {
   createContext,
   useContext,
@@ -7,294 +16,308 @@ import {
   useRef,
   type ReactNode,
 } from "react";
-import { supabase } from "@/lib/supabase";
-import type { User, Session } from "@supabase/supabase-js";
+import { apiUrl, tokenStore, djangoFetch } from "@/lib/django-api-base";
 
-type Profile = {
-  id: string;
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+export type Role = "customer" | "merchant";
+
+export type CustomerProfile = {
+  id: number;
   full_name: string | null;
-  avatar_url: string | null;
-  points: number;
-  streak: number;
+  loyalty_points: number;
+  streak_days: number;
+  total_orders: number;
   tier: string;
-  role?: "customer" | "merchant";
 };
 
-type MerchantProfile = {
-  id: string;
-  user_id: string;
-  store_name: string;
-  store_slug: string | null;
+export type MerchantProfile = {
+  id: number;
+  business_name: string;
+  slug: string | null;
   business_type: string | null;
   address: string | null;
   phone: string | null;
   logo_url: string | null;
   banner_url: string | null;
+  description: string | null;
   is_approved: boolean;
-  created_at: string;
+  is_open: boolean;
+  onboarding_complete: boolean;
 };
 
-type SignUpMeta = {
-  role?: "customer" | "merchant";
-  store_name?: string;
+export type AuthUser = {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  role: Role;
+  phone: string;
+  avatar_url: string;
+  customer_profile: CustomerProfile | null;
 };
 
 type AuthContextType = {
-  user: User | null;
-  session: Session | null;
-  profile: Profile | null;
+  user: AuthUser | null;
   merchantProfile: MerchantProfile | null;
   loading: boolean;
   signUp: (
     email: string,
     password: string,
     name: string,
-    meta?: SignUpMeta
+    meta?: { role?: Role; store_name?: string }
   ) => Promise<{ error: string | null }>;
-  signIn: (
-    email: string,
-    password: string
-  ) => Promise<{ error: string | null }>;
+  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   refreshMerchantProfile: () => Promise<void>;
 };
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-async function ensureProfileExists(userId: string, user: User): Promise<void> {
-  const { data: existing } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (existing) return; // already exists, nothing to do
-
-  const fullName =
-    user.user_metadata?.full_name ??
-    user.user_metadata?.name ??
-    null;
-
-  await supabase.from("profiles").insert({
-    id: userId,
-    full_name: fullName,
-    avatar_url: user.user_metadata?.avatar_url ?? null,
-    points: 0,
-    streak: 0,
-    tier: "Bronze",
-    role: "customer",
-  });
+/** Decode JWT payload without verification (verification is server-side). */
+function decodeJwt(token: string): Record<string, any> | null {
+  try {
+    const b64 = token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+    return JSON.parse(atob(b64));
+  } catch {
+    return null;
+  }
 }
 
-// ── Provider ──────────────────────────────────────────────────────────────────
+/** Returns seconds until the token expires (negative = already expired). */
+function secondsUntilExpiry(token: string): number {
+  const payload = decodeJwt(token);
+  if (!payload?.exp) return -1;
+  return payload.exp - Math.floor(Date.now() / 1000);
+}
+
+export function djangoHeaders(json = false): HeadersInit {
+  const token = tokenStore.getAccess();
+  if (!token) throw new Error("Not authenticated — please log in again.");
+  const h: Record<string, string> = { Authorization: `Bearer ${token}` };
+  if (json) h["Content-Type"] = "application/json";
+  return h;
+}
+
+// ── Context ───────────────────────────────────────────────────────────────────
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser]                       = useState<User | null>(null);
-  const [session, setSession]                 = useState<Session | null>(null);
-  const [profile, setProfile]                 = useState<Profile | null>(null);
+  const [user, setUser]                       = useState<AuthUser | null>(null);
   const [merchantProfile, setMerchantProfile] = useState<MerchantProfile | null>(null);
   const [loading, setLoading]                 = useState(true);
+  const refreshTimerRef                       = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Counts how many parallel fetches are in flight.
-  // loading stays true until all of them settle.
-  const pendingFetches = useRef(0);
+  // ── Fetch /api/auth/me/ ────────────────────────────────────────────────────
 
-  // ── Profile fetch ───────────────────────────────────────────────────────────
+  const fetchMe = useCallback(async () => {
+    const token = tokenStore.getAccess();
+    if (!token) { setUser(null); setMerchantProfile(null); return; }
 
-  const fetchProfile = useCallback(async (userId: string) => {
     try {
-      const { data } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .maybeSingle();
-      // Keep null if row genuinely doesn't exist yet —
-      // don't fabricate a fake "guest" object
-      setProfile((data as Profile) ?? null);
-    } catch {
-      setProfile(null);
-    }
-  }, []);
+      const me = await djangoFetch<AuthUser>(apiUrl("/auth/me/"), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setUser(me);
 
-  // ── Merchant profile fetch ──────────────────────────────────────────────────
-  // Always query by user_id — never trust user_metadata.role,
-  // which may be missing for OAuth or older accounts.
-
-  const fetchMerchantProfile = useCallback(async (userId: string) => {
-    try {
-      const { data } = await supabase
-        .from("merchant_profiles")
-        .select("*")
-        .eq("user_id", userId)
-        .maybeSingle();
-      setMerchantProfile((data as MerchantProfile) ?? null);
+      // If merchant, fetch merchant profile
+      if (me.role === "merchant") {
+        try {
+          const mp = await djangoFetch<MerchantProfile>(apiUrl("/merchants/me/"), {
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          setMerchantProfile(mp);
+        } catch {
+          setMerchantProfile(null);
+        }
+      } else {
+        setMerchantProfile(null);
+      }
     } catch {
+      // Token likely expired and refresh failed
+      tokenStore.clear();
+      setUser(null);
       setMerchantProfile(null);
     }
   }, []);
 
-  // ── Public refresh helpers ──────────────────────────────────────────────────
+  // ── Auto-refresh token ─────────────────────────────────────────────────────
 
-  const refreshProfile = useCallback(async () => {
-    if (user?.id) await fetchProfile(user.id);
-  }, [user, fetchProfile]);
+  const scheduleRefresh = useCallback((accessToken: string) => {
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    const secs = secondsUntilExpiry(accessToken);
+    // Refresh 2 minutes before expiry, or immediately if < 2 min remain
+    const delay = Math.max((secs - 120) * 1000, 0);
+    refreshTimerRef.current = setTimeout(async () => {
+      const refresh = tokenStore.getRefresh();
+      if (!refresh) return;
+      try {
+        const res = await djangoFetch<{ access: string; refresh?: string }>(
+          apiUrl("/auth/token/refresh/"),
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ refresh }),
+          }
+        );
+        tokenStore.set(res.access, res.refresh ?? refresh);
+        scheduleRefresh(res.access);
+      } catch {
+        tokenStore.clear();
+        setUser(null);
+        setMerchantProfile(null);
+      }
+    }, delay);
+  }, []);
 
-  const refreshMerchantProfile = useCallback(async () => {
-    if (user?.id) await fetchMerchantProfile(user.id);
-  }, [user, fetchMerchantProfile]);
-
-  // ── Core auth effect ────────────────────────────────────────────────────────
-  // onAuthStateChange is the single source of truth.
-  // INITIAL_SESSION fires on every page load after localStorage is read,
-  // so we never need a separate getSession() call.
+  // ── Initialise from localStorage on mount ─────────────────────────────────
 
   useEffect(() => {
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, s) => {
-      setSession(s);
-      setUser(s?.user ?? null);
-
-      if (s?.user) {
-        const userId = s.user.id;
-        const isOAuth =
-          s.user.app_metadata?.provider === "google" ||
-          s.user.app_metadata?.provider === "apple";
-
-        // For OAuth sign-ins, make sure a profiles row exists.
-        // Email signUp() creates it explicitly; OAuth skips that path.
-        // The DB trigger (handle_new_user) is the primary guard,
-        // but this is a reliable client-side fallback.
-        if (event === "SIGNED_IN" && isOAuth) {
-          await ensureProfileExists(userId, s.user);
-        }
-
-        // Fire both fetches in parallel; keep loading=true until both finish
-        pendingFetches.current = 2;
-
-        fetchProfile(userId).finally(() => {
-          pendingFetches.current -= 1;
-          if (pendingFetches.current === 0) setLoading(false);
-        });
-
-        fetchMerchantProfile(userId).finally(() => {
-          pendingFetches.current -= 1;
-          if (pendingFetches.current === 0) setLoading(false);
-        });
+    const access = tokenStore.getAccess();
+    if (!access || secondsUntilExpiry(access) < 0) {
+      // Try refresh first before giving up
+      const refresh = tokenStore.getRefresh();
+      if (refresh) {
+        djangoFetch<{ access: string; refresh?: string }>(
+          apiUrl("/auth/token/refresh/"),
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ refresh }),
+          }
+        )
+          .then((res) => {
+            tokenStore.set(res.access, res.refresh ?? refresh);
+            scheduleRefresh(res.access);
+            return fetchMe();
+          })
+          .catch(() => {
+            tokenStore.clear();
+          })
+          .finally(() => setLoading(false));
       } else {
-        // Signed out or no session
-        setProfile(null);
-        setMerchantProfile(null);
         setLoading(false);
       }
-    });
+      return;
+    }
 
-    return () => subscription.unsubscribe();
-  }, [fetchProfile, fetchMerchantProfile]);
+    scheduleRefresh(access);
+    fetchMe().finally(() => setLoading(false));
 
-  // ── Sign up ─────────────────────────────────────────────────────────────────
+    return () => {
+      if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
+    };
+  }, [fetchMe, scheduleRefresh]);
+
+  // ── Sign up ────────────────────────────────────────────────────────────────
 
   const signUp = useCallback(
     async (
       email: string,
       password: string,
       name: string,
-      meta?: SignUpMeta
+      meta?: { role?: Role; store_name?: string }
     ): Promise<{ error: string | null }> => {
-      const role = meta?.role ?? "customer";
-
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
+      try {
+        const data = await djangoFetch<{
+          access: string;
+          refresh: string;
+          role: string;
+          email: string;
+          full_name: string;
+        }>(apiUrl("/auth/register/"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            password,
             full_name: name,
-            role,
-            ...(meta?.store_name ? { store_name: meta.store_name } : {}),
-          },
-        },
-      });
-
-      if (error) return { error: error.message };
-
-      // Create DB rows immediately — don't wait for the email confirm redirect
-      const {
-        data: { user: u },
-      } = await supabase.auth.getUser();
-
-      if (u) {
-        await supabase.from("profiles").upsert(
-          {
-            id: u.id,
-            full_name: name,
-            avatar_url: null,
-            points: 0,
-            streak: 0,
-            tier: "Bronze",
-            role,
-          },
-          { onConflict: "id" }
-        );
-
-        if (role === "merchant" && meta?.store_name) {
-          await supabase.from("merchant_profiles").upsert(
-            {
-              user_id: u.id,
-              store_name: meta.store_name,
-              store_slug: meta.store_name
-                .toLowerCase()
-                .replace(/[^a-z0-9]+/g, "-")
-                .replace(/(^-|-$)/g, ""),
-              is_approved: false,
-            },
-            { onConflict: "user_id" }
-          );
-        }
+            role: meta?.role ?? "customer",
+            store_name: meta?.store_name ?? "",
+          }),
+        });
+        tokenStore.set(data.access, data.refresh);
+        scheduleRefresh(data.access);
+        await fetchMe();
+        return { error: null };
+      } catch (e: any) {
+        return { error: e.message };
       }
-
-      return { error: null };
     },
-    []
+    [fetchMe, scheduleRefresh]
   );
 
-  // ── Sign in ─────────────────────────────────────────────────────────────────
+  // ── Sign in ────────────────────────────────────────────────────────────────
 
   const signIn = useCallback(
-    async (
-      email: string,
-      password: string
-    ): Promise<{ error: string | null }> => {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      if (error) return { error: error.message };
-      return { error: null };
+    async (email: string, password: string): Promise<{ error: string | null }> => {
+      try {
+        const data = await djangoFetch<{
+          access: string;
+          refresh: string;
+          role: string;
+          email: string;
+          full_name: string;
+        }>(apiUrl("/auth/login/"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+        tokenStore.set(data.access, data.refresh);
+        scheduleRefresh(data.access);
+        await fetchMe();
+        return { error: null };
+      } catch (e: any) {
+        return { error: e.message };
+      }
     },
-    []
+    [fetchMe, scheduleRefresh]
   );
 
-  // ── Sign out ────────────────────────────────────────────────────────────────
+  // ── Sign out ───────────────────────────────────────────────────────────────
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
+    const refresh = tokenStore.getRefresh();
+    const access  = tokenStore.getAccess();
+    // Best-effort blacklist — don't throw if it fails
+    if (refresh && access) {
+      djangoFetch(apiUrl("/auth/logout/"), {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${access}` },
+        body: JSON.stringify({ refresh }),
+      }).catch(() => {});
+    }
+    tokenStore.clear();
+    if (refreshTimerRef.current) clearTimeout(refreshTimerRef.current);
     setUser(null);
-    setSession(null);
-    setProfile(null);
     setMerchantProfile(null);
   }, []);
 
-  // ── Context value ───────────────────────────────────────────────────────────
+  // ── Refresh helpers ────────────────────────────────────────────────────────
+
+  const refreshProfile = useCallback(async () => {
+    await fetchMe();
+  }, [fetchMe]);
+
+  const refreshMerchantProfile = useCallback(async () => {
+    const token = tokenStore.getAccess();
+    if (!token) return;
+    try {
+      const mp = await djangoFetch<MerchantProfile>(apiUrl("/merchants/me/"), {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setMerchantProfile(mp);
+    } catch {
+      setMerchantProfile(null);
+    }
+  }, []);
 
   return (
     <AuthContext.Provider
       value={{
         user,
-        session,
-        profile,
         merchantProfile,
         loading,
         signUp,
@@ -311,6 +334,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
 export function useAuth() {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error("useAuth must be used within an AuthProvider");
+  if (!ctx) throw new Error("useAuth must be used inside <AuthProvider>");
   return ctx;
 }

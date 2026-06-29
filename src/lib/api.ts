@@ -1,7 +1,69 @@
-//lib/api.ts — Supabase only, no Django backend
-import { supabase } from "@/lib/supabase";
+/**
+ * src/lib/api.ts
+ *
+ * All API calls to the Django backend.
+ * Drop-in replacement for the Supabase version — same function signatures,
+ * same return types, just backed by Django REST instead of Supabase.
+ */
 
-// ── Types ────────────────────────────────────────────────────────────────────
+import { apiUrl, djangoFetch } from "@/lib/django-api-base";
+import { djangoHeaders as authHeaders } from "@/lib/auth";
+
+// ── Types (kept identical to Supabase version for compatibility) ──────────────
+
+export interface TodaySpecial {
+  id: string;
+  title: string;
+  description: string;
+  image_url: string;
+  linked_menu_item: string | null;
+  linked_menu_item_name: string | null;
+  linked_reward: string | null;
+  linked_reward_name: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export const specialApi = {
+  // Customer — public, no auth needed
+  forSlug: async (slug: string): Promise<TodaySpecial | null> => {
+    const data = await djangoFetch<TodaySpecial | null>(
+      apiUrl(`/loyalty/specials/${slug}/`)
+    );
+    return data ?? null;
+  },
+
+  // Merchant
+  list: async (): Promise<TodaySpecial[]> => {
+    return djangoFetch<TodaySpecial[]>(apiUrl("/loyalty/merchant/specials/"), {
+      headers: authHeaders(),
+    });
+  },
+
+  create: async (input: Partial<TodaySpecial>): Promise<TodaySpecial> => {
+    return djangoFetch<TodaySpecial>(apiUrl("/loyalty/merchant/specials/"), {
+      method: "POST",
+      headers: authHeaders(true),
+      body: JSON.stringify(input),
+    });
+  },
+
+  update: async (id: string, input: Partial<TodaySpecial>): Promise<TodaySpecial> => {
+    return djangoFetch<TodaySpecial>(apiUrl(`/loyalty/merchant/specials/${id}/`), {
+      method: "PATCH",
+      headers: authHeaders(true),
+      body: JSON.stringify(input),
+    });
+  },
+
+  delete: async (id: string): Promise<void> => {
+    return djangoFetch<void>(apiUrl(`/loyalty/merchant/specials/${id}/`), {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
+  },
+};
 
 export interface MenuItem {
   id: string;
@@ -52,27 +114,29 @@ export interface Order {
   updated_at: string;
   order_items: OrderItem[];
   profiles?: { full_name: string | null };
-  merchant_profiles?: { store_name: string };
+  merchant_profiles?: { business_name: string };
+  // Django-side aliases (normalised below)
+  items?: OrderItem[];
+  customer_name?: string;
+  merchant_name?: string;
 }
 
-// Update the interface
 export interface CreateOrderPayload {
   merchant_id: string;
-  items: { 
-    menu_item_id: string; 
-    quantity: number; 
-    name: string; 
+  items: {
+    menu_item_id: string;
+    quantity: number;
+    name: string;
     price: number;
-    points_per_item: number; // ← add this
+    points_per_item: number;
   }[];
   notes?: string;
 }
-
 export interface MerchantProfile {
   id: string;
-  user_id: string;
-  store_name: string;
-  store_slug: string | null;
+  user_id?: string;
+  business_name: string;
+  slug: string | null;
   business_type: string | null;
   address: string | null;
   phone: string | null;
@@ -81,18 +145,57 @@ export interface MerchantProfile {
   description: string | null;
   is_approved: boolean;
   is_open: boolean;
+  onboarding_complete?: boolean;
+  latitude?: string | null;
+  longitude?: string | null;
+  qr_code?: string;
 }
-
-export interface PunchCard {
+export interface MerchantPunchCard {
   id: string;
-  customer_id: string;
   merchant_id: string;
-  punch_count: number;
-  lifetime_punches: number;
-  punches_to_free: number;
-  free_reward_available: boolean;
+  name: string;
+  mode: "per_order" | "per_streak";
+  stamps_required: number;
+  reward_text: string;
+  background_image?: string;
+  animated_gif_background?: string;
+  color_scheme?: string;
+  stamp_icon?: string;
+  logo?: string;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface CustomerPunchCard {
+  id: string;
+  customer_id: string;
+  punch_card?: MerchantPunchCard;
+  merchant_id: string;
+  merchant_name: string;
+  current_stamps: number;
+  is_completed: boolean;
+  completed_at?: string;
+  is_redeemed: boolean;
+  redeemed_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PointTransaction {
+  id: string;
+  merchant_id: string;
+  merchant_name: string;
+  customer_id: string;
+  customer_name: string;
+  transaction_type: string;
+  points: number;
+  balance_before: number;
+  balance_after: number;
+  expiry_date?: string;
+  status: string;
+  description?: string;
+  created_at: string;
 }
 
 export interface CustomerProfile {
@@ -102,6 +205,36 @@ export interface CustomerProfile {
   streak_days: number;
   tier: string;
   total_orders: number;
+  last_streak_at?: string | null;
+  streak_free_earned?: boolean;
+}
+
+export interface CustomerMerchantWallet {
+  id: string;
+  merchant_id: string;
+  merchant_name: string;
+  merchant_slug: string;
+  points_balance: number;
+  lifetime_points: number;
+  expired_points: number;
+  order_count: number;
+  streak_days: number;
+  last_order_date: string | null;
+  last_point_earned_at: string | null;
+  tier_level: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CustomerMerchantProfile {
+  id: string;
+  merchant_id: string;
+  merchant_name: string;
+  merchant_slug: string;
+  joined_at: string;
+  status: "active" | "inactive";
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Mission {
@@ -112,7 +245,7 @@ export interface Mission {
   icon: string;
   target_count: number;
   reward_points: number;
-  mission_type: "order_count" | "spend_amount" | "visit_streak";
+  mission_type: "order_count" | "spend_amount" | "visit_streak" | "purchase" | "visit" | "referral" | "special";
   is_active: boolean;
   created_at: string;
 }
@@ -126,7 +259,7 @@ export interface MissionView {
   current_count: number;
   reward_points: number;
   is_completed: boolean;
-  mission_type: "order_count" | "spend_amount" | "visit_streak";
+  mission_type: string;
 }
 
 export interface Reward {
@@ -147,7 +280,7 @@ export interface Redemption {
   reward_id: string;
   points_spent: number;
   code: string;
-  status: "pending" | "confirmed" | "expired";
+  status: "pending" | "confirmed" | "expired" | "cancelled";
   expires_at: string;
   confirmed_at: string | null;
   created_at: string;
@@ -166,91 +299,67 @@ export interface LoyaltyRules {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-async function getCurrentUserId(): Promise<string> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
-  return user.id;
-}
+/** Normalise a Django Order response into the shape the frontend expects. */
+function normaliseOrder(o: any): Order {
+  const items = (o.items ?? o.order_items ?? []).map((item: any) => ({
+    ...item,
+    id: String(item.id ?? ""),
+    order_id: String(item.order_id ?? o.id ?? ""),
+    menu_item_id: String(item.menu_item_id ?? item.menu_item ?? ""),
+  }));
 
-async function getMerchantProfile(userId: string): Promise<MerchantProfile> {
-  const { data, error } = await supabase
-    .from("merchant_profiles")
-    .select("*")
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (error || !data) throw new Error("Merchant profile not found");
-  return data as MerchantProfile;
+  return {
+    ...o,
+    id: String(o.id),
+    customer_id: String(o.customer_id ?? o.customer ?? ""),
+    merchant_id: String(o.merchant_id ?? o.merchant ?? ""),
+    order_items: items,
+    profiles: { full_name: o.customer_name ?? null },
+    merchant_profiles: { business_name: o.merchant_name ?? "" },
+  };
 }
 
 // ── Menu Items ────────────────────────────────────────────────────────────────
 
 export const menuApi = {
   myItems: async (): Promise<MenuItem[]> => {
-    const userId = await getCurrentUserId();
-    const merchant = await getMerchantProfile(userId);
-    const { data, error } = await supabase
-      .from("menu_items")
-      .select("*")
-      .eq("merchant_id", merchant.id)
-      .order("created_at", { ascending: false });
-    if (error) throw new Error(error.message);
-    return (data ?? []) as MenuItem[];
+    return djangoFetch<MenuItem[]>(apiUrl("/merchants/menu-items/"), {
+      headers: authHeaders(),
+    });
   },
 
   create: async (input: Partial<MenuItemInput>): Promise<MenuItem> => {
-    const userId = await getCurrentUserId();
-    const merchant = await getMerchantProfile(userId);
-    const { data, error } = await supabase
-      .from("menu_items")
-      .insert({ ...input, merchant_id: merchant.id })
-      .select()
-      .single();
-    if (error) throw new Error(error.message);
-    return data as MenuItem;
+    return djangoFetch<MenuItem>(apiUrl("/merchants/menu-items/"), {
+      method: "POST",
+      headers: authHeaders(true),
+      body: JSON.stringify(input),
+    });
   },
 
   update: async (id: string, input: Partial<MenuItemInput>): Promise<MenuItem> => {
-    const { data, error } = await supabase
-      .from("menu_items")
-      .update({ ...input, updated_at: new Date().toISOString() })
-      .eq("id", id)
-      .select()
-      .single();
-    if (error) throw new Error(error.message);
-    return data as MenuItem;
+    return djangoFetch<MenuItem>(apiUrl(`/merchants/menu-items/${id}/`), {
+      method: "PATCH",
+      headers: authHeaders(true),
+      body: JSON.stringify(input),
+    });
   },
 
   delete: async (id: string): Promise<void> => {
-    const { error } = await supabase.from("menu_items").delete().eq("id", id);
-    if (error) throw new Error(error.message);
+    return djangoFetch<void>(apiUrl(`/merchants/menu-items/${id}/`), {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
   },
 
   toggleAvailability: async (id: string): Promise<MenuItem> => {
-    const { data: current, error: fetchErr } = await supabase
-      .from("menu_items")
-      .select("is_available")
-      .eq("id", id)
-      .single();
-    if (fetchErr || !current) throw new Error("Item not found");
-    const { data, error } = await supabase
-      .from("menu_items")
-      .update({ is_available: !current.is_available, updated_at: new Date().toISOString() })
-      .eq("id", id)
-      .select()
-      .single();
-    if (error) throw new Error(error.message);
-    return data as MenuItem;
+    return djangoFetch<MenuItem>(apiUrl(`/merchants/menu-items/${id}/toggle-availability/`), {
+      method: "PATCH",
+      headers: authHeaders(),
+    });
   },
 
   forMerchant: async (merchantId: string): Promise<MenuItem[]> => {
-    const { data, error } = await supabase
-      .from("menu_items")
-      .select("*")
-      .eq("merchant_id", merchantId)
-      .eq("is_available", true)
-      .order("category");
-    if (error) throw new Error(error.message);
-    return (data ?? []) as MenuItem[];
+    return djangoFetch<MenuItem[]>(apiUrl(`/merchants/${merchantId}/menu/`));
   },
 };
 
@@ -258,118 +367,61 @@ export const menuApi = {
 
 export const orderApi = {
   myOrders: async (): Promise<Order[]> => {
-    const userId = await getCurrentUserId();
-    const { data, error } = await supabase
-      .from("orders")
-      .select("*, order_items(*), merchant_profiles(store_name)")
-      .eq("customer_id", userId)
-      .order("created_at", { ascending: false });
-    if (error) throw new Error(error.message);
-    return (data ?? []) as Order[];
+    const data = await djangoFetch<any[]>(apiUrl("/orders/my-orders/"), {
+      headers: authHeaders(),
+    });
+    return data.map(normaliseOrder);
   },
 
   storeOrders: async (filterStatus?: string): Promise<Order[]> => {
-    const userId = await getCurrentUserId();
-    const merchant = await getMerchantProfile(userId);
-    let query = supabase
-      .from("orders")
-      .select("*, order_items(*), profiles(full_name)")
-      .eq("merchant_id", merchant.id)
-      .order("created_at", { ascending: false });
-    if (filterStatus) query = query.eq("status", filterStatus);
-    const { data, error } = await query;
-    if (error) throw new Error(error.message);
-    return (data ?? []) as Order[];
+    const qs = filterStatus ? `?status=${filterStatus}` : "";
+    const data = await djangoFetch<any[]>(apiUrl(`/orders/store-orders/${qs}`), {
+      headers: authHeaders(),
+    });
+    return data.map(normaliseOrder);
   },
 
   create: async (payload: CreateOrderPayload): Promise<Order> => {
-    const userId = await getCurrentUserId();
-    const total = payload.items.reduce((sum, i) => sum + i.price * i.quantity, 0);
-    const pointsEarned = payload.items.reduce(
-  (sum, i) => sum + (i.points_per_item ?? 0) * i.quantity,
-  0
-);
-
-    const { data: order, error: orderErr } = await supabase
-      .from("orders")
-      .insert({
-        customer_id: userId,
-        merchant_id: payload.merchant_id,
-        status: "pending",
-        total_amount: total,
-        points_earned: pointsEarned,
-        notes: payload.notes ?? "",
-      })
-      .select()
-      .single();
-    if (orderErr || !order) throw new Error(orderErr?.message ?? "Failed to create order");
-
-    const orderItems = payload.items.map((i) => ({
-      order_id: order.id,
-      menu_item_id: i.menu_item_id,
-      name: i.name,
-      price: i.price,
-      quantity: i.quantity,
-      subtotal: i.price * i.quantity,
-    }));
-    const { error: itemsErr } = await supabase.from("order_items").insert(orderItems);
-    if (itemsErr) throw new Error(itemsErr.message);
-
-    return { ...order, order_items: orderItems } as Order;
+    // Django create-order body uses integer IDs and simple items array
+    const body = {
+      merchant_id: payload.merchant_id,
+      items: payload.items.map((i) => ({
+        menu_item_id: i.menu_item_id,
+        quantity: i.quantity,
+      })),
+      notes: payload.notes ?? "",
+    };
+    const data = await djangoFetch<any>(apiUrl("/orders/create/"), {
+      method: "POST",
+      headers: authHeaders(true),
+      body: JSON.stringify(body),
+    });
+    return normaliseOrder(data);
   },
 
   updateStatus: async (id: string, status: OrderStatus): Promise<Order> => {
-    const { data, error } = await supabase
-      .from("orders")
-      .update({ status, updated_at: new Date().toISOString() })
-      .eq("id", id)
-      .select("*, order_items(*), profiles(full_name)")
-      .single();
-    if (error) throw new Error(error.message);
-
-// Change: if (status === "completed") {
-// To:
-if (status === "confirmed") {
-  if (data.points_earned > 0) {
-    await (supabase.rpc as any)("increment_points", {
-      user_id: data.customer_id,
-      pts: data.points_earned,
-    }).throwOnError();
-  }
-
-  await (supabase.rpc as any)("increment_punch_card", {
-    p_customer_id: data.customer_id,
-    p_merchant_id: data.merchant_id,
-  }).throwOnError();
-
-  await (supabase.rpc as any)("try_increment_streak", {
-    p_customer_id: data.customer_id,
-    p_merchant_id: data.merchant_id,
-    p_order_total: parseFloat(data.total_amount),
-  }).throwOnError();
-}
-    return data as Order;
+    const data = await djangoFetch<any>(apiUrl(`/orders/${id}/update-status/`), {
+      method: "PATCH",
+      headers: authHeaders(true),
+      body: JSON.stringify({ status }),
+    });
+    return normaliseOrder(data);
   },
 
   cancel: async (id: string): Promise<Order> => {
-    const { data, error } = await supabase
-      .from("orders")
-      .update({ status: "cancelled", updated_at: new Date().toISOString() })
-      .eq("id", id)
-      .select("*, order_items(*)")
-      .single();
-    if (error) throw new Error(error.message);
-    return data as Order;
+    const data = await djangoFetch<any>(apiUrl(`/orders/${id}/cancel/`), {
+      method: "PATCH",
+      headers: authHeaders(true),
+      body: JSON.stringify({}),
+    });
+    return normaliseOrder(data);
   },
 
   get: async (id: string): Promise<Order> => {
-    const { data, error } = await supabase
-      .from("orders")
-      .select("*, order_items(*), profiles(full_name), merchant_profiles(store_name)")
-      .eq("id", id)
-      .single();
-    if (error) throw new Error(error.message);
-    return data as Order;
+    const data = await djangoFetch<any>(apiUrl(`/orders/${id}/`), {
+      headers: authHeaders(),
+    });
+    return normaliseOrder(data);
   },
 };
 
@@ -377,40 +429,29 @@ if (status === "confirmed") {
 
 export const merchantApi = {
   me: async (): Promise<MerchantProfile> => {
-    const userId = await getCurrentUserId();
-    return getMerchantProfile(userId);
+    return djangoFetch<MerchantProfile>(apiUrl("/merchants/me/"), {
+      headers: authHeaders(),
+    });
   },
 
   list: async (): Promise<MerchantProfile[]> => {
-    const { data, error } = await supabase
-      .from("merchant_profiles")
-      .select("*")
-      .order("store_name");
-    if (error) throw new Error(error.message);
-    return (data ?? []) as MerchantProfile[];
+    return djangoFetch<MerchantProfile[]>(apiUrl("/merchants/"));
   },
 
   get: async (id: string): Promise<MerchantProfile> => {
-    const { data, error } = await supabase
-      .from("merchant_profiles")
-      .select("*")
-      .eq("id", id)
-      .single();
-    if (error) throw new Error(error.message);
-    return data as MerchantProfile;
+    return djangoFetch<MerchantProfile>(apiUrl(`/merchants/${id}/`));
+  },
+
+  bySlug: async (slug: string): Promise<MerchantProfile> => {
+    return djangoFetch<MerchantProfile>(apiUrl(`/merchants/slug/${encodeURIComponent(slug)}/`));
   },
 
   update: async (input: Partial<MerchantProfile>): Promise<MerchantProfile> => {
-    const userId = await getCurrentUserId();
-    const merchant = await getMerchantProfile(userId);
-    const { data, error } = await supabase
-      .from("merchant_profiles")
-      .update(input)
-      .eq("id", merchant.id)
-      .select()
-      .single();
-    if (error) throw new Error(error.message);
-    return data as MerchantProfile;
+    return djangoFetch<MerchantProfile>(apiUrl("/merchants/me/update/"), {
+      method: "PATCH",
+      headers: authHeaders(true),
+      body: JSON.stringify(input),
+    });
   },
 };
 
@@ -418,142 +459,154 @@ export const merchantApi = {
 
 export const customerApi = {
   profile: async (): Promise<CustomerProfile> => {
-    const userId = await getCurrentUserId();
- 
-    // Fetch profile — columns: id, full_name, points, streak, tier
-// customerApi.profile — update the select and return:
-const { data, error } = await supabase
-  .from("profiles")
-  .select("id, full_name, points, streak, tier, last_streak_at, streak_free_earned")
-  .eq("id", userId)
-  .maybeSingle();
-
-if (error || !data) throw new Error(error?.message ?? "Profile not found");
-
-const { count } = await supabase
-  .from("orders")
-  .select("id", { count: "exact", head: true })
-  .eq("customer_id", userId)
-  .eq("status", "completed");
-
-return {
-  id: data.id,
-  full_name: data.full_name,
-  loyalty_points: data.points ?? 0,
-  streak_days: data.streak ?? 0,          // maps "streak" column → streak_days
-  tier: data.tier ?? "Bronze",
-  total_orders: count ?? 0,
-  last_streak_at: (data as any).last_streak_at ?? null,
-  streak_free_earned: (data as any).streak_free_earned ?? false,
-};
-  },
-
-   getPunchCard: async (merchantId: string): Promise<PunchCard | null> => {
-    const userId = await getCurrentUserId();
- 
-    const { data, error } = await supabase
-      .from("punch_cards")
-      .select("*")
-      .eq("customer_id", userId)
-      .eq("merchant_id", merchantId)
-      .maybeSingle();
- 
-    if (error) throw new Error(error.message);
- 
-    if (!data) return null; // No orders placed at this merchant yet — caller shows 0/5
- 
+    const data = await djangoFetch<any>(apiUrl("/auth/me/"), {
+      headers: authHeaders(),
+    });
+    const cp = data.customer_profile ?? {};
     return {
-      ...data,
-      // Normalise nullable columns so UI never gets undefined
-      punch_count: data.punch_count ?? 0,
-      lifetime_punches: data.lifetime_punches ?? 0,
-      punches_to_free: data.punches_to_free ?? 5,
-      free_reward_available: data.free_reward_available ?? false,
-    } as PunchCard;
+      id: String(data.id),
+      full_name: cp.full_name ?? null,
+      loyalty_points: cp.loyalty_points ?? 0,
+      streak_days: cp.streak_days ?? 0,
+      tier: cp.tier ?? "bronze",
+      total_orders: cp.total_orders ?? 0,
+    };
   },
 
-  useFreeReward: async (merchantId: string): Promise<void> => {
-    const userId = await getCurrentUserId();
-    await (supabase.rpc as any)("use_free_reward", {
-      p_customer_id: userId,
-      p_merchant_id: merchantId,
-    }).throwOnError();
+  // old PunchCard APIs removed
+
+  /** Merchant-scoped wallet — source of truth for points at a store. */
+  getWallet: async (merchantId: string): Promise<CustomerMerchantWallet | null> => {
+    try {
+      const data = await djangoFetch<any>(
+        apiUrl(`/loyalty/wallets/mine/?merchant=${merchantId}`),
+        { headers: authHeaders() }
+      );
+      if (!data) return null;
+      return {
+        id: String(data.id ?? ""),
+        merchant_id: String(data.merchant_id ?? merchantId),
+        merchant_name: data.merchant_name ?? "",
+        merchant_slug: data.merchant_slug ?? "",
+        points_balance: data.points_balance ?? 0,
+        lifetime_points: data.lifetime_points ?? 0,
+        expired_points: data.expired_points ?? 0,
+        order_count: data.order_count ?? 0,
+        streak_days: data.streak_days ?? 0,
+        last_order_date: data.last_order_date ?? null,
+        last_point_earned_at: data.last_point_earned_at ?? null,
+        tier_level: data.tier_level ?? "bronze",
+        created_at: data.created_at ?? "",
+        updated_at: data.updated_at ?? "",
+      };
+    } catch {
+      return null;
+    }
+  },
+
+  listWallets: async (): Promise<CustomerMerchantWallet[]> => {
+    const data = await djangoFetch<any[]>(apiUrl("/loyalty/wallets/"), {
+      headers: authHeaders(),
+    });
+    return (data ?? []).map((w) => ({
+      id: String(w.id ?? ""),
+      merchant_id: String(w.merchant_id ?? ""),
+      merchant_name: w.merchant_name ?? "",
+      merchant_slug: w.merchant_slug ?? "",
+      points_balance: w.points_balance ?? 0,
+      lifetime_points: w.lifetime_points ?? 0,
+      expired_points: w.expired_points ?? 0,
+      order_count: w.order_count ?? 0,
+      streak_days: w.streak_days ?? 0,
+      last_order_date: w.last_order_date ?? null,
+      last_point_earned_at: w.last_point_earned_at ?? null,
+      tier_level: w.tier_level ?? "bronze",
+      created_at: w.created_at ?? "",
+      updated_at: w.updated_at ?? "",
+    }));
+  },
+
+  joinMerchant: async (merchantSlug: string): Promise<{
+    profile: CustomerMerchantProfile;
+    wallet: CustomerMerchantWallet;
+    created: boolean;
+  }> => {
+    const data = await djangoFetch<any>(apiUrl("/loyalty/merchant-profiles/join/"), {
+      method: "POST",
+      headers: authHeaders(true),
+      body: JSON.stringify({ merchant_slug: merchantSlug }),
+    });
+    const normProfile = (p: any): CustomerMerchantProfile => ({
+      id: String(p.id ?? ""),
+      merchant_id: String(p.merchant_id ?? ""),
+      merchant_name: p.merchant_name ?? "",
+      merchant_slug: p.merchant_slug ?? merchantSlug,
+      joined_at: p.joined_at ?? "",
+      status: p.status ?? "active",
+      created_at: p.created_at ?? "",
+      updated_at: p.updated_at ?? "",
+    });
+    const normWallet = (w: any): CustomerMerchantWallet => ({
+      id: String(w.id ?? ""),
+      merchant_id: String(w.merchant_id ?? ""),
+      merchant_name: w.merchant_name ?? "",
+      merchant_slug: w.merchant_slug ?? merchantSlug,
+      points_balance: w.points_balance ?? 0,
+      lifetime_points: w.lifetime_points ?? 0,
+      expired_points: w.expired_points ?? 0,
+      order_count: w.order_count ?? 0,
+      streak_days: w.streak_days ?? 0,
+      last_order_date: w.last_order_date ?? null,
+      last_point_earned_at: w.last_point_earned_at ?? null,
+      tier_level: w.tier_level ?? "bronze",
+      created_at: w.created_at ?? "",
+      updated_at: w.updated_at ?? "",
+    });
+    return {
+      profile: normProfile(data.profile),
+      wallet: normWallet(data.wallet),
+      created: Boolean(data.created),
+    };
   },
 };
 
 // ── Missions ──────────────────────────────────────────────────────────────────
 
 export const missionApi = {
-  myMissions: async (): Promise<MissionView[]> => {
-    const userId = await getCurrentUserId();
-
-    const { data: missions, error: mErr } = await supabase
-      .from("missions")
-      .select("*")
-      .eq("is_active", true);
-    if (mErr) throw new Error(mErr.message);
-
-    const { data: progress } = await supabase
-      .from("customer_missions")
-      .select("*")
-      .eq("customer_id", userId);
-
-    const progressMap = new Map((progress ?? []).map((p) => [p.mission_id, p]));
-
-    return (missions ?? []).map((m) => {
-      const p = progressMap.get(m.id);
-      return {
-        id: m.id,
-        title: m.title,
-        description: m.description,
-        icon: m.icon,
-        target_count: m.target_count,
-        current_count: p?.current_count ?? 0,
-        reward_points: m.reward_points,
-        is_completed: p?.is_completed ?? false,
-        mission_type: m.mission_type,
-      };
+  myMissions: async (merchantId?: string): Promise<MissionView[]> => {
+    const qs = merchantId ? `?merchant=${merchantId}` : "";
+    return djangoFetch<MissionView[]>(apiUrl(`/loyalty/missions/my-missions/${qs}`), {
+      headers: authHeaders(),
     });
   },
 
   merchantMissions: async (): Promise<Mission[]> => {
-    const userId = await getCurrentUserId();
-    const merchant = await getMerchantProfile(userId);
-    const { data, error } = await supabase
-      .from("missions")
-      .select("*")
-      .eq("merchant_id", merchant.id)
-      .order("created_at", { ascending: false });
-    if (error) throw new Error(error.message);
-    return (data ?? []) as Mission[];
+    return djangoFetch<Mission[]>(apiUrl("/loyalty/missions/merchant/"), {
+      headers: authHeaders(),
+    });
   },
 
   create: async (input: Omit<Mission, "id" | "merchant_id" | "created_at">): Promise<Mission> => {
-    const userId = await getCurrentUserId();
-    const merchant = await getMerchantProfile(userId);
-    const { data, error } = await supabase
-      .from("missions")
-      .insert({ ...input, merchant_id: merchant.id })
-      .select()
-      .single();
-    if (error) throw new Error(error.message);
-    return data as Mission;
+    return djangoFetch<Mission>(apiUrl("/loyalty/missions/create/"), {
+      method: "POST",
+      headers: authHeaders(true),
+      body: JSON.stringify(input),
+    });
   },
 
   update: async (id: string, input: Partial<Mission>): Promise<Mission> => {
-    const { data, error } = await supabase
-      .from("missions")
-      .update(input)
-      .eq("id", id)
-      .select()
-      .single();
-    if (error) throw new Error(error.message);
-    return data as Mission;
+    return djangoFetch<Mission>(apiUrl(`/loyalty/missions/${id}/`), {
+      method: "PATCH",
+      headers: authHeaders(true),
+      body: JSON.stringify(input),
+    });
   },
 
   delete: async (id: string): Promise<void> => {
-    const { error } = await supabase.from("missions").delete().eq("id", id);
-    if (error) throw new Error(error.message);
+    return djangoFetch<void>(apiUrl(`/loyalty/missions/${id}/`), {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
   },
 };
 
@@ -561,56 +614,16 @@ export const missionApi = {
 
 export const rewardApi = {
   list: async (merchantId?: string): Promise<Reward[]> => {
-    let query = supabase.from("rewards").select("*").eq("is_active", true);
-    if (merchantId) query = query.eq("merchant_id", merchantId);
-    const { data, error } = await query;
-    if (error) throw new Error(error.message);
-    return (data ?? []) as Reward[];
+    const qs = merchantId ? `?merchant=${merchantId}` : "";
+    return djangoFetch<Reward[]>(apiUrl(`/loyalty/rewards/${qs}`));
   },
 
   redeem: async (rewardId: string): Promise<Redemption> => {
-    const userId = await getCurrentUserId();
-
-    const { data: reward, error: rErr } = await supabase
-      .from("rewards")
-      .select("*")
-      .eq("id", rewardId)
-      .single();
-    if (rErr || !reward) throw new Error("Reward not found");
-
-    const { data: profile, error: pErr } = await supabase
-      .from("profiles")
-      .select("points")
-      .eq("id", userId)
-      .single();
-    if (pErr || !profile) throw new Error("Profile not found");
-    if (profile.points < reward.points_cost) throw new Error("Not enough points");
-
-    // Deduct points via security definer function
-    await (supabase.rpc as any)("deduct_points", {
-      target_user_id: userId,
-      amount: reward.points_cost,
-    }).throwOnError();
-
-    // Create redemption with 6-char code, expires in 10 min
-    const code = Math.random().toString(36).slice(2, 8).toUpperCase();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
-
-    const { data: redemption, error: redErr } = await supabase
-      .from("redemptions")
-      .insert({
-        customer_id: userId,
-        reward_id: rewardId,
-        points_spent: reward.points_cost,
-        status: "pending",
-        code,
-        expires_at: expiresAt,
-      })
-      .select()
-      .single();
-    if (redErr || !redemption) throw new Error(redErr?.message ?? "Redemption failed");
-
-    return redemption as Redemption;
+    return djangoFetch<Redemption>(apiUrl(`/loyalty/rewards/${rewardId}/redeem/`), {
+      method: "POST",
+      headers: authHeaders(true),
+      body: JSON.stringify({}),
+    });
   },
 };
 
@@ -618,155 +631,140 @@ export const rewardApi = {
 
 export const loyaltyApi = {
   getRules: async (): Promise<LoyaltyRules> => {
-    const userId = await getCurrentUserId();
-    const merchant = await getMerchantProfile(userId);
-
-    const { data, error } = await supabase
-      .from("loyalty_rules")
-      .select("*")
-      .eq("merchant_id", merchant.id)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-
-    if (!data) {
-      return {
-        id: "",
-        merchant_id: merchant.id,
-        points_per_npr: 1,
-        streak_multiplier: 1.5,
-        welcome_bonus: 50,
-        birthday_bonus: 100,
-        streak_min_amount: 100,
-        updated_at: new Date().toISOString(),
-      };
-    }
-    return data as LoyaltyRules;
+    return djangoFetch<LoyaltyRules>(apiUrl("/loyalty/rules/"), {
+      headers: authHeaders(),
+    });
   },
 
   saveRules: async (
-    input: Pick<
-      LoyaltyRules,
-      "points_per_npr" | "streak_multiplier" | "welcome_bonus" | "birthday_bonus" | "streak_min_amount"
-    >
+    input: Pick<LoyaltyRules, "points_per_npr" | "streak_multiplier" | "welcome_bonus" | "birthday_bonus" | "streak_min_amount">
   ): Promise<LoyaltyRules> => {
-    const userId = await getCurrentUserId();
-    const merchant = await getMerchantProfile(userId);
-    const { data, error } = await supabase
-      .from("loyalty_rules")
-      .upsert(
-        { ...input, merchant_id: merchant.id, updated_at: new Date().toISOString() },
-        { onConflict: "merchant_id" }
-      )
-      .select()
-      .single();
-    if (error) throw new Error(error.message);
-    return data as LoyaltyRules;
+    return djangoFetch<LoyaltyRules>(apiUrl("/loyalty/rules/"), {
+      method: "PATCH",
+      headers: authHeaders(true),
+      body: JSON.stringify(input),
+    });
   },
 
   getRewards: async (): Promise<Reward[]> => {
-    const userId = await getCurrentUserId();
-    const merchant = await getMerchantProfile(userId);
-    const { data, error } = await supabase
-      .from("rewards")
-      .select("*")
-      .eq("merchant_id", merchant.id)
-      .order("created_at", { ascending: false });
-    if (error) throw new Error(error.message);
-    return (data ?? []) as Reward[];
+    return djangoFetch<Reward[]>(apiUrl("/loyalty/rewards/merchant/"), {
+      headers: authHeaders(),
+    });
   },
 
   createReward: async (input: Omit<Reward, "id" | "merchant_id" | "created_at">): Promise<Reward> => {
-    const userId = await getCurrentUserId();
-    const merchant = await getMerchantProfile(userId);
-    const { data, error } = await supabase
-      .from("rewards")
-      .insert({ ...input, merchant_id: merchant.id })
-      .select()
-      .single();
-    if (error) throw new Error(error.message);
-    return data as Reward;
+    return djangoFetch<Reward>(apiUrl("/loyalty/rewards/create/"), {
+      method: "POST",
+      headers: authHeaders(true),
+      body: JSON.stringify(input),
+    });
   },
 
   updateReward: async (id: string, input: Partial<Reward>): Promise<Reward> => {
-    const { data, error } = await supabase
-      .from("rewards")
-      .update(input)
-      .eq("id", id)
-      .select()
-      .single();
-    if (error) throw new Error(error.message);
-    return data as Reward;
+    return djangoFetch<Reward>(apiUrl(`/loyalty/rewards/${id}/`), {
+      method: "PATCH",
+      headers: authHeaders(true),
+      body: JSON.stringify(input),
+    });
   },
 
   deleteReward: async (id: string): Promise<void> => {
-    const { error } = await supabase.from("rewards").delete().eq("id", id);
-    if (error) throw new Error(error.message);
-  },
-
-  generateRedemptionToken: async (rewardId: string): Promise<{ token: string; redemption_id: string }> => {
-    const token = Math.random().toString(36).slice(2, 8).toUpperCase();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
-    const { data, error } = await supabase
-      .from("redemptions")
-      .insert({
-        reward_id: rewardId,
-        status: "pending",
-        code: token,
-        expires_at: expiresAt,
-      })
-      .select("id")
-      .single();
-    if (error) throw new Error(error.message);
-    return { token, redemption_id: data.id };
+    return djangoFetch<void>(apiUrl(`/loyalty/rewards/${id}/`), {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
   },
 
   confirmRedemption: async (code: string): Promise<{ customer_name: string; points_deducted: number }> => {
-    const { data: redemption, error: rErr } = await supabase
-      .from("redemptions")
-      .select("*, rewards(points_cost, name), customer_id")
-      .eq("code", code)
-      .eq("status", "pending")
-      .gt("expires_at", new Date().toISOString())
-      .maybeSingle();
-    if (rErr) throw new Error(rErr.message);
-    if (!redemption) throw new Error("Invalid or expired code");
-
-    const pointsCost = (redemption.rewards as any)?.points_cost ?? 0;
-
-    const { data: profile, error: pErr } = await supabase
-      .from("profiles")
-      .select("points, full_name")
-      .eq("id", redemption.customer_id)
-      .single();
-    if (pErr || !profile) throw new Error("Customer profile not found");
-    if (profile.points < pointsCost) throw new Error("Customer has insufficient points");
-
-    await (supabase.rpc as any)("deduct_points", {
-      target_user_id: redemption.customer_id,
-      amount: pointsCost,
-    }).throwOnError();
-
-    await supabase
-      .from("redemptions")
-      .update({ status: "confirmed", confirmed_at: new Date().toISOString() })
-      .eq("id", redemption.id);
-
+    const data = await djangoFetch<any>(apiUrl("/loyalty/redemptions/confirm/"), {
+      method: "POST",
+      headers: authHeaders(true),
+      body: JSON.stringify({ code }),
+    });
     return {
-      customer_name: profile.full_name ?? "Customer",
-      points_deducted: pointsCost,
+      customer_name: data.customer_name ?? "Customer",
+      points_deducted: data.points_spent ?? 0,
     };
   },
 
   getRedemptions: async (): Promise<Redemption[]> => {
-    const userId = await getCurrentUserId();
-    const merchant = await getMerchantProfile(userId);
-    const { data, error } = await supabase
-      .from("redemptions")
-      .select("*, rewards!inner(merchant_id, name)")
-      .eq("rewards.merchant_id", merchant.id)
-      .order("created_at", { ascending: false })
-      .limit(50);
-    if (error) throw new Error(error.message);
-    return (data ?? []) as Redemption[];
+    return djangoFetch<Redemption[]>(apiUrl("/loyalty/redemptions/merchant/"), {
+      headers: authHeaders(),
+    });
+  },
+};
+
+// ── Point Transactions ────────────────────────────────────────────────────────
+
+export const transactionApi = {
+  customerList: async (merchantId: string): Promise<PointTransaction[]> => {
+    return djangoFetch<PointTransaction[]>(apiUrl(`/loyalty/transactions/?merchant=${merchantId}`), {
+      headers: authHeaders(),
+    });
+  },
+
+  merchantList: async (): Promise<PointTransaction[]> => {
+    return djangoFetch<PointTransaction[]>(apiUrl("/loyalty/merchant/transactions/"), {
+      headers: authHeaders(),
+    });
+  },
+};
+
+// ── Punch Cards ───────────────────────────────────────────────────────────────
+
+export const punchCardApi = {
+  merchantList: async (): Promise<MerchantPunchCard[]> => {
+    return djangoFetch<MerchantPunchCard[]>(apiUrl("/loyalty/merchant/punch-cards/"), {
+      headers: authHeaders(),
+    });
+  },
+  
+  merchantCreate: async (data: Partial<MerchantPunchCard>): Promise<MerchantPunchCard> => {
+    return djangoFetch<MerchantPunchCard>(apiUrl("/loyalty/merchant/punch-cards/create/"), {
+      method: "POST",
+      headers: authHeaders(true),
+      body: JSON.stringify(data),
+    });
+  },
+
+  merchantUpdate: async (id: string, data: Partial<MerchantPunchCard>): Promise<MerchantPunchCard> => {
+    return djangoFetch<MerchantPunchCard>(apiUrl(`/loyalty/merchant/punch-cards/${id}/`), {
+      method: "PATCH",
+      headers: authHeaders(true),
+      body: JSON.stringify(data),
+    });
+  },
+
+  customerList: async (merchantId: string): Promise<{ active: CustomerPunchCard[]; completed: CustomerPunchCard[] }> => {
+    return djangoFetch<{ active: CustomerPunchCard[]; completed: CustomerPunchCard[] }>(apiUrl(`/loyalty/punch-cards/?merchant=${merchantId}`), {
+      headers: authHeaders(),
+    });
+  },
+
+  customerRedeem: async (id: string): Promise<CustomerPunchCard> => {
+    return djangoFetch<CustomerPunchCard>(apiUrl(`/loyalty/punch-cards/${id}/redeem/`), {
+      method: "POST",
+      headers: authHeaders(),
+    });
+  },
+};
+
+// ── Analytics ─────────────────────────────────────────────────────────────────
+
+export const analyticsApi = {
+  merchant: async (days = 30) => {
+    return djangoFetch<any>(apiUrl(`/merchants/analytics/?days=${days}`), {
+      headers: authHeaders(),
+    });
+  },
+};
+
+// ── Leaderboard ───────────────────────────────────────────────────────────────
+
+export const leaderboardApi = {
+  get: async (merchantId?: string, limit = 10) => {
+    const qs = new URLSearchParams({ limit: String(limit) });
+    if (merchantId) qs.set("merchant", merchantId);
+    return djangoFetch<any[]>(apiUrl(`/loyalty/leaderboard/?${qs}`));
   },
 };

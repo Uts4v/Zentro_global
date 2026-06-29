@@ -1,11 +1,16 @@
-// src/routes/merchant/store.tsx
+// src/routes/merchant.store.tsx
 import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useCallback, useRef } from "react";
-import { MapPin, Clock, Loader2, Save, Check, X, ImageIcon, Upload } from "lucide-react";
+import {
+  MapPin, Clock, Loader2, Save, Check, X,
+  ImageIcon, Upload, QrCode, ExternalLink, RefreshCw,
+} from "lucide-react";
 import { merchantApi, type MerchantProfile } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { optimizeImage } from "@/lib/image-optimize";
 import { uploadImage } from "@/lib/image-upload";
+import { useMutation } from "@tanstack/react-query";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/merchant/store")({
   head: () => ({ meta: [{ title: "Store · Merchant · Zentro" }] }),
@@ -19,20 +24,11 @@ type ImgStatus =
   | { status: "done"; previewUrl: string }
   | { status: "error"; error: string };
 
-// ── Small reusable image uploader used inside this file ───────────────────────
+// ── Inline image uploader ─────────────────────────────────────────────────────
 function InlineImageUploader({
-  label,
-  hint,
-  currentUrl,
-  onUpload,
-  onClear,
-  aspectClass = "aspect-video",
-  shape = "square",
-  disabled = false,
-  merchantId,
-  bucket,
-  storagePath,
-  preset,
+  label, hint, currentUrl, onUpload, onClear,
+  aspectClass = "aspect-video", shape = "square", disabled = false,
+  merchantId, bucket, storagePath, preset,
 }: {
   label: string;
   hint?: string;
@@ -52,19 +48,18 @@ function InlineImageUploader({
   );
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Sync when parent changes currentUrl (e.g. on initial load)
   useEffect(() => {
     if (currentUrl && imgState.status === "idle") {
       setImgState({ status: "done", previewUrl: currentUrl });
     }
   }, [currentUrl]);
 
-  const imgUploading = imgState.status === "processing" || imgState.status === "uploading";
+  const imgUploading =
+    imgState.status === "processing" || imgState.status === "uploading";
   const displayUrl =
     imgState.status === "uploading" || imgState.status === "done"
       ? imgState.previewUrl
       : currentUrl || null;
-
   const radiusCls = shape === "circle" ? "rounded-full" : "rounded-2xl";
 
   async function handleFile(file: File) {
@@ -127,7 +122,11 @@ function InlineImageUploader({
         onDrop={handleDrop}
       >
         {displayUrl ? (
-          <img src={displayUrl} alt={label} className={`h-full w-full object-cover ${radiusCls}`} />
+          <img
+            src={displayUrl}
+            alt={label}
+            className={`h-full w-full object-cover ${radiusCls}`}
+          />
         ) : (
           <div className="flex h-full flex-col items-center justify-center gap-2 bg-mist p-4 text-center">
             <ImageIcon className="h-6 w-6 text-muted-foreground/40" />
@@ -135,8 +134,6 @@ function InlineImageUploader({
             <p className="text-[10px] text-muted-foreground/60">JPG · PNG · WebP · max 5 MB</p>
           </div>
         )}
-
-        {/* Uploading overlay */}
         {imgUploading && (
           <div className={`absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/50 ${radiusCls}`}>
             <Loader2 className="h-7 w-7 animate-spin text-white" />
@@ -145,8 +142,6 @@ function InlineImageUploader({
             </p>
           </div>
         )}
-
-        {/* Done badge */}
         {imgState.status === "done" && (
           <div className="absolute bottom-2 right-2">
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 shadow">
@@ -154,8 +149,6 @@ function InlineImageUploader({
             </span>
           </div>
         )}
-
-        {/* Clear button */}
         {displayUrl && !imgUploading && !disabled && (
           <button
             type="button"
@@ -166,8 +159,6 @@ function InlineImageUploader({
           </button>
         )}
       </div>
-
-      {/* Status row */}
       <div className="flex min-h-[18px] items-center justify-between">
         {imgState.status === "error" && (
           <p className="text-xs text-rose-500">{imgState.error}</p>
@@ -190,6 +181,131 @@ function InlineImageUploader({
   );
 }
 
+// ── QR Code section ───────────────────────────────────────────────────────────
+function QRSection({
+  profile,
+  onRegenerate,
+}: {
+  profile: MerchantProfile | null;
+  onRegenerate: () => void;
+}) {
+  const { refreshMerchantProfile } = useAuth();
+  const storeUrl = `${window.location.origin}/customer/merchant/${profile?.slug ?? ""}`;
+
+  const generateQR = useMutation({
+    mutationFn: () =>
+      merchantApi.update({
+        business_name: profile?.business_name,
+        slug: profile?.slug,
+      }),
+    onSuccess: async () => {
+      await refreshMerchantProfile();
+      onRegenerate();
+      toast.success("QR code generated!");
+    },
+    onError: () => {
+      toast.error("Failed to generate QR code.");
+    },
+  });
+
+  return (
+    <section className="glass-strong rounded-3xl p-6">
+      <div className="flex items-center gap-2">
+        <QrCode className="h-4 w-4 text-muted-foreground" />
+        <h2 className="font-display text-2xl text-ink">QR Code &amp; Store Link</h2>
+      </div>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Customers scan this to open your loyalty page. Print it and place it at your counter.
+      </p>
+
+      <div className="mt-6 flex flex-col items-center gap-6 sm:flex-row sm:items-start">
+
+        {/* Left column — QR image + buttons */}
+        <div className="flex shrink-0 flex-col items-center gap-3">
+          {profile?.qr_code ? (
+            <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">
+              <img
+                src={profile.qr_code}
+                alt={`QR code for ${profile.business_name}`}
+                className="h-48 w-48"
+              />
+            </div>
+          ) : (
+            <div className="flex h-48 w-48 flex-col items-center justify-center gap-2 rounded-2xl border-2 border-dashed border-border bg-mist">
+              <QrCode className="h-12 w-12 text-muted-foreground/30" />
+              <p className="text-center text-xs text-muted-foreground">No QR yet</p>
+            </div>
+          )}
+
+          {/* Action buttons */}
+          <div className="flex gap-2">
+            {profile?.qr_code && (
+              <a href={profile.qr_code}
+                download={`${profile.slug}-qr.png`}
+                className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-xs text-muted-foreground transition-colors hover:border-ink hover:text-ink"
+              >
+                Download
+              </a>
+            )}
+            <button
+              onClick={() => generateQR.mutate()}
+              disabled={generateQR.isPending}
+              className="inline-flex items-center gap-1.5 rounded-full border border-border px-4 py-2 text-xs text-muted-foreground transition-colors hover:border-ink hover:text-ink disabled:opacity-50"
+            >
+              {generateQR.isPending ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3 w-3" />
+              )}
+              {profile?.qr_code ? "Regenerate" : "Generate QR"}
+            </button>
+          </div>
+        </div>
+        {/* End left column */}
+
+        {/* Right column — store link + slug info */}
+        <div className="flex flex-1 flex-col gap-4">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+              Your store link
+            </p>
+            <div className="mt-2 flex items-center gap-2 rounded-2xl bg-mist px-4 py-3">
+              <span className="flex-1 truncate text-sm text-ink">{storeUrl}</span>
+              <a href={`/customer/merchant/${profile?.slug}`}
+                target="_blank"
+                rel="noreferrer"
+                className="shrink-0 text-muted-foreground hover:text-ink"
+              >
+                <ExternalLink className="h-4 w-4" />
+              </a>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+              Your slug
+            </p>
+            <p className="mt-1 text-sm text-ink">
+              <span className="text-muted-foreground">/customer/merchant/</span>
+              <span className="font-medium">{profile?.slug ?? "—"}</span>
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              To change your slug, contact support.
+            </p>
+          </div>
+
+          <div className="rounded-2xl bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-700">
+            The QR code points to your public customer page. It contains no
+            private tokens — safe to print and share anywhere.
+          </div>
+        </div>
+        {/* End right column */}
+
+      </div>
+    </section>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 function StoreConfig() {
   const { merchantProfile: authMerchant } = useAuth();
@@ -200,7 +316,7 @@ function StoreConfig() {
   const [error, setError] = useState<string | null>(null);
 
   const [form, setForm] = useState({
-    store_name: "",
+    business_name: "",
     description: "",
     business_type: "",
     address: "",
@@ -217,7 +333,7 @@ function StoreConfig() {
       const data = await merchantApi.me();
       setProfile(data);
       setForm({
-        store_name: data.store_name || "",
+        business_name: data.business_name || "",
         description: data.description || "",
         business_type: data.business_type || "",
         address: data.address || "",
@@ -227,7 +343,7 @@ function StoreConfig() {
         is_open: data.is_open ?? true,
       });
     } catch (err) {
-      setError("Could not load your store profile. Make sure you're logged in as a merchant.");
+      setError("Could not load your store profile.");
     } finally {
       setLoading(false);
     }
@@ -243,7 +359,7 @@ function StoreConfig() {
       const updated = await merchantApi.update(form);
       setProfile(updated);
       setForm({
-        store_name: updated.store_name || "",
+        business_name: updated.business_name || "",
         description: updated.description || "",
         business_type: updated.business_type || "",
         address: updated.address || "",
@@ -276,14 +392,17 @@ function StoreConfig() {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
         <p className="text-sm text-destructive">{error}</p>
-        <button onClick={fetchProfile} className="h-10 rounded-full bg-ink px-5 text-sm font-medium text-primary-foreground">
+        <button
+          onClick={fetchProfile}
+          className="h-10 rounded-full bg-ink px-5 text-sm font-medium text-primary-foreground"
+        >
           Retry
         </button>
       </div>
     );
   }
 
-  const merchantId = profile?.id ?? "";
+  const merchantId = String(profile?.id ?? "");
 
   return (
     <div className="space-y-8">
@@ -313,15 +432,16 @@ function StoreConfig() {
         )}
       </div>
 
+      {/* ── QR Code & Store Link ── */}
+      <QRSection profile={profile} onRegenerate={fetchProfile} />
+
       {/* ── Banner + Logo images ── */}
       <section className="glass-strong rounded-3xl p-6 space-y-6">
         <h2 className="font-display text-2xl text-ink">Images</h2>
-
-        {/* Banner — wide 12:5 */}
         {merchantId && (
           <InlineImageUploader
             label="Store banner"
-            hint="Recommended 1200 × 500 px — shown at the top of your store page"
+            hint="Recommended 1200 × 500 px"
             currentUrl={form.banner_url}
             onUpload={(url) => updateField("banner_url", url)}
             onClear={() => updateField("banner_url", "")}
@@ -333,8 +453,6 @@ function StoreConfig() {
             preset="banner"
           />
         )}
-
-        {/* Logo — circle */}
         {merchantId && (
           <div className="flex items-start gap-5">
             <div className="w-28 shrink-0">
@@ -361,7 +479,7 @@ function StoreConfig() {
       </section>
 
       {/* ── Live preview card ── */}
-      {(form.logo_url || form.banner_url || form.store_name) && (
+      {(form.logo_url || form.banner_url || form.business_name) && (
         <section className="glass-strong overflow-hidden rounded-3xl">
           <p className="px-5 pt-4 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Preview</p>
           <div
@@ -385,7 +503,7 @@ function StoreConfig() {
                 {!form.logo_url && "☕"}
               </div>
               <div className="pb-1">
-                <p className="font-display text-lg text-ink">{form.store_name || "Your store name"}</p>
+                <p className="font-display text-lg text-ink">{form.business_name || "Your store name"}</p>
                 <p className="text-xs text-muted-foreground">{form.business_type || "Café"}</p>
               </div>
             </div>
@@ -397,9 +515,23 @@ function StoreConfig() {
       <section className="glass-strong rounded-3xl p-6">
         <h2 className="font-display text-2xl text-ink">Details</h2>
         <div className="mt-5 space-y-4">
-          <Field label="Store name" value={form.store_name} onChange={(v) => updateField("store_name", v)} />
-          <Field label="Tagline / Description" value={form.description} onChange={(v) => updateField("description", v)} multiline />
-          <Field label="Category" value={form.business_type} onChange={(v) => updateField("business_type", v)} placeholder="e.g. Café · Bakery" />
+          <Field
+            label="Business name"
+            value={form.business_name}
+            onChange={(v) => updateField("business_name", v)}
+          />
+          <Field
+            label="Tagline / Description"
+            value={form.description}
+            onChange={(v) => updateField("description", v)}
+            multiline
+          />
+          <Field
+            label="Category"
+            value={form.business_type}
+            onChange={(v) => updateField("business_type", v)}
+            placeholder="e.g. Café · Bakery"
+          />
         </div>
       </section>
 
@@ -410,8 +542,18 @@ function StoreConfig() {
             <MapPin className="h-3.5 w-3.5" /> Location
           </div>
           <div className="mt-3 space-y-3">
-            <Field label="Address" value={form.address} onChange={(v) => updateField("address", v)} placeholder="42 Thamel Street, Kathmandu" />
-            <Field label="Phone" value={form.phone} onChange={(v) => updateField("phone", v)} placeholder="+977 98-0000-0000" />
+            <Field
+              label="Address"
+              value={form.address}
+              onChange={(v) => updateField("address", v)}
+              placeholder="42 Thamel Street, Kathmandu"
+            />
+            <Field
+              label="Phone"
+              value={form.phone}
+              onChange={(v) => updateField("phone", v)}
+              placeholder="+977 98-0000-0000"
+            />
           </div>
         </section>
         <section className="glass-strong rounded-3xl p-6">
@@ -456,12 +598,9 @@ function StoreConfig() {
   );
 }
 
+// ── Field component ───────────────────────────────────────────────────────────
 function Field({
-  label,
-  value,
-  onChange,
-  placeholder,
-  multiline = false,
+  label, value, onChange, placeholder, multiline = false,
 }: {
   label: string;
   value: string;

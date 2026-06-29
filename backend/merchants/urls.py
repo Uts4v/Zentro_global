@@ -1,12 +1,33 @@
 # merchants/urls.py
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from .views import MerchantViewSet, MenuItemViewSet
+"""
+Mounted at /api/merchants/
 
-router = DefaultRouter()
-router.register(r"profiles", MerchantViewSet, basename="merchant")
-router.register(r"menu-items", MenuItemViewSet, basename="menuitem")
+Order matters — specific paths (me/, analytics/, menu-items/, slug/)
+must come before the generic <int:pk>/ catch-all.
+"""
+
+from django.urls import path
+from . import views
 
 urlpatterns = [
-    path("", include(router.urls)),
+    # ── Authenticated merchant ────────────────────────────────────────────────
+    path("me/",                  views.merchant_me,             name="merchant-me"),
+    path("me/update/",           views.merchant_update,         name="merchant-update"),
+    path("analytics/",           views.merchant_analytics,      name="merchant-analytics"),
+
+    # ── Menu items ────────────────────────────────────────────────────────────
+    path("menu-items/my-items/", views.my_menu_items,           name="my-menu-items"),
+    path("menu-items/",          views.menu_item_list_create,   name="menu-item-list-create"),
+    path("menu-items/<int:pk>/", views.menu_item_detail,        name="menu-item-detail"),
+    path(
+        "menu-items/<int:pk>/toggle-availability/",
+        views.toggle_availability,
+        name="toggle-availability",
+    ),
+
+    # ── Public merchant pages ─────────────────────────────────────────────────
+    path("",                     views.merchant_list,           name="merchant-list"),
+    path("slug/<slug:slug>/",    views.merchant_by_slug,        name="merchant-by-slug"),
+    path("<int:pk>/",            views.merchant_detail,         name="merchant-detail"),
+    path("<int:pk>/menu/",       views.merchant_menu,           name="merchant-public-menu"),
 ]

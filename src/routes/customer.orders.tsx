@@ -32,8 +32,8 @@ function CustomerOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [expanded, setExpanded] = useState<number | null>(null);
-  const [cancelling, setCancelling] = useState<number | null>(null);
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [cancelling, setCancelling] = useState<string | null>(null);
 
   useEffect(() => {
     load();
@@ -52,11 +52,11 @@ function CustomerOrders() {
     }
   }
 
-  async function handleCancel(id: number) {
+  async function handleCancel(id: string) {
     if (!confirm("Cancel this order?")) return;
     setCancelling(id);
     try {
-      const updated = await orderApi.cancel(id);
+      const updated = await orderApi.cancel(id as any);
       setOrders((prev) => prev.map((o) => (o.id === id ? updated : o)));
     } catch (e: any) {
       setError(e.message);
@@ -180,7 +180,7 @@ function OrderRow({
         </div>
         <div className="text-right">
           <p className="font-display text-xl text-ink">NPR {Number(order.total_amount).toLocaleString()}</p>
-          <p className="mt-1 text-xs text-muted-foreground">{order.items.length} item{order.items.length !== 1 ? "s" : ""}</p>
+          <p className="mt-1 text-xs text-muted-foreground">{(order.items ?? []).length} item{(order.items ?? []).length !== 1 ? "s" : ""}</p>
         </div>
         {expanded ? (
           <ChevronUp className="h-4 w-4 shrink-0 text-muted-foreground" />
@@ -219,7 +219,7 @@ function OrderRow({
 
           {/* Items */}
           <ul className="space-y-1.5">
-            {order.items.map((item) => (
+            {(order.items ?? []).map((item) => (
               <li key={item.id} className="flex justify-between text-sm">
                 <span className="text-ink">{item.quantity}× {item.name}</span>
                 <span className="text-muted-foreground">NPR {Number(item.subtotal).toLocaleString()}</span>

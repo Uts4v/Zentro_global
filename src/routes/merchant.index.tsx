@@ -8,7 +8,7 @@ import {
   ShoppingBag,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabase";
+import { analyticsApi } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/merchant/")({
@@ -24,15 +24,37 @@ interface TopItem {
 }
 
 interface OverviewStats {
-  hourly_velocity: {
-    hour: string;
-    count: number;
-  }[];
+  hourly_velocity: { hour: string; count: number }[];
   velocity_change: number;
   active_members: number;
-  today: {
-    orders: number;
-    revenue: number;
+  today: { orders: number; revenue: number };
+}
+
+// Build a today-centric OverviewStats from the Django analytics response
+function buildOverviewStats(data: any): OverviewStats {
+  const daily: any[] = data.daily_revenue ?? [];
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayRow = daily.find((d: any) => d.date === todayStr);
+
+  // Hourly velocity: use daily_revenue as a proxy (last 12 entries → last 12 days)
+  // Django doesn't yet expose hourly granularity — we use daily points as bars.
+  const velocity = daily.slice(-12).map((d: any) => ({
+    hour: d.date,
+    count: Number(d.orders ?? 0),
+  }));
+
+  const prev = daily.length >= 2 ? Number(daily[daily.length - 2]?.revenue ?? 0) : 0;
+  const curr = todayRow ? Number(todayRow.revenue ?? 0) : 0;
+  const velocityChange = prev > 0 ? Math.round(((curr - prev) / prev) * 100) : 0;
+
+  return {
+    hourly_velocity: velocity,
+    velocity_change: velocityChange,
+    active_members: data.top_customers?.length ?? 0,
+    today: {
+      orders: todayRow ? Number(todayRow.orders ?? 0) : 0,
+      revenue: todayRow ? Number(todayRow.revenue ?? 0) : 0,
+    },
   };
 }
 
@@ -67,61 +89,25 @@ function Overview() {
       setError("");
 
       try {
-        const [statsRes, topItemsRes] = await Promise.all([
-          supabase.rpc("get_merchant_overview_stats"),
-          supabase
-            .from("order_items")
-            .select("name, menu_item_id, quantity, orders!inner(merchant_id)")
-            .eq("orders.merchant_id", merchantProfile.id),
-        ]);
-
+        const data = await analyticsApi.merchant(30);
         if (cancelled) return;
 
-        if (statsRes.error) {
-          throw new Error(statsRes.error.message);
-        }
+        setStats(buildOverviewStats(data));
 
-        setStats((statsRes.data ?? null) as OverviewStats | null);
-
-        if (topItemsRes.error) {
-          console.warn("Top items failed:", topItemsRes.error.message);
-          setTopItems([]);
-          return;
-        }
-
-        const soldMap = new Map<string, { name: string; quantity: number }>();
-
-        for (const row of (topItemsRes.data ?? []) as any[]) {
-          const name = row.name || "Unnamed item";
-          const quantity = Number(row.quantity ?? 0);
-
-          const current = soldMap.get(name);
-
-          soldMap.set(name, {
-            name,
-            quantity: (current?.quantity ?? 0) + quantity,
-          });
-        }
-
-        const rankedItems = Array.from(soldMap.values())
-          .sort((a, b) => b.quantity - a.quantity)
+        // Top items from Django analytics
+        const rankedItems = (data.top_items ?? [])
           .slice(0, 4)
-          .map((item, index) => ({
+          .map((item: any, index: number) => ({
             id: `${index}-${item.name}`,
             name: item.name,
             emoji: "☕",
-            sold: item.quantity,
+            sold: item.total_qty ?? 0,
           }));
-
         setTopItems(rankedItems);
       } catch (err: any) {
-        if (!cancelled) {
-          setError(err?.message || "Failed to load merchant overview");
-        }
+        if (!cancelled) setError(err?.message || "Failed to load merchant overview");
       } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
+        if (!cancelled) setLoading(false);
       }
     }
 
@@ -202,7 +188,7 @@ function Overview() {
             </p>
 
             <h1 className="font-display mt-3 text-4xl leading-tight text-ink sm:text-5xl">
-              {getGreeting()}, {merchantProfile.store_name.split(" ")[0]}.
+              {getGreeting()}, {(merchantProfile.business_name ?? "there").split(" ")[0]}.
             </h1>
 
             <p className="mt-3 max-w-xl text-sm leading-6 text-muted-foreground">
@@ -253,10 +239,10 @@ function Overview() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-                Last 12 hours
+                Last 12 days
               </p>
               <h2 className="font-display mt-1 text-2xl text-ink">
-                Order velocity
+                Order trend
               </h2>
             </div>
 
@@ -282,12 +268,9 @@ function Overview() {
                     ? Math.max((item.count / maxVelocity) * 100, 10)
                     : 3;
 
-                const hourLabel = new Date(item.hour).toLocaleTimeString(
+                const hourLabel = new Date(item.hour).toLocaleDateString(
                   "en-US",
-                  {
-                    hour: "numeric",
-                    hour12: true,
-                  },
+                  { month: "short", day: "numeric" },
                 );
 
                 return (

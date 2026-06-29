@@ -1,19 +1,37 @@
+/**
+ * src/lib/merchant-auth-guard.ts
+ *
+ * Guards merchant-only routes. Checks both token presence and the `role`
+ * claim embedded in the JWT payload.
+ */
+
 import { redirect } from "@tanstack/react-router";
-import { authReady } from "@/lib/supabase-auth-ready";
+import { tokenStore } from "@/lib/django-api-base";
+
+function getTokenPayload(): Record<string, any> | null {
+  if (typeof window === "undefined") return null;
+  const access = tokenStore.getAccess();
+  if (!access) return null;
+  try {
+    const payload = JSON.parse(atob(access.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
+    if (payload.exp < Math.floor(Date.now() / 1000)) return null; // expired
+    return payload;
+  } catch {
+    return null;
+  }
+}
 
 export async function requireMerchant() {
-  // Skip on SSR — no session available server-side, client will re-run on hydration
   if (typeof window === "undefined") return;
 
   const redirectPath = window.location.pathname;
-  const session = await authReady;
+  const payload = getTokenPayload();
 
-  if (!session) {
+  if (!payload) {
     throw redirect({ to: "/auth/merchant", search: { redirect: redirectPath } });
   }
 
-  const role = session.user?.user_metadata?.role;
-  if (role !== "merchant") {
+  if (payload.role !== "merchant") {
     throw redirect({ to: "/auth/merchant", search: { redirect: redirectPath } });
   }
 }

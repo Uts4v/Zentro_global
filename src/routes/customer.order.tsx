@@ -190,12 +190,12 @@ function CustomerOrder() {
                 {m.logo_url && (
                   <img
                     src={m.logo_url}
-                    alt={m.store_name}
+                    alt={m.business_name}
                     className="mb-3 h-12 w-12 rounded-xl object-cover"
                     onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                   />
                 )}
-                <h3 className="font-display text-2xl text-ink">{m.store_name}</h3>
+                <h3 className="font-display text-2xl text-ink">{m.business_name}</h3>
                 {m.description && (
                   <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{m.description}</p>
                 )}
@@ -222,7 +222,7 @@ function CustomerOrder() {
           >
             ← Back
           </button>
-          <h1 className="font-display mt-1 text-5xl text-ink">{selectedMerchant.store_name}</h1>
+          <h1 className="font-display mt-1 text-5xl text-ink">{selectedMerchant.business_name}</h1>
         </div>
 
         {/* Cart button */}

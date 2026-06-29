@@ -10,8 +10,7 @@ export default defineConfig({
     },
   },
   vite: {
-    ssr: {
-      noExternal: ["@supabase/supabase-js"],
-    },
+    // Removed @supabase/supabase-js — no longer used.
+    // No noExternal needed.
   },
 });

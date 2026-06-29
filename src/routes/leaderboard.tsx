@@ -1,10 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { customerApi } from "@/lib/api";
-import { supabase } from "@/lib/supabase";
+import { customerApi, leaderboardApi } from "@/lib/api";
+import { useStore } from "@/lib/store";
 import { MobileShell, TopBar } from "@/components/MobileShell";
 import { requireAuth } from "@/lib/auth-guard";
 import { useEffect, useState } from "react";
-import { Flame, Trophy, Medal, Star } from "lucide-react";
+import { Flame, Trophy, Star } from "lucide-react";
 
 export const Route = createFileRoute("/leaderboard")({
   beforeLoad: requireAuth,
@@ -13,88 +13,65 @@ export const Route = createFileRoute("/leaderboard")({
 });
 
 type LeaderEntry = {
-  id: string;
-  full_name: string | null;
-  points: number;
-  streak: number;
-  tier: string;
   rank: number;
+  customer_id: string;
+  full_name: string | null;
+  loyalty_points: number;
+  tier: string;
+  streak_days: number;
 };
 
 const TIER_CONFIG = [
-  { name: "Bronze",   min: 0,    color: "bg-amber-700",  text: "text-amber-700" },
-  { name: "Silver",   min: 200,  color: "bg-gray-400",   text: "text-gray-500"  },
-  { name: "Gold",     min: 500,  color: "bg-yellow-500", text: "text-yellow-600"},
-  { name: "Platinum", min: 1000, color: "bg-purple-500", text: "text-purple-600"},
+  { name: "Bronze",   min: 0,    color: "bg-amber-700",  dot: "bg-amber-700"  },
+  { name: "Silver",   min: 500,  color: "bg-gray-400",   dot: "bg-gray-400"   },
+  { name: "Gold",     min: 2000, color: "bg-yellow-500", dot: "bg-yellow-500" },
+  { name: "Platinum", min: 5000, color: "bg-purple-500", dot: "bg-purple-500" },
 ];
 
-function getTier(points: number) {
-  return [...TIER_CONFIG].reverse().find((t) => points >= t.min) ?? TIER_CONFIG[0];
+function getTier(pts: number) {
+  return [...TIER_CONFIG].reverse().find((t) => pts >= t.min) ?? TIER_CONFIG[0];
 }
 
 function RankBadge({ rank }: { rank: number }) {
   if (rank === 1) return <span className="text-2xl">🥇</span>;
   if (rank === 2) return <span className="text-2xl">🥈</span>;
   if (rank === 3) return <span className="text-2xl">🥉</span>;
-  return (
-    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-mist text-sm font-bold text-muted-foreground">
-      {rank}
-    </span>
-  );
+  return <span className="flex h-8 w-8 items-center justify-center rounded-full bg-mist text-sm font-bold text-muted-foreground">{rank}</span>;
 }
 
 function Leaders() {
-  const [profile, setProfile] = useState<{
-    id: string;
-    loyalty_points: number;
-    streak_days: number;
-    total_orders: number;
-    tier: string;
-    full_name: string | null;
-  } | null>(null);
+  const { selectedMerchantId } = useStore();
+  const [profile, setProfile] = useState<{ id: string; full_name: string | null } | null>(null);
+  const [wallet, setWallet] = useState<{ points_balance: number; tier_level: string; streak_days: number; order_count: number } | null>(null);
   const [leaders, setLeaders] = useState<LeaderEntry[]>([]);
-  const [myRank, setMyRank] = useState<number | null>(null);
+  const [myRank, setMyRank]   = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
+      if (!selectedMerchantId) {
+        setProfile(null);
+        setWallet(null);
+        setLeaders([]);
+        setMyRank(null);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
       try {
-        // Load current user profile
-        const p = await customerApi.profile();
-        setProfile(p);
-
-        // Load top 50 by points from Supabase
-        const { data, error } = await supabase
-          .from("profiles")
-          .select("id, full_name, points, streak, tier")
-          .order("points", { ascending: false })
-          .limit(50);
-
-        if (error) throw error;
-
-        const ranked: LeaderEntry[] = (data ?? []).map((row, i) => ({
-          id: row.id,
-          full_name: row.full_name,
-          points: row.points ?? 0,
-          streak: row.streak ?? 0,
-          tier: row.tier ?? "Bronze",
-          rank: i + 1,
-        }));
-
-        setLeaders(ranked);
-
-        // Find current user's rank
-        const myEntry = ranked.find((e) => e.id === p.id);
-        if (myEntry) {
-          setMyRank(myEntry.rank);
-        } else {
-          // User not in top 50 — count how many are above them
-          const { count } = await supabase
-            .from("profiles")
-            .select("id", { count: "exact", head: true })
-            .gt("points", p.loyalty_points);
-          setMyRank((count ?? 0) + 1);
-        }
+        const [p, w, lb] = await Promise.all([
+          customerApi.profile(),
+          customerApi.getWallet(selectedMerchantId),
+          leaderboardApi.get(selectedMerchantId, 50),
+        ]);
+        setProfile({ id: p.id, full_name: p.full_name });
+        setWallet(w);
+        setLeaders(lb as LeaderEntry[]);
+        const mine = (lb as LeaderEntry[]).find(
+          (e) => String(e.customer_id) === String(p.id)
+        );
+        setMyRank(mine ? mine.rank : null);
       } catch (e) {
         console.error(e);
       } finally {
@@ -102,9 +79,10 @@ function Leaders() {
       }
     }
     load();
-  }, []);
+  }, [selectedMerchantId]);
 
-  const tier = profile ? getTier(profile.loyalty_points) : TIER_CONFIG[0];
+  const points = wallet?.points_balance ?? 0;
+  const tier = getTier(points);
 
   return (
     <MobileShell>
@@ -112,173 +90,105 @@ function Leaders() {
       <div className="px-5">
         <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Rankings</p>
         <h1 className="font-display mt-1 text-4xl text-ink">Leaderboard</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Top customers ranked by loyalty points.
-        </p>
+        <p className="mt-1 text-sm text-muted-foreground">Top customers at your current store.</p>
       </div>
 
-      {loading && (
-        <p className="mt-8 text-center text-sm text-muted-foreground">Loading…</p>
+      {!selectedMerchantId && !loading && (
+        <p className="mt-8 px-5 text-center text-sm text-muted-foreground">
+          Open a store via QR code to see the leaderboard.
+        </p>
       )}
 
-      {!loading && profile && (
+      {loading && <p className="mt-8 text-center text-sm text-muted-foreground">Loading…</p>}
+
+      {!loading && selectedMerchantId && profile && (
         <>
           {/* Your rank card */}
           <section className="mt-6 px-5">
             <div className="relative overflow-hidden rounded-3xl bg-ink p-6 text-primary-foreground shadow-ember">
               <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full gradient-ember opacity-30 blur-3xl" />
-              <div className="relative">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <Trophy className="h-4 w-4 text-ember" />
-                      <p className="text-[11px] uppercase tracking-widest text-white/60">Your Rank</p>
-                    </div>
-                    <p className="font-display mt-1 text-6xl leading-none">
-                      #{myRank ?? "—"}
-                    </p>
-                    <p className="mt-1 text-sm text-white/70">
-                      {profile.full_name ?? "You"} · {tier.name}
-                    </p>
+              <div className="relative flex items-center justify-between">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Trophy className="h-4 w-4 text-ember" />
+                    <p className="text-[11px] uppercase tracking-widest text-white/60">Your Rank</p>
                   </div>
-                  <div className="glass-strong rounded-2xl px-4 py-3 text-center">
-                    <p className="font-display text-3xl text-ink">
-                      {profile.loyalty_points.toLocaleString()}
-                    </p>
-                    <p className="text-[10px] uppercase tracking-wider text-muted-foreground">pts</p>
-                  </div>
+                  <p className="font-display mt-1 text-6xl leading-none">#{myRank ?? "—"}</p>
+                  <p className="mt-1 text-sm text-white/70">{profile.full_name ?? "You"} · {tier.name}</p>
+                </div>
+                <div className="glass-strong rounded-2xl px-4 py-3 text-center">
+                  <p className="font-display text-3xl text-ink">{points.toLocaleString()}</p>
+                  <p className="text-[10px] uppercase tracking-wider text-muted-foreground">pts</p>
                 </div>
               </div>
-
               <div className="relative mt-5 grid grid-cols-3 gap-3">
-                <div className="rounded-2xl bg-white/10 p-3 text-center">
-                  <p className="font-display text-2xl">{profile.loyalty_points.toLocaleString()}</p>
-                  <p className="mt-0.5 text-[10px] uppercase tracking-wider text-white/60">Points</p>
-                </div>
-                <div className="rounded-2xl bg-white/10 p-3 text-center">
-                  <p className="font-display text-2xl">{profile.total_orders}</p>
-                  <p className="mt-0.5 text-[10px] uppercase tracking-wider text-white/60">Orders</p>
-                </div>
-                <div className="rounded-2xl bg-white/10 p-3 text-center">
-                  <div className="flex items-center justify-center gap-1">
-                    <Flame className="h-4 w-4 text-ember" />
-                    <p className="font-display text-2xl">{profile.streak_days}</p>
+                {[
+                  { label: "Points", val: points.toLocaleString() },
+                  { label: "Orders", val: wallet?.order_count ?? 0 },
+                  { label: "Streak", val: wallet?.streak_days ?? 0, icon: <Flame className="h-4 w-4 text-ember" /> },
+                ].map(({ label, val, icon }) => (
+                  <div key={label} className="rounded-2xl bg-white/10 p-3 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      {icon}
+                      <p className="font-display text-2xl">{val}</p>
+                    </div>
+                    <p className="mt-0.5 text-[10px] uppercase tracking-wider text-white/60">{label}</p>
                   </div>
-                  <p className="mt-0.5 text-[10px] uppercase tracking-wider text-white/60">Streak</p>
-                </div>
+                ))}
               </div>
             </div>
           </section>
 
-          {/* Top 3 podium */}
+          {/* Podium */}
           {leaders.length >= 3 && (
             <section className="mt-6 px-5">
               <p className="mb-3 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Top 3</p>
               <div className="flex items-end gap-2">
-                {/* 2nd place */}
-                <div className="flex flex-1 flex-col items-center gap-2">
-                  <p className="text-xs font-medium text-ink truncate max-w-full text-center">
-                    {leaders[1].full_name ?? "Customer"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{leaders[1].points.toLocaleString()} pts</p>
-                  <div className="flex h-16 w-full items-center justify-center rounded-t-2xl bg-gray-200 text-2xl">
-                    🥈
+                {[leaders[1], leaders[0], leaders[2]].map((entry, col) => (
+                  <div key={entry.customer_id} className="flex flex-1 flex-col items-center gap-2">
+                    <p className="text-xs font-medium text-ink truncate max-w-full text-center">{entry.full_name ?? "Customer"}</p>
+                    <p className="text-xs text-muted-foreground">{entry.loyalty_points.toLocaleString()} pts</p>
+                    <div className={`flex w-full items-center justify-center rounded-t-2xl text-2xl ${
+                      col === 0 ? "h-16 bg-gray-200" : col === 1 ? "h-24 bg-amber-100" : "h-12 bg-orange-100"
+                    }`}>
+                      {col === 0 ? "🥈" : col === 1 ? "🥇" : "🥉"}
+                    </div>
                   </div>
-                </div>
-                {/* 1st place */}
-                <div className="flex flex-1 flex-col items-center gap-2">
-                  <p className="text-xs font-medium text-ink truncate max-w-full text-center">
-                    {leaders[0].full_name ?? "Customer"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{leaders[0].points.toLocaleString()} pts</p>
-                  <div className="flex h-24 w-full items-center justify-center rounded-t-2xl bg-amber-100 text-2xl">
-                    🥇
-                  </div>
-                </div>
-                {/* 3rd place */}
-                <div className="flex flex-1 flex-col items-center gap-2">
-                  <p className="text-xs font-medium text-ink truncate max-w-full text-center">
-                    {leaders[2].full_name ?? "Customer"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">{leaders[2].points.toLocaleString()} pts</p>
-                  <div className="flex h-12 w-full items-center justify-center rounded-t-2xl bg-orange-100 text-2xl">
-                    🥉
-                  </div>
-                </div>
+                ))}
               </div>
             </section>
           )}
 
-          {/* Full leaderboard list */}
+          {/* Full list */}
           <section className="mt-4 px-5 pb-8">
-            <p className="mb-3 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-              Top {leaders.length}
-            </p>
+            <p className="mb-3 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Top {leaders.length}</p>
             <div className="space-y-2">
               {leaders.map((entry) => {
-                const isMe = entry.id === profile.id;
-                const entryTier = getTier(entry.points);
+                const isMe = String(entry.customer_id) === String(profile.id);
+                const eTier = getTier(entry.loyalty_points);
                 return (
-                  <div
-                    key={entry.id}
-                    className={`flex items-center gap-3 rounded-2xl px-4 py-3 transition-all ${
-                      isMe
-                        ? "bg-ink text-primary-foreground shadow-ember"
-                        : "glass"
-                    }`}
-                  >
+                  <div key={entry.customer_id} className={`flex items-center gap-3 rounded-2xl px-4 py-3 ${isMe ? "bg-ink text-primary-foreground shadow-ember" : "glass"}`}>
                     <RankBadge rank={entry.rank} />
                     <div className="min-w-0 flex-1">
                       <p className={`truncate text-sm font-medium ${isMe ? "text-white" : "text-ink"}`}>
-                        {entry.full_name ?? "Customer"}
-                        {isMe && <span className="ml-2 text-[10px] text-white/60">· You</span>}
+                        {entry.full_name ?? "Customer"}{isMe && <span className="ml-2 text-[10px] text-white/60">· You</span>}
                       </p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className={`text-[10px] ${isMe ? "text-white/60" : "text-muted-foreground"}`}>
-                          {entryTier.name}
-                        </span>
-                        {entry.streak > 0 && (
+                        <span className={`text-[10px] ${isMe ? "text-white/60" : "text-muted-foreground"}`}>{eTier.name}</span>
+                        {entry.streak_days > 0 && (
                           <span className={`flex items-center gap-0.5 text-[10px] ${isMe ? "text-white/60" : "text-muted-foreground"}`}>
-                            <Flame className="h-2.5 w-2.5 text-ember" />
-                            {entry.streak}d
+                            <Flame className="h-2.5 w-2.5 text-ember" />{entry.streak_days}d
                           </span>
                         )}
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className={`font-display text-lg ${isMe ? "text-white" : "text-ink"}`}>
-                        {entry.points.toLocaleString()}
-                      </p>
+                      <p className={`font-display text-lg ${isMe ? "text-white" : "text-ink"}`}>{entry.loyalty_points.toLocaleString()}</p>
                       <p className={`text-[10px] ${isMe ? "text-white/60" : "text-muted-foreground"}`}>pts</p>
                     </div>
                   </div>
                 );
               })}
-
-              {/* Show current user's rank if not in top 50 */}
-              {myRank && myRank > 50 && (
-                <>
-                  <div className="py-2 text-center text-xs text-muted-foreground">· · ·</div>
-                  <div className="flex items-center gap-3 rounded-2xl bg-ink px-4 py-3 shadow-ember">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-sm font-bold text-white">
-                      {myRank}
-                    </span>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-white">
-                        {profile.full_name ?? "You"}
-                        <span className="ml-2 text-[10px] text-white/60">· You</span>
-                      </p>
-                      <p className="text-[10px] text-white/60">{tier.name}</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-display text-lg text-white">
-                        {profile.loyalty_points.toLocaleString()}
-                      </p>
-                      <p className="text-[10px] text-white/60">pts</p>
-                    </div>
-                  </div>
-                </>
-              )}
             </div>
           </section>
 
@@ -291,19 +201,14 @@ function Leaders() {
               </div>
               <div className="space-y-3">
                 {TIER_CONFIG.map((t) => {
-                  const reached = profile.loyalty_points >= t.min;
-                  const next = TIER_CONFIG.find((x) => x.min > profile.loyalty_points);
-                  const isCurrent = getTier(profile.loyalty_points).name === t.name;
+                  const reached  = points >= t.min;
+                  const isCurrent = tier.name === t.name;
                   return (
                     <div key={t.name} className="flex items-center gap-3">
-                      <div className={`h-3 w-3 rounded-full ${t.color} ${!reached ? "opacity-30" : ""}`} />
+                      <div className={`h-3 w-3 rounded-full ${t.dot} ${!reached ? "opacity-30" : ""}`} />
                       <span className={`text-sm ${reached ? "font-medium text-ink" : "text-muted-foreground"}`}>
                         {t.name}
-                        {isCurrent && (
-                          <span className="ml-2 rounded-full bg-ember-soft px-2 py-0.5 text-[10px] text-ember">
-                            Current
-                          </span>
-                        )}
+                        {isCurrent && <span className="ml-2 rounded-full bg-ember-soft px-2 py-0.5 text-[10px] text-ember">Current</span>}
                       </span>
                       <span className="ml-auto text-xs text-muted-foreground">{t.min.toLocaleString()}+ pts</span>
                       {reached && <span className="text-xs text-ember">✓</span>}
@@ -311,14 +216,9 @@ function Leaders() {
                   );
                 })}
                 {(() => {
-                  const next = TIER_CONFIG.find((t) => t.min > profile.loyalty_points);
+                  const next = TIER_CONFIG.find((t) => t.min > points);
                   if (!next) return null;
-                  const needed = next.min - profile.loyalty_points;
-                  return (
-                    <p className="mt-2 text-xs text-muted-foreground">
-                      {needed.toLocaleString()} more pts to reach {next.name}
-                    </p>
-                  );
+                  return <p className="mt-2 text-xs text-muted-foreground">{(next.min - points).toLocaleString()} more pts to reach {next.name}</p>;
                 })()}
               </div>
             </div>

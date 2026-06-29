@@ -4,15 +4,17 @@ from django.conf import settings
 
 
 class MerchantProfile(models.Model):
-    """Merchant/store profile data."""
-
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="merchant_profile",
     )
-    store_name = models.CharField(max_length=255)
-    store_slug = models.SlugField(unique=True)
+
+    # Renamed: store_name → business_name, store_slug → slug
+    # db_column keeps the existing DB column so no data is lost
+    business_name = models.CharField(max_length=255, db_column="store_name")
+    slug = models.SlugField(unique=True, db_column="store_slug")
+
     business_type = models.CharField(max_length=100, blank=True)
     address = models.TextField(blank=True)
     phone = models.CharField(max_length=20, blank=True)
@@ -21,6 +23,17 @@ class MerchantProfile(models.Model):
     description = models.TextField(blank=True)
     is_approved = models.BooleanField(default=False)
     is_open = models.BooleanField(default=True)
+
+    # New fields
+    onboarding_complete = models.BooleanField(default=False)
+    latitude = models.DecimalField(
+        max_digits=9, decimal_places=6, null=True, blank=True
+    )
+    longitude = models.DecimalField(
+        max_digits=9, decimal_places=6, null=True, blank=True
+    )
+    qr_code = models.TextField(blank=True)  # stores the public URL or SVG string
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -28,12 +41,10 @@ class MerchantProfile(models.Model):
         db_table = "merchant_profiles"
 
     def __str__(self):
-        return self.store_name
+        return self.business_name
 
 
 class MenuItem(models.Model):
-    """Menu item for a merchant."""
-
     merchant = models.ForeignKey(
         MerchantProfile,
         on_delete=models.CASCADE,
@@ -57,4 +68,5 @@ class MenuItem(models.Model):
         ordering = ["category", "name"]
 
     def __str__(self):
-        return f"{self.name} - {self.merchant.store_name}"
+        # updated to use new field name
+        return f"{self.name} - {self.merchant.business_name}"

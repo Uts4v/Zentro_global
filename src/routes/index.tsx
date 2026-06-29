@@ -36,7 +36,7 @@ function MenuItemCard({
       {/* Image or emoji thumbnail */}
       {hasImage ? (
         <img
-          src={item.image_url}
+          src={item.image_url ?? undefined}
           alt={item.name}
           className="h-32 w-full object-cover"
           onError={() => setImgError(true)}
@@ -86,17 +86,17 @@ function Index() {
     setLoading(true);
     Promise.all([
       menuApi.forMerchant(selectedMerchantId)
-        .then((items) => setMenuItems(items))
+        .then((items) => setMenuItems(items.map((i) => ({ ...i, price: parseFloat(i.price as any) }))))
         .catch(() => setMenuItems([])),
       merchantApi.get(selectedMerchantId)
-        .then((m) => setMerchantName(m.store_name))
-        .catch(() => {}),
-      customerApi.profile()
-        .then((p) => {
-          setPoints(p.loyalty_points);
-          setStreak(p.streak_days);
+        .then((m) => setMerchantName(m.business_name))
+        .catch(() => setSelectedMerchant(null)),
+      customerApi.getWallet(selectedMerchantId)
+        .then((w) => {
+          setPoints(w?.points_balance ?? 0);
+          setStreak(w?.streak_days ?? 0);
         })
-        .catch(() => {}),
+        .catch(() => setSelectedMerchant(null)),
     ]).finally(() => setLoading(false));
   }, [selectedMerchantId]);
 

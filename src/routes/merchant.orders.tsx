@@ -2,7 +2,6 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Check, RefreshCw, Loader2, Clock, Bell } from "lucide-react";
 import { orderApi, type Order, type OrderStatus } from "@/lib/api";
-import { supabase } from "@/lib/supabase";
 
 export const Route = createFileRoute("/merchant/orders")({
   head: () => ({ meta: [{ title: "Orders · Merchant · Zentro" }] }),
@@ -46,7 +45,6 @@ function MerchantOrders() {
   const [refreshing, setRefreshing] = useState(false);
   const [newOrderIds, setNewOrderIds] = useState<Set<string>>(new Set());
   const [connected, setConnected] = useState(false);
-  const audioRef = useRef<AudioContext | null>(null);
   const knownOrderIds = useRef<Set<string>>(new Set());
 
   // Play a subtle notification sound for new orders
@@ -91,66 +89,35 @@ function MerchantOrders() {
     load();
   }, [load]);
 
+  // Poll every 8 seconds for new / updated orders and detect changes
   useEffect(() => {
-    // Subscribe to ALL changes on orders table for this merchant
-    const channel = supabase
-      .channel("merchant-orders-realtime", {
-        config: { presence: { key: "merchant" } },
-      })
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "orders" },
-        async (payload) => {
-          // New order — fetch full order with items and profile
-          try {
-            const newOrder = await orderApi.get(payload.new.id);
-            setOrders((prev) => {
-              // Only add if it belongs to this merchant's list
-              if (prev.some((o) => o.id === newOrder.id)) return prev;
-              return [newOrder, ...prev];
-            });
-            // Highlight and notify
-            if (!knownOrderIds.current.has(newOrder.id)) {
-              knownOrderIds.current.add(newOrder.id);
-              setNewOrderIds((prev) => new Set([...prev, newOrder.id]));
-              playNotification();
-              // Remove highlight after 5 seconds
-              setTimeout(() => {
-                setNewOrderIds((prev) => {
-                  const next = new Set(prev);
-                  next.delete(newOrder.id);
-                  return next;
-                });
-              }, 5000);
-            }
-          } catch {
-            load(true);
-          }
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "orders" },
-        async (payload) => {
-          // Status updated — update in place
-          try {
-            const updated = await orderApi.get(payload.new.id);
-            setOrders((prev) =>
-              prev.map((o) => (o.id === updated.id ? updated : o))
-            );
-          } catch {
-            load(true);
-          }
-        }
-      )
-      .subscribe((status) => {
-        setConnected(status === "SUBSCRIBED");
-      });
+    setConnected(true); // polling is always "connected"
+    const interval = setInterval(async () => {
+      try {
+        const fresh = await orderApi.storeOrders();
 
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [load]);
+        setOrders((prev) => {
+          // Detect genuinely new order IDs
+          const newOnes = fresh.filter((o) => !knownOrderIds.current.has(o.id));
+          if (newOnes.length > 0) {
+            newOnes.forEach((o) => {
+              knownOrderIds.current.add(o.id);
+              setNewOrderIds((s) => new Set([...s, o.id]));
+              playNotification();
+              setTimeout(() => {
+                setNewOrderIds((s) => { const n = new Set(s); n.delete(o.id); return n; });
+              }, 5000);
+            });
+          }
+          return fresh;
+        });
+      } catch {
+        // Silent poll failure — don't show error, next tick will retry
+      }
+    }, 8000);
+
+    return () => clearInterval(interval);
+  }, []);
 
   async function advance(order: Order) {
     const next = NEXT_STATUS[order.status];
@@ -192,16 +159,10 @@ function MerchantOrders() {
           <h1 className="font-display mt-1 text-5xl text-ink">Orders</h1>
         </div>
         <div className="flex items-center gap-2">
-          {/* Realtime status indicator */}
+          {/* Auto-refresh status indicator */}
           <div className="flex items-center gap-1.5 rounded-full bg-mist px-3 py-1.5">
-            <span
-              className={`h-2 w-2 rounded-full ${
-                connected ? "bg-emerald-500 animate-pulse" : "bg-rose-400"
-              }`}
-            />
-            <span className="text-[10px] text-muted-foreground">
-              {connected ? "Live" : "Reconnecting…"}
-            </span>
+            <span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[10px] text-muted-foreground">Auto-refresh</span>
           </div>
           <button
             onClick={() => load(true)}
@@ -307,7 +268,7 @@ function OrderCard({
             </div>
           )}
           <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
-            #{order.id.slice(0, 8)}
+            #{String(order.id).slice(0, 8)}
           </p>
           <h3 className="font-display mt-1 text-xl text-ink">{customerName}</h3>
         </div>

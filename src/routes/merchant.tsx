@@ -4,11 +4,11 @@ import {
   Link,
   Outlet,
   useNavigate,
-  useRouterState,
+  redirect,
 } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useAuth } from "@/lib/auth";
-import { supabase } from "@/lib/supabase";
+import { requireMerchant } from "@/lib/merchant-auth-guard";
 import {
   Loader2,
   LayoutDashboard,
@@ -20,9 +20,22 @@ import {
   LogOut,
   Menu,
 } from "lucide-react";
+// Correct — matches your actual file location
+import { MerchantNav } from "@/components/merchant-nav";
 
 export const Route = createFileRoute("/merchant")({
-  head: () => ({ meta: [{ title: "Merchant · Zentro" }] }),
+beforeLoad: async ({ context, location }) => {
+  await requireMerchant();
+  const { auth } = context;
+
+  if (!auth) return; // ← add this guard
+
+  if (auth.merchantProfile && !auth.merchantProfile.onboarding_complete) {
+    if (location.pathname !== "/merchant/onboarding") {
+      throw redirect({ to: "/merchant/onboarding" });
+    }
+  }
+},
   component: MerchantLayout,
 });
 
@@ -36,117 +49,20 @@ const navItems = [
 ];
 
 function MerchantLayout() {
-  const { user, merchantProfile, loading, signOut } = useAuth();
+  const { merchantProfile, signOut } = useAuth();
   const navigate = useNavigate();
-  const path = useRouterState({ select: (s) => s.location.pathname });
   const [mobileOpen, setMobileOpen] = useState(false);
-
- useEffect(() => {
-  if (loading) return; // auth + both profile fetches still in progress
-
-  if (!user) {
-    navigate({ to: "/auth/merchant" as any, replace: true });
-    return;
-  }
-
-  // merchantProfile is definitively null (fetch completed, no row found)
-  // AND loading is false means both fetches are done
-  if (merchantProfile === null) {
-    supabase.auth.signOut().then(() => {
-      navigate({ to: "/auth/merchant" as any, replace: true });
-    });
-  }
-}, [user, merchantProfile, loading]);
-
-// Show spinner while loading — covers both auth init AND profile fetches
-if (loading || !user || !merchantProfile) {
-  return (
-    <div className="flex min-h-dvh items-center justify-center">
-      <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-    </div>
-  );
-}
 
   async function handleSignOut() {
     await signOut();
     navigate({ to: "/auth/merchant" as any, replace: true });
   }
 
-  function SidebarContent() {
-    return (
-      <>
-        {/* Logo */}
-        <div className="border-b border-border px-6 py-6">
-          <Link to="/" className="font-display text-2xl text-ink">
-            zentro<span className="text-ember">.</span>
-          </Link>
-          <p className="mt-0.5 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-            for business
-          </p>
-        </div>
-
-        {/* Store badge */}
-        <div className="border-b border-border px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-ink text-sm font-medium text-primary-foreground">
-              {merchantProfile.store_name.charAt(0).toUpperCase()}
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-ink">
-                {merchantProfile.store_name}
-              </p>
-              <p className="text-[10px] text-muted-foreground">
-                {merchantProfile.is_open ? "🟢 Open" : "🔴 Closed"}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Nav */}
-        <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive =
-              item.to === "/merchant/"
-                ? path === "/merchant" || path === "/merchant/"
-                : path.startsWith(item.to);
-            return (
-              <Link
-                key={item.to}
-                to={item.to as any}
-                onClick={() => setMobileOpen(false)}
-                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
-                  isActive
-                    ? "bg-ink text-primary-foreground"
-                    : "text-muted-foreground hover:bg-mist hover:text-ink"
-                }`}
-              >
-                <Icon className="h-4 w-4 shrink-0" />
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        {/* Sign out */}
-        <div className="border-t border-border px-3 py-4">
-          <button
-            onClick={handleSignOut}
-            className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-rose-50 hover:text-rose-600"
-          >
-            <LogOut className="h-4 w-4 shrink-0" />
-            Sign out
-          </button>
-        </div>
-      </>
-    );
-  }
-
   return (
     <div className="flex min-h-dvh bg-background">
       {/* Desktop sidebar */}
       <aside className="hidden w-60 shrink-0 flex-col border-r border-border bg-background/80 backdrop-blur-xl lg:flex">
-        <SidebarContent />
+        <MerchantNav navItems={navItems} onSignOut={handleSignOut} />
       </aside>
 
       {/* Mobile sidebar overlay */}
@@ -160,7 +76,7 @@ if (loading || !user || !merchantProfile) {
             className="absolute bottom-0 left-0 top-0 flex w-64 flex-col bg-background shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <SidebarContent />
+            <MerchantNav navItems={navItems} onSignOut={handleSignOut} onLinkClick={() => setMobileOpen(false)} />
           </aside>
         </div>
       )}
@@ -179,7 +95,7 @@ if (loading || !user || !merchantProfile) {
             zentro<span className="text-ember">.</span>
           </Link>
           <div className="ml-auto grid h-8 w-8 place-items-center rounded-full bg-ink text-xs font-medium text-primary-foreground">
-            {merchantProfile.store_name.charAt(0).toUpperCase()}
+            {(merchantProfile?.business_name ?? "M").charAt(0).toUpperCase()}
           </div>
         </header>
 

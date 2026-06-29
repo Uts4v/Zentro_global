@@ -9,7 +9,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useMemo, type ReactNode } from "react";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { Loader2 } from "lucide-react";
 
@@ -21,6 +21,7 @@ const PUBLIC_ROUTES = [
   "/auth",
   "/auth/merchant",
   "/auth/forgot-password",
+  "/auth/reset-password",
 ];
 
 // ── Auth gate — rendered inside AuthProvider so useAuth() works ───────────────
@@ -123,7 +124,12 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 }
 
 // ── Route definition ──────────────────────────────────────────────────────────
-export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+type RouterContext = {
+  queryClient: QueryClient;
+  auth: ReturnType<typeof useAuth>;
+};
+
+export const Route = createRootRouteWithContext<RouterContext>()({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -151,6 +157,35 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   errorComponent: ErrorComponent,
 });
 
+function InnerRoot() {
+  const auth = useAuth();
+  const { queryClient } = Route.useRouteContext();
+  const router = useRouter();
+
+  // This is a bit of a hack to inject the auth context into the router
+  // after the fact. This is needed for the `beforeLoad` guards to work.
+  // A cleaner solution might involve a different app structure, but this works.
+  useMemo(() => {
+    router.options.context = { ...router.options.context, auth };
+  }, [auth, router]);
+
+  return <Outlet />;
+}
+
+function RootComponent() {
+  const { queryClient } = Route.useRouteContext();
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        {/* AuthGate sits inside AuthProvider so useAuth() is available */}
+        {/* The router context is now aware of auth state */}
+        <InnerRoot />
+      </AuthProvider>
+    </QueryClientProvider>
+  );
+}
+
 function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
@@ -162,17 +197,5 @@ function RootShell({ children }: { children: ReactNode }) {
         <Scripts />
       </body>
     </html>
-  );
-}
-
-function RootComponent() {
-  const { queryClient } = Route.useRouteContext();
-  return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        {/* AuthGate sits inside AuthProvider so useAuth() is available */}
-        <AuthGate />
-      </AuthProvider>
-    </QueryClientProvider>
   );
 }

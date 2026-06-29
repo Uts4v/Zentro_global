@@ -1,0 +1,152 @@
+// routes/m.$slug.tsx — QR entry → redirects to merchant-specific customer dashboard
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { Loader2, ArrowRight, MapPin } from "lucide-react";
+import { merchantApi, type MerchantProfile } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
+
+export const Route = createFileRoute("/m/$slug")({
+  head: () => ({ meta: [{ title: "Store · Zentro" }] }),
+  component: MerchantEntryRedirect,
+});
+
+function MerchantEntryRedirect() {
+  const { slug } = Route.useParams();
+  const navigate = useNavigate();
+  const { user, loading: authLoading } = useAuth();
+
+  const [merchant, setMerchant] = useState<MerchantProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const dashboardPath = `/customer/merchant/${slug}`;
+
+  // Fetch merchant by slug
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+
+    merchantApi
+      .bySlug(slug)
+      .then((m) => { if (!cancelled) setMerchant(m); })
+      .catch(() => { if (!cancelled) setError("We couldn't find that store. Check the link and try again."); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+
+    return () => { cancelled = true; };
+  }, [slug]);
+
+  // Redirect based on role once both auth and merchant are loaded
+  useEffect(() => {
+    if (authLoading || loading || !merchant) return;
+
+    if (user?.role === "merchant") {
+      // Merchant viewing their own QR → send to their store dashboard
+      navigate({ to: "/merchant/store" as any, replace: true });
+      return;
+    }
+
+    if (user?.role === "customer") {
+      // Customer → merchant loyalty page
+      navigate({ to: "/customer/merchant/$slug", params: { slug }, replace: true });
+      return;
+    }
+
+    // Not logged in → stay on this page (guest landing shown below)
+  }, [authLoading, loading, merchant, user, slug, navigate]);
+
+  // ── Loading state ─────────────────────────────────────────────────────────
+  if (loading || authLoading) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  // ── Error state ───────────────────────────────────────────────────────────
+  if (error || !merchant) {
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 px-5 text-center">
+        <p className="text-4xl">🔍</p>
+        <p className="text-sm text-muted-foreground">{error ?? "Store not found."}</p>
+        <Link
+          to="/"
+          className="text-sm font-medium text-ink underline-offset-4 hover:underline"
+        >
+          Back to home
+        </Link>
+      </div>
+    );
+  }
+
+  // ── Redirect spinner — shown while navigate() fires ───────────────────────
+  if (user?.role === "customer" || user?.role === "merchant") {
+    return (
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-3">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+        <p className="text-sm text-muted-foreground">
+          {user.role === "merchant"
+            ? "Opening your dashboard…"
+            : `Opening ${merchant.business_name}…`}
+        </p>
+      </div>
+    );
+  }
+
+  // ── Guest landing — not logged in ─────────────────────────────────────────
+  return (
+    <div className="mx-auto flex min-h-dvh max-w-[480px] flex-col px-5 pb-10 pt-10">
+      <Link to="/" className="font-display text-2xl text-ink">
+        zentro<span className="text-ember">.</span>
+      </Link>
+
+      <div className="mt-12">
+        <div
+          className="grid h-16 w-16 place-items-center rounded-3xl bg-ink text-3xl text-primary-foreground shadow-soft"
+          style={
+            merchant.logo_url
+              ? {
+                  backgroundImage: `url(${merchant.logo_url})`,
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                }
+              : undefined
+          }
+        >
+          {!merchant.logo_url && "☕"}
+        </div>
+
+        <p className="mt-6 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+          {merchant.is_open ? "Now open" : "Currently closed"}
+        </p>
+        <h1 className="font-display mt-2 text-5xl leading-[1.05] text-ink">
+          {merchant.business_name}
+        </h1>
+        {merchant.address && (
+          <p className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
+            <MapPin className="h-4 w-4 shrink-0" /> {merchant.address}
+          </p>
+        )}
+        {merchant.description && (
+          <p className="mt-2 text-sm text-muted-foreground">{merchant.description}</p>
+        )}
+      </div>
+
+      <div className="mt-10 glass-strong rounded-3xl p-6">
+        <p className="font-display text-2xl text-ink">Join to start earning</p>
+        <p className="mt-2 text-sm text-muted-foreground">
+          Sign up or sign in to order, collect points, and track your punch card at{" "}
+          {merchant.business_name}.
+        </p>
+        <Link
+          to="/auth"
+          search={{ redirect: dashboardPath }}
+          className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-ink text-sm font-medium text-primary-foreground"
+        >
+          Sign up / Sign in <ArrowRight className="h-4 w-4" />
+        </Link>
+      </div>
+    </div>
+  );
+}

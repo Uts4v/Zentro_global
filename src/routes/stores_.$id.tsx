@@ -118,7 +118,7 @@ function StoreDetail() {
   return (
     <MobileShell>
       <TopBar
-        title={merchant.store_name}
+        title={merchant.business_name}
         right={
           <Link to="/stores" className="glass grid h-9 w-9 place-items-center rounded-full">
             <ArrowLeft className="h-4 w-4" />
@@ -136,7 +136,7 @@ function StoreDetail() {
           </div>
         )}
         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background/80 to-transparent p-4">
-          <h1 className="font-display text-2xl text-white drop-shadow-md">{merchant.store_name}</h1>
+          <h1 className="font-display text-2xl text-white drop-shadow-md">{merchant.business_name}</h1>
           <p className="text-xs text-white/80">{merchant.business_type}</p>
         </div>
         <span

@@ -1,126 +1,75 @@
-// src/lib/image-upload.ts
-// Supabase Storage helpers: upload optimized blobs, delete old files,
-// return stable public URLs. One function per image category.
+/**
+ * src/lib/image-upload.ts
+ *
+ * Image upload helpers — uploads to Django /api/media/upload/
+ * Returns a stable public URL served by Django (or a CDN in production).
+ *
+ * Django side: add a simple FileField endpoint that saves to MEDIA_ROOT
+ * and returns { url: "http://..." }. See backend/accounts/views.py upload_image.
+ */
 
-import { supabase } from "@/lib/supabase";
+import { apiUrl, djangoFetch } from "@/lib/django-api-base";
+import { djangoHeaders as authHeaders } from "@/lib/auth";
 import { optimizeImage, type ImagePreset } from "@/lib/image-optimize";
-
-// ── Bucket names (must exist in your Supabase project) ───────────────────────
-const BUCKETS = {
-  merchant: "merchant-images",
-  customer: "customer-images",
-  product:  "product-images",
-  banner:   "banner-images",
-} as const;
 
 export interface UploadResult {
   publicUrl: string;
   path: string;
 }
 
-// ── Core low-level uploader ───────────────────────────────────────────────────
-
 /**
- * Optimize a File then upsert it into a Supabase Storage bucket.
- * Returns the permanent public URL and the storage path.
- *
- * We always upsert (overwrite) so the path acts as the stable key —
- * no need to track or delete old files when using fixed paths like
- * `product-images/{merchantId}/{productId}.webp`.
+ * Optimize a File then upload it to Django's media endpoint.
+ * Returns the permanent public URL.
  */
 export async function uploadImage(
   file: File,
   preset: ImagePreset,
-  bucket: string,
-  storagePath: string      // e.g. "abc123/profile.webp"
+  _bucket: string,        // kept for API compat — not used with Django
+  storagePath: string     // used as the filename hint
 ): Promise<UploadResult> {
   const { blob } = await optimizeImage(file, preset);
 
-  const { error } = await supabase.storage
-    .from(bucket)
-    .upload(storagePath, blob, {
-      contentType: "image/webp",
-      upsert: true,           // overwrite silently — same path = same logical image
-      cacheControl: "3600",
-    });
+  const formData = new FormData();
+  // Use just the filename portion as the upload name
+  const filename = storagePath.replace(/\//g, "_") + ".webp";
+  formData.append("file", blob, filename);
 
-  if (error) throw new Error(`Storage upload failed: ${error.message}`);
+  const headers = authHeaders(false); // no Content-Type — let browser set multipart boundary
+  delete (headers as any)["Content-Type"];
 
-  const { data } = supabase.storage.from(bucket).getPublicUrl(storagePath);
-  if (!data?.publicUrl) throw new Error("Could not get public URL after upload");
+  const data = await djangoFetch<{ url: string }>(apiUrl("/media/upload/"), {
+    method: "POST",
+    headers,
+    body: formData,
+  });
 
-  return { publicUrl: data.publicUrl, path: storagePath };
+  return { publicUrl: data.url, path: storagePath };
 }
 
-/**
- * Delete a file from Supabase Storage by its path.
- * Silently ignores "not found" errors — safe to call on first upload.
- */
-export async function deleteImage(bucket: string, path: string): Promise<void> {
-  const { error } = await supabase.storage.from(bucket).remove([path]);
-  if (error && !error.message.includes("Not Found")) {
-    console.warn(`[deleteImage] ${error.message}`);
-  }
+// ── Per-category helpers (same API surface as before) ─────────────────────────
+
+export async function uploadMerchantLogo(file: File, merchantId: string): Promise<UploadResult> {
+  return uploadImage(file, "logo", "merchant-images", `${merchantId}/logo`);
 }
 
-// ── Per-category helpers ──────────────────────────────────────────────────────
-
-/** Upload merchant logo. Path: merchant-images/{merchantId}/logo.webp */
-export async function uploadMerchantLogo(
-  file: File,
-  merchantId: string
-): Promise<UploadResult> {
-  return uploadImage(
-    file,
-    "logo",
-    BUCKETS.merchant,
-    `${merchantId}/logo.webp`
-  );
+export async function uploadMerchantBanner(file: File, merchantId: string): Promise<UploadResult> {
+  return uploadImage(file, "banner", "banner-images", `${merchantId}/banner`);
 }
 
-/** Upload merchant banner. Path: banner-images/{merchantId}/banner.webp */
-export async function uploadMerchantBanner(
-  file: File,
-  merchantId: string
-): Promise<UploadResult> {
-  return uploadImage(
-    file,
-    "banner",
-    BUCKETS.banner,
-    `${merchantId}/banner.webp`
-  );
+export async function uploadCustomerProfile(file: File, customerId: string): Promise<UploadResult> {
+  return uploadImage(file, "profile", "customer-images", `${customerId}/profile`);
 }
 
-/** Upload customer profile image. Path: customer-images/{customerId}/profile.webp */
-export async function uploadCustomerProfile(
-  file: File,
-  customerId: string
-): Promise<UploadResult> {
-  return uploadImage(
-    file,
-    "profile",
-    BUCKETS.customer,
-    `${customerId}/profile.webp`
-  );
+export async function uploadProductImage(file: File, merchantId: string, productId: string): Promise<UploadResult> {
+  return uploadImage(file, "product", "product-images", `${merchantId}/${productId}`);
 }
 
-/**
- * Upload a product/menu item image.
- * Path: product-images/{merchantId}/{productId}.webp
- * Pass productId as "new" for items not yet saved — caller can rename after.
- */
-export async function uploadProductImage(
-  file: File,
-  merchantId: string,
-  productId: string
-): Promise<UploadResult> {
-  return uploadImage(
-    file,
-    "product",
-    BUCKETS.product,
-    `${merchantId}/${productId}.webp`
-  );
-}
+// Kept for API compat — no-op with Django (no separate storage bucket to delete from)
+export async function deleteImage(_bucket: string, _path: string): Promise<void> {}
 
-// ── Bucket names export (for direct use if needed) ────────────────────────────
-export { BUCKETS };
+export const BUCKETS = {
+  merchant: "merchant-images",
+  customer: "customer-images",
+  product:  "product-images",
+  banner:   "banner-images",
+} as const;

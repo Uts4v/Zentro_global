@@ -45,9 +45,9 @@ function Stores() {
     }
   }
 
-const filtered = merchants.filter(
-  (m) =>
-    m.store_name.toLowerCase().includes(search.toLowerCase()) ||
+  const filtered = merchants.filter(
+    (m) =>
+      (m.business_name || "").toLowerCase().includes(search.toLowerCase()) ||
     (m.business_type ?? "").toLowerCase().includes(search.toLowerCase())
 );
   return (
@@ -99,15 +99,15 @@ const filtered = merchants.filter(
                 className={`h-28 bg-gradient-to-br ${GRADIENTS[i % GRADIENTS.length]} grid place-items-center text-6xl`}
               >
                 {m.logo_url ? (
-                  <img src={m.logo_url} alt={m.store_name} className="h-16 w-16 rounded-2xl object-cover" />
+                  <img src={m.logo_url} alt={m.business_name} className="h-16 w-16 rounded-2xl object-cover" />
                 ) : (
-                  <span>{getEmoji(m.business_type)}</span>
+                  <span>{getEmoji(m.business_type ?? "")}</span>
                 )}
               </div>
               <div className="p-4">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <h3 className="truncate text-base font-semibold text-ink">{m.store_name}</h3>
+                    <h3 className="truncate text-base font-semibold text-ink">{m.business_name}</h3>
                     <p className="truncate text-xs text-muted-foreground">{m.business_type || "Café"}</p>
                   </div>
                   <span

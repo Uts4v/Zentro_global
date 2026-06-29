@@ -118,7 +118,7 @@ export const useStore = create<State>()(
           customerName: apiOrder.profiles?.full_name ?? "",
           pointsEarned: apiOrder.points_earned,
           merchantId: apiOrder.merchant_id,
-          merchantName: apiOrder.merchant_profiles?.store_name,
+          merchantName: apiOrder.merchant_profiles?.business_name,
           notes: apiOrder.notes,
         };
 

@@ -1,26 +1,27 @@
+// src/routes/profile.tsx
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { MobileShell, TopBar } from "@/components/MobileShell";
 import { useAuth } from "@/lib/auth";
 import { Settings, Bell, CreditCard, ChevronRight, LogOut, Loader2 } from "lucide-react";
-import { requireAuth } from "@/lib/auth-guard";
+import { requireCustomer } from "@/lib/auth-guard";
 import { customerApi, orderApi, type Order } from "@/lib/api";
 import { useState, useEffect } from "react";
 
 export const Route = createFileRoute("/profile")({
-  beforeLoad: requireAuth,
+  beforeLoad: requireCustomer,
   head: () => ({ meta: [{ title: "Profile · Zentro" }] }),
   component: Profile,
 });
 
 function Profile() {
-  const { profile: authProfile, signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
   const [customerProfile, setCustomerProfile] = useState<{
     loyalty_points: number;
     streak_days: number;
     total_orders: number;
     tier: string;
-    full_name: string;
+    full_name: string | null;
   } | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -34,14 +35,15 @@ function Profile() {
 
   const handleSignOut = async () => {
     await signOut();
-    navigate({ to: "/auth" });
+    navigate({ to: "/auth", search: {} });
   };
 
-  const displayName = customerProfile?.full_name || authProfile?.full_name || "Guest";
-  const displayTier = customerProfile?.tier || authProfile?.tier || "Bronze";
+  const displayName =
+    customerProfile?.full_name || user?.first_name || "Guest";
+  const displayTier = customerProfile?.tier || "Bronze";
   const displayPoints = customerProfile?.loyalty_points ?? 0;
   const displayStreak = customerProfile?.streak_days ?? 0;
-  const displayVisits = (customerProfile?.total_orders ?? 0) + 24;
+  const displayVisits = customerProfile?.total_orders ?? 0;
 
   return (
     <MobileShell>
@@ -49,15 +51,7 @@ function Profile() {
       <section className="px-5">
         <div className="glass-strong flex items-center gap-4 rounded-3xl p-5">
           <div className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl gradient-ember text-3xl text-white shadow-ember">
-            {authProfile?.avatar_url ? (
-              <img
-                src={authProfile.avatar_url}
-                alt=""
-                className="h-full w-full rounded-2xl object-cover"
-              />
-            ) : (
-              "✨"
-            )}
+            ✨
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
@@ -87,7 +81,9 @@ function Profile() {
           </div>
         ) : orders.length === 0 ? (
           <div className="glass-strong rounded-3xl p-6 text-center">
-            <p className="text-sm text-muted-foreground">No orders yet. Start by visiting a store!</p>
+            <p className="text-sm text-muted-foreground">
+              No orders yet. Start by visiting a store!
+            </p>
           </div>
         ) : (
           <div className="glass-strong divide-y divide-border rounded-3xl">
@@ -102,13 +98,18 @@ function Profile() {
                   ☕
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-ink">Order #{o.id}</p>
+                  <p className="truncate text-sm font-medium text-ink">
+                    Order #{o.id}
+                  </p>
                   <p className="text-[11px] text-muted-foreground">
-                    {o.items?.length ?? 0} items · {o.status}
+                    {o.items?.length ?? o.order_items?.length ?? 0} items ·{" "}
+                    {o.status}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-display text-base text-ink">NPR {parseFloat(o.total_amount).toLocaleString()}</p>
+                  <p className="font-display text-base text-ink">
+                    NPR {parseFloat(o.total_amount).toLocaleString()}
+                  </p>
                   <p className="text-[10px] text-ember">+{o.points_earned} pts</p>
                 </div>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -141,18 +142,14 @@ function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="glass rounded-2xl p-3 text-center">
       <p className="font-display text-2xl text-ink">{value}</p>
-      <p className="mt-0.5 text-[10px] uppercase tracking-widest text-muted-foreground">{label}</p>
+      <p className="mt-0.5 text-[10px] uppercase tracking-widest text-muted-foreground">
+        {label}
+      </p>
     </div>
   );
 }
 
-function Row({
-  icon: Icon,
-  label,
-}: {
-  icon: typeof Bell;
-  label: string;
-}) {
+function Row({ icon: Icon, label }: { icon: typeof Bell; label: string }) {
   return (
     <button className="flex w-full items-center gap-3 p-4 text-left">
       <Icon className="h-4 w-4 text-muted-foreground" />

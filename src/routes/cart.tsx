@@ -1,19 +1,20 @@
+// src/routes/cart.tsx
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useStore, cartTotal, cartPoints, type MenuItem } from "@/lib/store";
 import { TopBar, MobileShell } from "@/components/MobileShell";
 import { Minus, Plus, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
-import { requireAuth } from "@/lib/auth-guard";
+import { requireCustomer } from "@/lib/auth-guard";
 import { menuApi } from "@/lib/api";
 import { useState, useEffect } from "react";
 
 export const Route = createFileRoute("/cart")({
-  beforeLoad: requireAuth,
+  beforeLoad: requireCustomer,
   head: () => ({ meta: [{ title: "Your bag · Zentro" }] }),
   component: Cart,
 });
 
 function Cart() {
-  const { cart, add, remove, placeOrder, selectedMerchantId, clearCart } = useStore();
+  const { cart, add, remove, placeOrder, selectedMerchantId } = useStore();
   const nav = useNavigate();
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,7 +47,7 @@ function Cart() {
         }))
       );
     } catch {
-      // If API fails, cart calculations will just skip unknown items
+      // cart calculations will skip unknown items
     } finally {
       setLoading(false);
     }
@@ -83,7 +84,9 @@ function Cart() {
         <p className="mt-1 text-sm text-muted-foreground">
           {cart.length === 0
             ? "Quiet for now. Add something lovely."
-            : `${cart.reduce((s, c) => s + c.qty, 0)} item${cart.reduce((s, c) => s + c.qty, 0) !== 1 ? "s" : ""} ready to brew.`}
+            : `${cart.reduce((s, c) => s + c.qty, 0)} item${
+                cart.reduce((s, c) => s + c.qty, 0) !== 1 ? "s" : ""
+              } ready to brew.`}
         </p>
       </div>
 
@@ -91,12 +94,17 @@ function Cart() {
         {cart.map((c) => {
           const item = menuItems.find((m) => m.id === c.itemId);
           return (
-            <div key={c.itemId} className="glass flex items-center gap-3 rounded-2xl p-3">
+            <div
+              key={c.itemId}
+              className="glass flex items-center gap-3 rounded-2xl p-3"
+            >
               <div className="grid h-14 w-14 shrink-0 place-items-center rounded-xl bg-mist text-2xl">
                 {item?.emoji || "🍽️"}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-ink">{item?.name || "Unknown item"}</p>
+                <p className="truncate text-sm font-semibold text-ink">
+                  {item?.name || "Unknown item"}
+                </p>
                 <p className="font-display text-lg text-ink">
                   NPR {item ? (item.price * c.qty).toLocaleString() : "—"}
                 </p>
@@ -160,11 +168,27 @@ function Cart() {
   );
 }
 
-function Row({ label, value, bold }: { label: string; value: string; bold?: boolean }) {
+function Row({
+  label,
+  value,
+  bold,
+}: {
+  label: string;
+  value: string;
+  bold?: boolean;
+}) {
   return (
     <div className="flex items-center justify-between py-1">
-      <span className={`text-sm ${bold ? "font-medium text-ink" : "text-muted-foreground"}`}>{label}</span>
-      <span className={`${bold ? "font-display text-2xl text-ink" : "text-sm text-ink"}`}>{value}</span>
+      <span
+        className={`text-sm ${bold ? "font-medium text-ink" : "text-muted-foreground"}`}
+      >
+        {label}
+      </span>
+      <span
+        className={`${bold ? "font-display text-2xl text-ink" : "text-sm text-ink"}`}
+      >
+        {value}
+      </span>
     </div>
   );
 }

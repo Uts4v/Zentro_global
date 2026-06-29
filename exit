@@ -1,0 +1,65 @@
+[33mcommit e7eec54b2c3291c5b4c2b86f37b9162c65b424a2[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m
+Author: uts4v <utsavstha033@gmail.com>
+Date:   Thu Jun 25 17:33:42 2026 +0545
+
+    push
+
+[33mcommit 2eeaf0632bc4a4a1cadb06dbbdef01f49d37373d[m
+Author: uts4v <utsavstha033@gmail.com>
+Date:   Thu Jun 25 16:58:13 2026 +0545
+
+    push
+
+[33mcommit 5d6b572eeacae2145500e27f41e35bc3d4f750c8[m
+Author: uts4v <utsavstha033@gmail.com>
+Date:   Thu Jun 25 16:44:28 2026 +0545
+
+    deploy
+
+[33mcommit 7d762ae686fb9834fb85e7213a1bfbae20f84faf[m
+Author: uts4v <utsavstha033@gmail.com>
+Date:   Thu Jun 25 16:34:18 2026 +0545
+
+    deploy
+
+[33mcommit e5400795e620d43850bb690995b6d496563ca6a3[m
+Author: uts4v <utsavstha033@gmail.com>
+Date:   Thu Jun 25 16:15:59 2026 +0545
+
+    deploy
+
+[33mcommit 47a5a63e1cd5fb7412d6edfd687eaa3d459e901d[m
+Author: uts4v <utsavstha033@gmail.com>
+Date:   Thu Jun 25 15:39:12 2026 +0545
+
+    deploy
+
+[33mcommit 82926444bf0e29c63f1d7f88a043a538719c2623[m
+Author: uts4v <utsavstha033@gmail.com>
+Date:   Thu Jun 25 15:20:00 2026 +0545
+
+    Fix vite config typo
+
+[33mcommit dfff5da656a148756deda7dd741b71c7dd984d76[m
+Author: uts4v <utsavstha033@gmail.com>
+Date:   Thu Jun 25 15:16:10 2026 +0545
+
+    deploy
+
+[33mcommit b331420026c830cc845c13246a93baf2d5bfedbe[m
+Author: uts4v <utsavstha033@gmail.com>
+Date:   Thu Jun 25 15:12:17 2026 +0545
+
+    deploy
+
+[33mcommit 329f7a73a107515bdc81278951811b0a34add711[m
+Author: uts4v <utsavstha033@gmail.com>
+Date:   Thu Jun 25 14:35:50 2026 +0545
+
+    Fix SPA routing
+
+[33mcommit d88b7dd6273d869d2f91af7ca6860155067be872[m
+Author: uts4v <utsavstha033@gmail.com>
+Date:   Thu Jun 25 14:23:25 2026 +0545
+
+    Initial commit
