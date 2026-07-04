@@ -2,6 +2,7 @@
 """
 Endpoints:
   GET    /api/merchants/                              — list all merchants (public)
+  GET    /api/merchants/nearby/                       — nearby merchants (public)
   GET    /api/merchants/<id>/                         — merchant detail (public)
   GET    /api/merchants/slug/<slug>/                  — merchant by slug (public)
   GET    /api/merchants/me/                           — authenticated merchant's own profile
@@ -19,10 +20,12 @@ Endpoints:
 
 import io
 import base64
+import math
 from datetime import timedelta
 
 import qrcode
 from django.db.models import Avg, Count, Sum
+from django.db.models.functions import TruncDate
 from django.utils import timezone
 from django.utils.text import slugify
 
@@ -36,6 +39,7 @@ from .serializers import (
     MenuItemSerializer,
     MerchantProfileSerializer,
     MerchantPublicSerializer,
+    MerchantDiscoverySerializer,
 )
 
 
@@ -58,18 +62,67 @@ def _generate_qr(slug: str, request) -> str:
     return f"data:image/png;base64,{b64}"
 
 
+def _haversine_km(lat1, lon1, lat2, lon2):
+    """Great-circle distance between two lat/lng points, in kilometers."""
+    R = 6371.0
+    phi1, phi2 = math.radians(lat1), math.radians(lat2)
+    dphi = math.radians(lat2 - lat1)
+    dlambda = math.radians(lon2 - lon1)
+    a = (
+        math.sin(dphi / 2) ** 2
+        + math.cos(phi1) * math.cos(phi2) * math.sin(dlambda / 2) ** 2
+    )
+    return 2 * R * math.asin(math.sqrt(a))
+
+
 # ── Merchant profile ──────────────────────────────────────────────────────────
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def merchant_list(request):
     """GET /api/merchants/ — all approved merchants (public)."""
-    merchants = (
-        MerchantProfile.objects
-        .filter(is_approved=True)
-        .order_by("business_name")   # ← fixed from store_name
-    )
+    merchants = MerchantProfile.objects.filter(is_approved=True).order_by("business_name")
     return Response(MerchantPublicSerializer(merchants, many=True).data)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def merchant_discovery_nearby(request):
+    """
+    GET /api/merchants/nearby/?lat=<float>&lng=<float>
+    Public discovery feed for the map + nearby list.
+    """
+    lat_param = request.query_params.get("lat")
+    lng_param = request.query_params.get("lng")
+
+    user_lat = user_lng = None
+    if lat_param is not None and lng_param is not None:
+        try:
+            user_lat = float(lat_param)
+            user_lng = float(lng_param)
+        except ValueError:
+            return Response(
+                {"error": "lat and lng must be valid numbers."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    merchants = MerchantProfile.objects.filter(is_approved=True)
+
+    distances = {}
+    if user_lat is not None and user_lng is not None:
+        for m in merchants:
+            if m.latitude is not None and m.longitude is not None:
+                distances[m.id] = _haversine_km(
+                    user_lat, user_lng, float(m.latitude), float(m.longitude)
+                )
+        merchants = sorted(merchants, key=lambda m: distances.get(m.id, float("inf")))
+    else:
+        merchants = merchants.order_by("business_name")
+
+    serializer = MerchantDiscoverySerializer(
+        merchants, many=True, context={"distances": distances}
+    )
+    return Response(serializer.data)
 
 
 @api_view(["GET"])
@@ -79,10 +132,7 @@ def merchant_detail(request, pk):
     try:
         merchant = MerchantProfile.objects.get(pk=pk)
     except MerchantProfile.DoesNotExist:
-        return Response(
-            {"error": "Merchant not found."},
-            status=status.HTTP_404_NOT_FOUND,
-        )
+        return Response({"error": "Merchant not found."}, status=status.HTTP_404_NOT_FOUND)
     return Response(MerchantPublicSerializer(merchant).data)
 
 
@@ -93,10 +143,7 @@ def merchant_by_slug(request, slug):
     try:
         merchant = MerchantProfile.objects.get(slug=slug)
     except MerchantProfile.DoesNotExist:
-        return Response(
-            {"error": "Merchant not found."},
-            status=status.HTTP_404_NOT_FOUND,
-        )
+        return Response({"error": "Merchant not found."}, status=status.HTTP_404_NOT_FOUND)
     return Response(MerchantPublicSerializer(merchant).data)
 
 
@@ -120,9 +167,7 @@ def merchant_update(request):
     except PermissionError as e:
         return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
 
-    serializer = MerchantProfileSerializer(
-        merchant, data=request.data, partial=True
-    )
+    serializer = MerchantProfileSerializer(merchant, data=request.data, partial=True)
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -133,7 +178,6 @@ def merchant_update(request):
         base_slug = slugify(instance.business_name)
         slug = base_slug
         counter = 1
-        # Ensure uniqueness
         while MerchantProfile.objects.filter(slug=slug).exclude(pk=instance.pk).exists():
             slug = f"{base_slug}-{counter}"
             counter += 1
@@ -155,10 +199,7 @@ def merchant_menu(request, pk):
     try:
         merchant = MerchantProfile.objects.get(pk=pk)
     except MerchantProfile.DoesNotExist:
-        return Response(
-            {"error": "Merchant not found."},
-            status=status.HTTP_404_NOT_FOUND,
-        )
+        return Response({"error": "Merchant not found."}, status=status.HTTP_404_NOT_FOUND)
     items = merchant.menu_items.filter(is_available=True).order_by("category", "name")
     return Response(MenuItemSerializer(items, many=True).data)
 
@@ -212,15 +253,11 @@ def menu_item_detail(request, pk):
     try:
         item = MenuItem.objects.get(pk=pk)
     except MenuItem.DoesNotExist:
-        return Response(
-            {"error": "Menu item not found."},
-            status=status.HTTP_404_NOT_FOUND,
-        )
+        return Response({"error": "Menu item not found."}, status=status.HTTP_404_NOT_FOUND)
 
     if request.method == "GET":
         return Response(MenuItemSerializer(item).data)
 
-    # Write operations — must own the item
     try:
         merchant = _get_merchant(request.user)
     except PermissionError as e:
@@ -250,10 +287,7 @@ def toggle_availability(request, pk):
     try:
         item = MenuItem.objects.get(pk=pk)
     except MenuItem.DoesNotExist:
-        return Response(
-            {"error": "Menu item not found."},
-            status=status.HTTP_404_NOT_FOUND,
-        )
+        return Response({"error": "Menu item not found."}, status=status.HTTP_404_NOT_FOUND)
 
     try:
         merchant = _get_merchant(request.user)
@@ -261,10 +295,7 @@ def toggle_availability(request, pk):
         return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
 
     if item.merchant != merchant:
-        return Response(
-            {"error": "Not your item."},
-            status=status.HTTP_403_FORBIDDEN,
-        )
+        return Response({"error": "Not your item."}, status=status.HTTP_403_FORBIDDEN)
 
     item.is_available = not item.is_available
     item.save(update_fields=["is_available", "updated_at"])
@@ -276,9 +307,7 @@ def toggle_availability(request, pk):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def merchant_analytics(request):
-    """
-    GET /api/merchants/analytics/?days=30
-    """
+    """GET /api/merchants/analytics/?days=30"""
     try:
         merchant = _get_merchant(request.user)
     except PermissionError as e:
@@ -316,7 +345,6 @@ def merchant_analytics(request):
         .order_by("-order_count")[:10]
     )
 
-    from django.db.models.functions import TruncDate
     daily = (
         orders_qs
         .annotate(date=TruncDate("created_at"))

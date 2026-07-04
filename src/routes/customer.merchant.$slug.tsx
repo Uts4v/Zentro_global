@@ -229,16 +229,6 @@ function CustomerMerchantDashboard() {
           <p className="mt-6 text-sm text-muted-foreground">{merchant.description}</p>
         )}
       </div>
-      <TodaySpecialPopup
-  slug={slug}
-  onOrderItem={(itemId) => {
-    add(itemId);
-    navigate({ to: "/cart" as any });
-  }}
-  onViewReward={(_rewardId) => {
-    navigate({ to: "/rewards" as any });
-  }}
-/>
     </MobileShell>
   );
 }

@@ -14,7 +14,12 @@ urlpatterns = [
     path("me/",                  views.merchant_me,             name="merchant-me"),
     path("me/update/",           views.merchant_update,         name="merchant-update"),
     path("analytics/",           views.merchant_analytics,      name="merchant-analytics"),
-
+# ── Public merchant pages ─────────────────────────────────────────────────
+    path("",                     views.merchant_list,           name="merchant-list"),
+    path("nearby/",               views.merchant_discovery_nearby, name="merchant-nearby"),
+    path("slug/<slug:slug>/",    views.merchant_by_slug,        name="merchant-by-slug"),
+    path("<int:pk>/",            views.merchant_detail,         name="merchant-detail"),
+    path("<int:pk>/menu/",       views.merchant_menu,           name="merchant-public-menu"),
     # ── Menu items ────────────────────────────────────────────────────────────
     path("menu-items/my-items/", views.my_menu_items,           name="my-menu-items"),
     path("menu-items/",          views.menu_item_list_create,   name="menu-item-list-create"),

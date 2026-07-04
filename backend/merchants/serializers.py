@@ -31,19 +31,15 @@ class MerchantProfileSerializer(serializers.ModelSerializer):
         read_only_fields = ["id", "is_approved", "qr_code", "created_at", "updated_at"]
 
     def validate_slug(self, value):
-        # Lowercase, replace spaces with hyphens, strip bad chars
         value = value.lower().strip()
         value = re.sub(r"[^\w-]", "", value.replace(" ", "-"))
         if not value:
             raise serializers.ValidationError("Slug cannot be empty.")
-        
-        # Uniqueness check — exclude current instance on update
         qs = MerchantProfile.objects.filter(slug=value)
         if self.instance:
             qs = qs.exclude(pk=self.instance.pk)
         if qs.exists():
             raise serializers.ValidationError("This slug is already taken.")
-        
         return value
 
 
@@ -58,3 +54,20 @@ class MerchantPublicSerializer(serializers.ModelSerializer):
             "description", "is_open",
             "latitude", "longitude",
         ]
+
+
+class MerchantDiscoverySerializer(serializers.ModelSerializer):
+    """Minimal public fields for map/nearby discovery — nothing private."""
+    distance_km = serializers.SerializerMethodField()
+
+    class Meta:
+        model = MerchantProfile
+        fields = [
+            "id", "business_name", "slug", "business_type",
+            "address", "logo_url", "is_open",
+            "latitude", "longitude", "distance_km",
+        ]
+
+    def get_distance_km(self, obj):
+        distance = self.context.get("distances", {}).get(obj.id)
+        return round(distance, 2) if distance is not None else None

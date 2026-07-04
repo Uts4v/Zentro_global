@@ -1,5 +1,5 @@
-// C:\Users\ACER\Desktop\NTE Loyalty\zentro-glow-loyalty\src\routes\__root.tsx
-import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
+// src/routes/__root.tsx
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import {
   Outlet,
   Link,
@@ -10,7 +10,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, type ReactNode } from "react";
+import { useEffect, useMemo, type ReactNode } from "react";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -18,7 +18,7 @@ import { toast } from "sonner";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
-import { notificationApi } from "@/lib/api";
+import { tokenStore } from "@/lib/django-api-base";
 
 // Routes that never require auth
 const PUBLIC_ROUTES = [
@@ -28,7 +28,7 @@ const PUBLIC_ROUTES = [
   "/auth/reset-password",
 ];
 
-// ── Auth gate — rendered inside AuthProvider so useAuth() works ───────────────
+// ── Auth gate ─────────────────────────────────────────────────────────────────
 function AuthGate() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
@@ -42,7 +42,6 @@ function AuthGate() {
     if (user) return;
     if (isPublic) return;
 
-    // Not logged in and on a protected route → send to the right login page
     if (isMerchant) {
       navigate({
         to: "/auth/merchant" as any,
@@ -58,8 +57,6 @@ function AuthGate() {
     }
   }, [user, loading, isPublic, pathname]);
 
-  // While auth is initialising on a protected route, show a full-screen spinner
-  // so the page never flashes protected content before the redirect fires
   if (loading && !isPublic) {
     return (
       <div className="flex min-h-dvh items-center justify-center">
@@ -68,7 +65,6 @@ function AuthGate() {
     );
   }
 
-  // Auth done, not logged in, not a public route — spinner while redirect fires
   if (!loading && !user && !isPublic) {
     return (
       <div className="flex min-h-dvh items-center justify-center">
@@ -161,14 +157,12 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   errorComponent: ErrorComponent,
 });
 
+// ── Inner root — injects auth into router context ─────────────────────────────
 function InnerRoot() {
   const auth = useAuth();
   const { queryClient } = Route.useRouteContext();
   const router = useRouter();
 
-  // This is a bit of a hack to inject the auth context into the router
-  // after the fact. This is needed for the `beforeLoad` guards to work.
-  // A cleaner solution might involve a different app structure, but this works.
   useMemo(() => {
     router.options.context = { ...router.options.context, auth };
   }, [auth, router]);
@@ -176,51 +170,61 @@ function InnerRoot() {
   return <Outlet />;
 }
 
+// ── WebSocket notification toasts ─────────────────────────────────────────────
 function GlobalNotificationToasts() {
   const { user } = useAuth();
-  const seenIds = useRef<Set<string> | null>(null);
-
-  const { data } = useQuery({
-    queryKey: ["notifications", "list"],
-    queryFn: () => notificationApi.list(),
-    enabled: Boolean(user),
-    staleTime: 5_000,
-    refetchInterval: 10_000,
-    retry: false,
-  });
+  const queryClient = useQueryClient();
 
   useEffect(() => {
-    if (!data) return;
+    if (!user) return;
 
-    // First load — just remember what's already there, don't toast for history.
-    if (seenIds.current === null) {
-      seenIds.current = new Set(data.map((n) => n.id));
-      return;
-    }
+    const token = tokenStore.getAccess();
+    if (!token) return;
 
-    const fresh = data.filter((n) => !seenIds.current!.has(n.id));
-    fresh.forEach((n) => seenIds.current!.add(n.id));
+    const wsUrl = `ws://localhost:8000/ws/notifications/?token=${token}`;
+    const ws = new WebSocket(wsUrl);
 
-    // Newest first in the API response — toast oldest-of-the-new first so order feels right.
-    [...fresh].reverse().forEach((n) => {
-      toast.success(n.title, {
-        description: n.message,
-        duration: 6000,
-      });
-    });
-  }, [data]);
+    ws.onopen = () => {
+      console.log("Notification WebSocket connected");
+    };
+
+    ws.onmessage = (event) => {
+      try {
+        const notif = JSON.parse(event.data);
+        toast.success(notif.title, {
+          description: notif.message,
+          duration: 6000,
+        });
+        // Refresh notification list so bell icon / page updates
+        queryClient.invalidateQueries({ queryKey: ["notifications", "list"] });
+      } catch {
+        // ignore malformed messages
+      }
+    };
+
+    ws.onerror = () => {
+      console.warn("Notification WebSocket error — will retry on next mount");
+    };
+
+    ws.onclose = () => {
+      console.log("Notification WebSocket closed");
+    };
+
+    return () => {
+      ws.close();
+    };
+  }, [user, queryClient]);
 
   return null;
 }
 
+// ── Root component ────────────────────────────────────────────────────────────
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        {/* AuthGate sits inside AuthProvider so useAuth() is available */}
-        {/* The router context is now aware of auth state */}
         <GlobalNotificationToasts />
         <InnerRoot />
         <Toaster position="top-center" richColors expand visibleToasts={4} />
@@ -229,6 +233,7 @@ function RootComponent() {
   );
 }
 
+// ── Shell ─────────────────────────────────────────────────────────────────────
 function RootShell({ children }: { children: ReactNode }) {
   return (
     <html lang="en">

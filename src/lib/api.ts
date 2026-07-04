@@ -24,6 +24,18 @@ export interface TodaySpecial {
   created_at: string;
   updated_at: string;
 }
+export interface MerchantDiscoveryItem {
+  id: string;
+  business_name: string;
+  slug: string;
+  business_type: string | null;
+  address: string | null;
+  logo_url: string | null;
+  is_open: boolean;
+  latitude: string | null;
+  longitude: string | null;
+  distance_km: number | null;
+}
 
 export const specialApi = {
   // Customer — public, no auth needed
@@ -101,7 +113,43 @@ export interface OrderItem {
   quantity: number;
   subtotal: string;
 }
+// ── Notifications ─────────────────────────────────────────────────────────────
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  notification_type: string;
+  merchant_name: string;
+  context_url: string;
+  order_id: number | null;
+  merchant_id: number | null;
+  reward_id: number | null;
+  is_read: boolean;
+  created_at: string;
+}
 
+export const notificationApi = {
+  list: async (): Promise<Notification[]> => {
+    return djangoFetch<Notification[]>(apiUrl("/notifications/"), {
+      headers: authHeaders(),
+    });
+  },
+
+  markRead: async (id: string): Promise<void> => {
+    await djangoFetch(apiUrl(`/notifications/${id}/read/`), {
+      method: "PATCH",
+      headers: authHeaders(),
+    });
+  },
+
+  markAllRead: async (): Promise<void> => {
+    await djangoFetch(apiUrl("/notifications/read-all/"), {
+      method: "POST",
+      headers: authHeaders(true),
+      body: JSON.stringify({}),
+    });
+  },
+};
 export interface Order {
   id: string;
   customer_id: string;
@@ -286,18 +334,6 @@ export interface Redemption {
   created_at: string;
 }
 
-export interface Notification {
-  id: string;
-  notification_type: string;
-  title: string;
-  message: string;
-  context_url?: string | null;
-  is_read: boolean;
-  merchant_id?: string | null;
-  merchant_name?: string;
-  created_at: string;
-}
-
 export interface LoyaltyRules {
   id: string;
   merchant_id: string;
@@ -448,6 +484,18 @@ export const merchantApi = {
 
   list: async (): Promise<MerchantProfile[]> => {
     return djangoFetch<MerchantProfile[]>(apiUrl("/merchants/"));
+  },
+
+  nearby: async (lat?: number, lng?: number): Promise<MerchantDiscoveryItem[]> => {
+    const params = new URLSearchParams();
+    if (lat !== undefined && lng !== undefined) {
+      params.set("lat", String(lat));
+      params.set("lng", String(lng));
+    }
+    const qs = params.toString();
+    return djangoFetch<MerchantDiscoveryItem[]>(
+      apiUrl(`/merchants/nearby/${qs ? `?${qs}` : ""}`)
+    );
   },
 
   get: async (id: string): Promise<MerchantProfile> => {
@@ -721,35 +769,7 @@ export const transactionApi = {
     });
   },
 };
-export const notificationApi = {
-  list: async (): Promise<Notification[]> => {
-    return djangoFetch<Notification[]>(apiUrl("/loyalty/notifications/"), {
-      headers: authHeaders(),
-    });
-  },
 
-  unreadCount: async (): Promise<{ unread_count: number }> => {
-    return djangoFetch<{ unread_count: number }>(apiUrl("/loyalty/notifications/unread-count/"), {
-      headers: authHeaders(),
-    });
-  },
-
-  markRead: async (id: string): Promise<Notification> => {
-    return djangoFetch<Notification>(apiUrl(`/loyalty/notifications/${id}/read/`), {
-      method: "PATCH",
-      headers: authHeaders(),
-      body: JSON.stringify({}),
-    });
-  },
-
-  markAllRead: async (): Promise<{ marked_read: number }> => {
-    return djangoFetch<{ marked_read: number }>(apiUrl("/loyalty/notifications/read-all/"), {
-      method: "PATCH",
-      headers: authHeaders(),
-      body: JSON.stringify({}),
-    });
-  },
-};
 // ── Punch Cards ───────────────────────────────────────────────────────────────
 
 export const punchCardApi = {

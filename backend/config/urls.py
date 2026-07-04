@@ -15,7 +15,7 @@ urlpatterns = [
 
     # Auth: register, login, logout, token refresh, password reset, profile
     path("api/auth/", include("accounts.urls")),
-
+    path("api/notifications/", include("notifications.urls")),
     # Media upload (images)
     path("api/media/upload/", upload_image, name="media-upload"),
 

@@ -10,9 +10,7 @@ All loyalty-related models:
   - Redemption      : records of reward redemptions by customers
 """
 
-from django.conf import settings
 from django.db import models
-
 class TodaySpecial(models.Model):
     merchant = models.ForeignKey(
         "merchants.MerchantProfile",
@@ -312,51 +310,6 @@ class PointTransaction(models.Model):
         return f"{self.transaction_type}: {self.points} pts for {self.customer} @ {self.merchant}"
 
 
-class Notification(models.Model):
-    """User-facing notification events for customers and merchants."""
-
-    NOTIFICATION_TYPES = [
-        ("generic", "Generic"),
-        ("new_order", "New order"),
-        ("order_status", "Order status"),
-        ("reward_redeemed", "Reward redeemed"),
-        ("redemption_confirmed", "Redemption confirmed"),
-        ("mission_completed", "Mission completed"),
-        ("punch_card_completed", "Punch card completed"),
-        ("special_offer", "Special offer"),
-    ]
-
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="notifications",
-    )
-    merchant = models.ForeignKey(
-        "merchants.MerchantProfile",
-        on_delete=models.CASCADE,
-        null=True,
-        blank=True,
-        related_name="notifications",
-    )
-    notification_type = models.CharField(
-        max_length=50,
-        choices=NOTIFICATION_TYPES,
-        default="generic",
-    )
-    title = models.CharField(max_length=255)
-    message = models.TextField(blank=True)
-    context_url = models.CharField(max_length=255, blank=True)
-    is_read = models.BooleanField(default=False)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        db_table = "notifications"
-        ordering = ["-created_at"]
-
-    def __str__(self):
-        return f"Notification for {self.user}: {self.title}"
-
-
 class Mission(models.Model):
     """Loyalty missions / challenges that merchants create for their customers."""
 
@@ -468,13 +421,6 @@ class Redemption(models.Model):
         related_name="redemptions",
     )
     reward = models.ForeignKey(Reward, on_delete=models.CASCADE, related_name="redemptions")
-    order = models.OneToOneField(
-        "orders.Order",
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="redemption",
-)
     points_spent = models.IntegerField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
     code = models.CharField(max_length=50, unique=True, db_index=True)

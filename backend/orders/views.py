@@ -12,6 +12,8 @@ Endpoints:
   PATCH /api/orders/<id>/cancel/         — customer cancels pending order
 """
 
+import logging
+
 from django.db import transaction
 from django.utils import timezone
 
@@ -22,19 +24,29 @@ from rest_framework.response import Response
 
 from accounts.models import CustomerProfile
 from merchants.models import MerchantProfile, MenuItem
-from loyalty.models import MerchantPunchCard, CustomerPunchCard, CustomerMission, Mission, CustomerMerchantProfile, Redemption
-from loyalty.services import (
-    create_notification,
-    get_or_create_wallet,
-    award_wallet_points,
-    update_wallet_streak,
-)
+from loyalty.models import MerchantPunchCard, CustomerPunchCard, CustomerMission, Mission, CustomerMerchantProfile
+from loyalty.services import get_or_create_wallet, award_wallet_points, update_wallet_streak
+from notifications.services import send_notification
+from notifications.models import Notification
 
 from .models import Order, OrderItem
 from .serializers import OrderSerializer, CreateOrderSerializer
 
+logger = logging.getLogger(__name__)
+
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
+
+def _notify_safe(**kwargs):
+    """
+    Send a notification without ever letting a failure here roll back
+    an order transaction. Errors are logged, not raised.
+    """
+    try:
+        send_notification(**kwargs)
+    except Exception:
+        logger.exception("Failed to send notification (order flow continues)")
+
 
 def _award_loyalty(order: Order):
     """
@@ -74,46 +86,51 @@ def _award_loyalty(order: Order):
             should_punch = True
         elif merchant_card.mode == MerchantPunchCard.MODE_PER_STREAK and streak_incremented:
             should_punch = True
-            
+
         if should_punch:
             completed = customer_card.add_punch()
             if completed:
-                try:
-                    create_notification(
-                        user=customer.user,
-                        merchant=order.merchant,
-                        notification_type="punch_card_completed",
-                        title="Punch card completed",
-                        message=f"Your punch card at {order.merchant.business_name} is complete. Claim your reward!",
-                        context_url=f"/customer/order/{order.id}",
-                    )
-                except Exception:
-                    # Don't let notification failures break order processing
-                    pass
+                # Assuming Punch Card reward is physical or claimed manually by customer later.
+                # If we were to award points, we could do it here, but reward_text is free text.
+                pass
 
-    # 4. Mission progress — order_count type
-    _update_mission_progress(customer, order, wallet)
+    # 4. Mission progress — order_count, spend_amount, visit_streak types
+    _update_mission_progress(customer, order, wallet, streak_incremented)
 
 
-def _update_mission_progress(customer: CustomerProfile, order: Order, wallet):
-    """Increment order_count missions for this merchant + general missions."""
+def _update_mission_progress(customer: CustomerProfile, order: Order, wallet, streak_incremented: bool):
+    """
+    Update progress for missions relevant to this completed order:
+      - order_count:   +1 per completed order
+      - spend_amount:  +order.total_amount per completed order
+      - visit_streak:  +1 only on orders that actually incremented the streak
+    """
     from loyalty.services import award_wallet_points as award_pts
 
     missions = Mission.objects.filter(
         is_active=True,
-        mission_type="order_count",
+        mission_type__in=["order_count", "spend_amount", "visit_streak"],
     ).filter(
         required_merchant__in=[order.merchant, None]
     )
 
     for mission in missions:
+        # Streak missions only move forward on orders that grew the streak
+        if mission.mission_type == "visit_streak" and not streak_incremented:
+            continue
+
         cm, _ = CustomerMission.objects.get_or_create(
             customer=customer,
             mission=mission,
         )
         if cm.is_completed:
             continue
-        cm.current_count += 1
+
+        if mission.mission_type == "spend_amount":
+            cm.current_count += int(order.total_amount)
+        else:  # order_count, visit_streak
+            cm.current_count += 1
+
         if cm.current_count >= mission.target_count:
             cm.is_completed = True
             cm.completed_at = timezone.now()
@@ -123,17 +140,6 @@ def _update_mission_progress(customer: CustomerProfile, order: Order, wallet):
             else:
                 mission_wallet = wallet
             award_pts(mission_wallet, mission.reward_points, transaction_type="MISSION_BONUS", description=f"Mission '{mission.title}' completed", mission=mission)
-            try:
-                create_notification(
-                    user=customer.user,
-                    merchant=mission.required_merchant or order.merchant,
-                    notification_type="mission_completed",
-                    title="Mission complete",
-                    message=f"You completed '{mission.title}' and earned {mission.reward_points} points!",
-                    context_url=f"/customer/order/{order.id}",
-                )
-            except Exception:
-                pass
         cm.save()
 
 
@@ -267,17 +273,21 @@ def create_order(request):
 
     for item in order_items_data:
         OrderItem.objects.create(order=order, **item)
-    try:
-        create_notification(
-            user=merchant.user,
-            merchant=merchant,
-            notification_type="new_order",
-            title="New order received",
-            message=f"Order #{order.id} has been placed by {customer.full_name or customer.user.email}.",
-            context_url="/merchant/orders",
-        )
-    except Exception:
-        pass
+
+    # Notify the merchant that a new order has come in.
+    # Deferred with on_commit: runs only after this transaction succeeds,
+    # and a failure here can never poison the order-creation transaction
+    # itself (unlike calling it directly inside this atomic block).
+    transaction.on_commit(lambda: _notify_safe(
+        user=merchant.user,
+        title="New order received",
+        message=f"New order #{order.id} — NPR {total_amount}",
+        notification_type=Notification.TYPE_NEW_ORDER,
+        merchant_name=merchant.business_name,
+        context_url=f"/merchant/orders/{order.id}",
+        order_id=order.id,
+        merchant_id=merchant.id,
+    ))
 
     return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
 
@@ -319,7 +329,7 @@ def update_order_status(request, pk):
     Merchant-scoped points + punch card are awarded when status becomes "completed".
     """
     try:
-        order = Order.objects.select_related("customer", "merchant").get(pk=pk)
+        order = Order.objects.select_related("customer__user", "merchant").get(pk=pk)
     except Order.DoesNotExist:
         return Response({"error": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
 
@@ -341,51 +351,30 @@ def update_order_status(request, pk):
 
     previous_status = order.status
 
-    # Award loyalty once on first transition INTO "completed" — skip for reward pickup orders,
-    # since points were already deducted at redemption time.
+    # Award loyalty once on first transition INTO "completed"
     if (
         new_status == Order.STATUS_COMPLETED
         and not order.loyalty_awarded
-        and not order.is_reward_order
         and previous_status != Order.STATUS_CANCELLED
     ):
         _award_loyalty(order)
         order.loyalty_awarded = True
 
-    # If this is a reward pickup order being completed, auto-confirm the linked redemption.
-    if new_status == Order.STATUS_COMPLETED and order.is_reward_order:
-        try:
-            redemption = order.redemption
-        except Redemption.DoesNotExist:
-            redemption = None
-
-        if redemption and redemption.status == redemption.STATUS_PENDING:
-            redemption.status = redemption.STATUS_CONFIRMED
-            redemption.confirmed_at = timezone.now()
-            redemption.save(update_fields=["status", "confirmed_at"])
-            create_notification(
-                user=order.customer.user,
-                merchant=order.merchant,
-                notification_type="redemption_confirmed",
-                title="Reward confirmed",
-                message=f"Your redemption for {redemption.reward.name} was confirmed.",
-                context_url="/profile",
-            )
-
     order.status = new_status
     order.save(update_fields=["status", "loyalty_awarded", "updated_at"])
 
-    try:
-        create_notification(
-            user=order.customer.user,
-            merchant=order.merchant,
-            notification_type="order_status",
-            title="Order status updated",
-            message=f"Your order #{order.id} is now {new_status}.",
-            context_url=f"/orders/{order.id}",
-        )
-    except Exception:
-        pass
+    # Notify the customer that their order status changed.
+    # Deferred with on_commit — see note in create_order above.
+    transaction.on_commit(lambda: _notify_safe(
+        user=order.customer.user,
+        title="Order update",
+        message=f"Your order #{order.id} is now {new_status}.",
+        notification_type=Notification.TYPE_ORDER_UPDATE,
+        merchant_name=order.merchant.business_name,
+        context_url=f"/orders/{order.id}",
+        order_id=order.id,
+        merchant_id=order.merchant.id,
+    ))
 
     return Response(OrderSerializer(order).data)
 
@@ -418,16 +407,4 @@ def cancel_order(request, pk):
 
     order.status = Order.STATUS_CANCELLED
     order.save(update_fields=["status", "updated_at"])
-    try:
-        create_notification(
-            user=order.merchant.user,
-            merchant=order.merchant,
-            notification_type="order_status",
-            title="Order cancelled",
-            message=f"Order #{order.id} was cancelled by the customer.",
-            context_url="/merchant/orders",
-        )
-    except Exception:
-        pass
-
     return Response(OrderSerializer(order).data)

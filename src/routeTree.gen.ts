@@ -15,6 +15,7 @@ import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as MissionsRouteImport } from './routes/missions'
 import { Route as MerchantRouteImport } from './routes/merchant'
+import { Route as MapRouteImport } from './routes/map'
 import { Route as LoyaltyRouteImport } from './routes/loyalty'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as CartRouteImport } from './routes/cart'
@@ -70,6 +71,11 @@ const MissionsRoute = MissionsRouteImport.update({
 const MerchantRoute = MerchantRouteImport.update({
   id: '/merchant',
   path: '/merchant',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MapRoute = MapRouteImport.update({
+  id: '/map',
+  path: '/map',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoyaltyRoute = LoyaltyRouteImport.update({
@@ -209,6 +215,7 @@ export interface FileRoutesByFullPath {
   '/cart': typeof CartRoute
   '/leaderboard': typeof LeaderboardRoute
   '/loyalty': typeof LoyaltyRoute
+  '/map': typeof MapRoute
   '/merchant': typeof MerchantRouteWithChildren
   '/missions': typeof MissionsRoute
   '/notifications': typeof NotificationsRoute
@@ -243,6 +250,7 @@ export interface FileRoutesByTo {
   '/cart': typeof CartRoute
   '/leaderboard': typeof LeaderboardRoute
   '/loyalty': typeof LoyaltyRoute
+  '/map': typeof MapRoute
   '/missions': typeof MissionsRoute
   '/notifications': typeof NotificationsRoute
   '/profile': typeof ProfileRoute
@@ -277,6 +285,7 @@ export interface FileRoutesById {
   '/cart': typeof CartRoute
   '/leaderboard': typeof LeaderboardRoute
   '/loyalty': typeof LoyaltyRoute
+  '/map': typeof MapRoute
   '/merchant': typeof MerchantRouteWithChildren
   '/missions': typeof MissionsRoute
   '/notifications': typeof NotificationsRoute
@@ -313,6 +322,7 @@ export interface FileRouteTypes {
     | '/cart'
     | '/leaderboard'
     | '/loyalty'
+    | '/map'
     | '/merchant'
     | '/missions'
     | '/notifications'
@@ -347,6 +357,7 @@ export interface FileRouteTypes {
     | '/cart'
     | '/leaderboard'
     | '/loyalty'
+    | '/map'
     | '/missions'
     | '/notifications'
     | '/profile'
@@ -380,6 +391,7 @@ export interface FileRouteTypes {
     | '/cart'
     | '/leaderboard'
     | '/loyalty'
+    | '/map'
     | '/merchant'
     | '/missions'
     | '/notifications'
@@ -415,6 +427,7 @@ export interface RootRouteChildren {
   CartRoute: typeof CartRoute
   LeaderboardRoute: typeof LeaderboardRoute
   LoyaltyRoute: typeof LoyaltyRoute
+  MapRoute: typeof MapRoute
   MerchantRoute: typeof MerchantRouteWithChildren
   MissionsRoute: typeof MissionsRoute
   NotificationsRoute: typeof NotificationsRoute
@@ -471,6 +484,13 @@ declare module '@tanstack/react-router' {
       path: '/merchant'
       fullPath: '/merchant'
       preLoaderRoute: typeof MerchantRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/map': {
+      id: '/map'
+      path: '/map'
+      fullPath: '/map'
+      preLoaderRoute: typeof MapRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/loyalty': {
@@ -722,6 +742,7 @@ const rootRouteChildren: RootRouteChildren = {
   CartRoute: CartRoute,
   LeaderboardRoute: LeaderboardRoute,
   LoyaltyRoute: LoyaltyRoute,
+  MapRoute: MapRoute,
   MerchantRoute: MerchantRouteWithChildren,
   MissionsRoute: MissionsRoute,
   NotificationsRoute: NotificationsRoute,
