@@ -22,8 +22,13 @@ from rest_framework.response import Response
 
 from accounts.models import CustomerProfile
 from merchants.models import MerchantProfile, MenuItem
-from loyalty.models import MerchantPunchCard, CustomerPunchCard, CustomerMission, Mission, CustomerMerchantProfile
-from loyalty.services import get_or_create_wallet, award_wallet_points, update_wallet_streak
+from loyalty.models import MerchantPunchCard, CustomerPunchCard, CustomerMission, Mission, CustomerMerchantProfile, Redemption
+from loyalty.services import (
+    create_notification,
+    get_or_create_wallet,
+    award_wallet_points,
+    update_wallet_streak,
+)
 
 from .models import Order, OrderItem
 from .serializers import OrderSerializer, CreateOrderSerializer
@@ -73,9 +78,18 @@ def _award_loyalty(order: Order):
         if should_punch:
             completed = customer_card.add_punch()
             if completed:
-                # Assuming Punch Card reward is physical or claimed manually by customer later.
-                # If we were to award points, we could do it here, but reward_text is free text.
-                pass
+                try:
+                    create_notification(
+                        user=customer.user,
+                        merchant=order.merchant,
+                        notification_type="punch_card_completed",
+                        title="Punch card completed",
+                        message=f"Your punch card at {order.merchant.business_name} is complete. Claim your reward!",
+                        context_url=f"/customer/order/{order.id}",
+                    )
+                except Exception:
+                    # Don't let notification failures break order processing
+                    pass
 
     # 4. Mission progress — order_count type
     _update_mission_progress(customer, order, wallet)
@@ -109,6 +123,17 @@ def _update_mission_progress(customer: CustomerProfile, order: Order, wallet):
             else:
                 mission_wallet = wallet
             award_pts(mission_wallet, mission.reward_points, transaction_type="MISSION_BONUS", description=f"Mission '{mission.title}' completed", mission=mission)
+            try:
+                create_notification(
+                    user=customer.user,
+                    merchant=mission.required_merchant or order.merchant,
+                    notification_type="mission_completed",
+                    title="Mission complete",
+                    message=f"You completed '{mission.title}' and earned {mission.reward_points} points!",
+                    context_url=f"/customer/order/{order.id}",
+                )
+            except Exception:
+                pass
         cm.save()
 
 
@@ -242,6 +267,17 @@ def create_order(request):
 
     for item in order_items_data:
         OrderItem.objects.create(order=order, **item)
+    try:
+        create_notification(
+            user=merchant.user,
+            merchant=merchant,
+            notification_type="new_order",
+            title="New order received",
+            message=f"Order #{order.id} has been placed by {customer.full_name or customer.user.email}.",
+            context_url="/merchant/orders",
+        )
+    except Exception:
+        pass
 
     return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
 
@@ -305,17 +341,51 @@ def update_order_status(request, pk):
 
     previous_status = order.status
 
-    # Award loyalty once on first transition INTO "completed"
+    # Award loyalty once on first transition INTO "completed" — skip for reward pickup orders,
+    # since points were already deducted at redemption time.
     if (
         new_status == Order.STATUS_COMPLETED
         and not order.loyalty_awarded
+        and not order.is_reward_order
         and previous_status != Order.STATUS_CANCELLED
     ):
         _award_loyalty(order)
         order.loyalty_awarded = True
 
+    # If this is a reward pickup order being completed, auto-confirm the linked redemption.
+    if new_status == Order.STATUS_COMPLETED and order.is_reward_order:
+        try:
+            redemption = order.redemption
+        except Redemption.DoesNotExist:
+            redemption = None
+
+        if redemption and redemption.status == redemption.STATUS_PENDING:
+            redemption.status = redemption.STATUS_CONFIRMED
+            redemption.confirmed_at = timezone.now()
+            redemption.save(update_fields=["status", "confirmed_at"])
+            create_notification(
+                user=order.customer.user,
+                merchant=order.merchant,
+                notification_type="redemption_confirmed",
+                title="Reward confirmed",
+                message=f"Your redemption for {redemption.reward.name} was confirmed.",
+                context_url="/profile",
+            )
+
     order.status = new_status
     order.save(update_fields=["status", "loyalty_awarded", "updated_at"])
+
+    try:
+        create_notification(
+            user=order.customer.user,
+            merchant=order.merchant,
+            notification_type="order_status",
+            title="Order status updated",
+            message=f"Your order #{order.id} is now {new_status}.",
+            context_url=f"/orders/{order.id}",
+        )
+    except Exception:
+        pass
 
     return Response(OrderSerializer(order).data)
 
@@ -348,4 +418,16 @@ def cancel_order(request, pk):
 
     order.status = Order.STATUS_CANCELLED
     order.save(update_fields=["status", "updated_at"])
+    try:
+        create_notification(
+            user=order.merchant.user,
+            merchant=order.merchant,
+            notification_type="order_status",
+            title="Order cancelled",
+            message=f"Order #{order.id} was cancelled by the customer.",
+            context_url="/merchant/orders",
+        )
+    except Exception:
+        pass
+
     return Response(OrderSerializer(order).data)

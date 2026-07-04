@@ -41,7 +41,7 @@ function ForgotPassword() {
       </Link>
 
       <button
-        type="button" onClick={() => navigate({ to: "/auth" })}
+        type="button" onClick={() => navigate({ to: "/auth", search: {} as any })}
         className="mt-8 flex items-center gap-1.5 text-xs text-muted-foreground hover:text-ink"
       >
         <ArrowLeft className="h-3.5 w-3.5" /> Back to sign in
@@ -67,6 +67,7 @@ function ForgotPassword() {
           </p>
           <Link
             to="/auth"
+            search={{ redirect: undefined }}
             className="mt-4 inline-flex h-10 items-center justify-center rounded-full bg-ink px-5 text-xs font-medium text-primary-foreground"
           >
             Back to sign in

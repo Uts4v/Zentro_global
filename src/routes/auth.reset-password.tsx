@@ -46,7 +46,7 @@ function ResetPassword() {
     return (
       <div className="mx-auto flex min-h-dvh max-w-[480px] flex-col items-center justify-center px-5">
         <p className="text-sm text-destructive">Invalid reset link.</p>
-        <Link to="/auth/forgot-password" className="mt-4 text-xs text-ink underline">
+        <Link to="/auth/forgot-password" search={{ redirect: undefined }} className="mt-4 text-xs text-ink underline">
           Request a new link
         </Link>
       </div>
@@ -74,6 +74,7 @@ function ResetPassword() {
           <p className="mt-1 text-xs text-emerald-600">You can now sign in with your new password.</p>
           <Link
             to="/auth"
+            search={{ redirect: undefined }}
             className="mt-4 inline-flex h-10 items-center justify-center rounded-full bg-ink px-5 text-xs font-medium text-primary-foreground"
           >
             Sign in

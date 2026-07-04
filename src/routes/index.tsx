@@ -1,6 +1,6 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useStore, cartTotal, type MenuItem } from "@/lib/store";
-import { merchantApi, menuApi, customerApi } from "@/lib/api";
+import { merchantApi, menuApi, customerApi, specialApi, type TodaySpecial } from "@/lib/api";
 import { MobileShell, TopBar } from "@/components/MobileShell";
 import { Plus, ShoppingBag, Flame } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -73,10 +73,13 @@ function Index() {
   const { cart, add, selectedMerchantId, setSelectedMerchant } = useStore();
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [merchantName, setMerchantName] = useState("Select a store");
+  const [merchantSlug, setMerchantSlug] = useState<string | null>(null);
+  const [special, setSpecial] = useState<TodaySpecial | null>(null);
   const [points, setPoints] = useState(0);
   const [streak, setStreak] = useState(0);
   const [loading, setLoading] = useState(true);
   const [cat, setCat] = useState<string>("All");
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (!selectedMerchantId) {
@@ -86,11 +89,18 @@ function Index() {
     setLoading(true);
     Promise.all([
       menuApi.forMerchant(selectedMerchantId)
-        .then((items) => setMenuItems(items.map((i) => ({ ...i, price: parseFloat(i.price as any) }))))
+        .then((items) => setMenuItems(items.map((i) => ({ ...i, price: parseFloat(i.price as any) }))
+        ))
         .catch(() => setMenuItems([])),
       merchantApi.get(selectedMerchantId)
-        .then((m) => setMerchantName(m.business_name))
-        .catch(() => setSelectedMerchant(null)),
+        .then((m) => {
+          setMerchantName(m.business_name);
+          setMerchantSlug(m.slug);
+        })
+        .catch(() => {
+          setSelectedMerchant(null);
+          setMerchantSlug(null);
+        }),
       customerApi.getWallet(selectedMerchantId)
         .then((w) => {
           setPoints(w?.points_balance ?? 0);
@@ -99,6 +109,26 @@ function Index() {
         .catch(() => setSelectedMerchant(null)),
     ]).finally(() => setLoading(false));
   }, [selectedMerchantId]);
+
+  useEffect(() => {
+    if (!merchantSlug) {
+      setSpecial(null);
+      return;
+    }
+
+    let cancelled = false;
+    specialApi.forSlug(merchantSlug)
+      .then((s) => {
+        if (!cancelled) setSpecial(s);
+      })
+      .catch(() => {
+        if (!cancelled) setSpecial(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [merchantSlug]);
 
   const cats = ["All", ...Array.from(new Set(menuItems.map((m) => m.category).filter(Boolean)))];
   const items = cat === "All" ? menuItems : menuItems.filter((m) => m.category === cat);
@@ -137,6 +167,49 @@ function Index() {
       </section>
 
       {/* Category filter */}
+      {special && (
+        <section className="mt-6 px-5">
+          <div className="glass rounded-[28px] p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">Today's special</p>
+                <h2 className="font-display mt-2 text-3xl text-ink">{special.title}</h2>
+                {special.description && (
+                  <p className="mt-2 text-sm text-muted-foreground">{special.description}</p>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {special.linked_menu_item_name && (
+                  <span className="rounded-full bg-ember-soft px-3 py-1 text-xs font-medium text-ember">
+                    Menu: {special.linked_menu_item_name}
+                  </span>
+                )}
+                {special.linked_reward_name && (
+                  <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
+                    Reward: {special.linked_reward_name}
+                  </span>
+                )}
+                {(special.linked_menu_item || special.linked_reward) && (
+                  <button
+                    onClick={() => {
+                      if (special.linked_menu_item) {
+                        add(special.linked_menu_item);
+                        navigate({ to: "/cart" as any });
+                      } else if (special.linked_reward) {
+                        navigate({ to: "/rewards" as any });
+                      }
+                    }}
+                    className="rounded-2xl bg-ink px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+                  >
+                    {special.linked_menu_item ? "Order today's special" : "View today's reward"}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
       {menuItems.length > 0 && (
         <div className="no-scrollbar mt-6 flex gap-2 overflow-x-auto px-5 pb-1">
           {cats.map((c) => (

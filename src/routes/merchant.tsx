@@ -1,4 +1,4 @@
-// routes/merchant.tsx — Layout shell with sidebar nav + auth guard
+// src/routes/merchant.tsx
 import {
   createFileRoute,
   Link,
@@ -10,32 +10,30 @@ import { useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { requireMerchant } from "@/lib/merchant-auth-guard";
 import {
-  Loader2,
   LayoutDashboard,
   ShoppingBag,
   UtensilsCrossed,
   Trophy,
   BarChart3,
   Store,
-  LogOut,
   Menu,
+  Sparkles,
 } from "lucide-react";
-// Correct — matches your actual file location
 import { MerchantNav } from "@/components/merchant-nav";
 
 export const Route = createFileRoute("/merchant")({
-beforeLoad: async ({ context, location }) => {
-  await requireMerchant();
-  const { auth } = context;
+  beforeLoad: async ({ context, location }) => {
+    await requireMerchant();
+    const { auth } = context;
 
-  if (!auth) return; // ← add this guard
+    if (!auth) return;
 
-  if (auth.merchantProfile && !auth.merchantProfile.onboarding_complete) {
-    if (location.pathname !== "/merchant/onboarding") {
-      throw redirect({ to: "/merchant/onboarding" });
+    if (auth.merchantProfile && !auth.merchantProfile.onboarding_complete) {
+      if (location.pathname !== "/merchant/onboarding") {
+        throw redirect({ to: "/merchant/onboarding" });
+      }
     }
-  }
-},
+  },
   component: MerchantLayout,
 });
 
@@ -44,6 +42,7 @@ const navItems = [
   { to: "/merchant/orders", label: "Orders", icon: ShoppingBag },
   { to: "/merchant/menu", label: "Menu", icon: UtensilsCrossed },
   { to: "/merchant/loyalty", label: "Loyalty", icon: Trophy },
+  { to: "/merchant/specials", label: "Today's Special", icon: Sparkles },
   { to: "/merchant/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/merchant/store", label: "Store", icon: Store },
 ];
@@ -76,7 +75,11 @@ function MerchantLayout() {
             className="absolute bottom-0 left-0 top-0 flex w-64 flex-col bg-background shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            <MerchantNav navItems={navItems} onSignOut={handleSignOut} onLinkClick={() => setMobileOpen(false)} />
+            <MerchantNav
+              navItems={navItems}
+              onSignOut={handleSignOut}
+              onLinkClick={() => setMobileOpen(false)}
+            />
           </aside>
         </div>
       )}

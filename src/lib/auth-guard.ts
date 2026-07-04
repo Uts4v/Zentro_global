@@ -36,7 +36,7 @@ export async function requireAuth() {
   if (!hasValidToken()) {
     throw redirect({
       to: "/auth",
-      search: { redirect: window.location.pathname },
+      search: { redirect: window.location.pathname } as any,
     });
   }
 }
@@ -47,7 +47,7 @@ export async function requireCustomer() {
   if (!hasValidToken()) {
     throw redirect({
       to: "/auth",
-      search: { redirect: window.location.pathname },
+      search: { redirect: window.location.pathname } as any,
     });
   }
   const role = getUserRole();
@@ -62,7 +62,7 @@ export async function requireMerchantAuth() {
   if (!hasValidToken()) {
     throw redirect({
       to: "/auth/merchant" as any,
-      search: { redirect: window.location.pathname },
+      search: { redirect: window.location.pathname } as any,
     });
   }
 }

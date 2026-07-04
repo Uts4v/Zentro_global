@@ -1,0 +1,244 @@
+﻿
+> build
+> vite build
+
+node.exe : [33mThe plugin "vite-tsconfig-paths" is detected. Vite now 
+supports tsconfig paths resolution natively via the 
+[1mresolve.tsconfigPaths[22m option. You can remove the plugin and set 
+[1mresolve.tsconfigPaths: true[22m in your Vite config instead.[39m
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Users\ACER\AppData\Roaming\n ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: ([33mThe plugin...g instead.[39m 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[36mvite v8.0.16 [32mbuilding client environment for production...[36m[39m
+[2K
+transforming...Γ£ô 2062 modules transformed.
+rendering chunks...
+computing gzip size...
+.output/public/assets/styles-DGrnw3xb.css                  103.98 kB Γöé gzip:  17.22 kB
+.output/public/assets/merchant.specials-BGhQF7R8.js          0.08 kB Γöé gzip:   0.09 kB
+.output/public/assets/minus-B_mabstO.js                      0.11 kB Γöé gzip:   0.13 kB
+.output/public/assets/check-Dxeyoov_.js                      0.12 kB Γöé gzip:   0.14 kB
+.output/public/assets/loader-circle-aedxAz1-.js              0.14 kB Γöé gzip:   0.15 kB
+.output/public/assets/plus-psvog1OK.js                       0.15 kB Γöé gzip:   0.15 kB
+.output/public/assets/x-DSHPaOOl.js                          0.15 kB Γöé gzip:   0.15 kB
+.output/public/assets/arrow-left-DWsA1N-W.js                 0.16 kB Γöé gzip:   0.16 kB
+.output/public/assets/arrow-right-Gpp5_pJh.js                0.16 kB Γöé gzip:   0.16 kB
+.output/public/assets/user-pyZC6JLG.js                       0.19 kB Γöé gzip:   0.18 kB
+.output/public/assets/flame-BBKAjmRx.js                      0.19 kB Γöé gzip:   0.18 kB
+.output/public/assets/lock-C_NVPB0H.js                       0.20 kB Γöé gzip:   0.19 kB
+.output/public/assets/mail-D5EjLbs_.js                       0.21 kB Γöé gzip:   0.20 kB
+.output/public/assets/log-out-DoLQqS8K.js                    0.23 kB Γöé gzip:   0.18 kB
+.output/public/assets/circle-alert-D3hNVnil.js               0.25 kB Γöé gzip:   0.18 kB
+.output/public/assets/map-pin-YfEUEOcS.js                    0.25 kB Γöé gzip:   0.22 kB
+.output/public/assets/bell-DnADRkVz.js                       0.29 kB Γöé gzip:   0.23 kB
+.output/public/assets/shopping-cart-D0QGs4TS.js              0.29 kB Γöé gzip:   0.23 kB
+.output/public/assets/users-CG7u0fQJ.js                      0.30 kB Γöé gzip:   0.22 kB
+.output/public/assets/shopping-bag-DmftO-P6.js               0.34 kB Γöé gzip:   0.24 kB
+.output/public/assets/gift-k4fIDLtB.js                       0.34 kB Γöé gzip:   0.25 kB
+.output/public/assets/refresh-cw-DzhDwkzX.js                 0.43 kB Γöé gzip:   0.28 kB
+.output/public/assets/star-DI6QzGpd.js                       0.47 kB Γöé gzip:   0.29 kB
+.output/public/assets/sparkles-b6Z3h6qd.js                   0.49 kB Γöé gzip:   0.28 kB
+.output/public/assets/store-CwcfX6KB.js                      0.49 kB Γöé gzip:   0.28 kB
+.output/public/assets/trash-2-BurAyOxv.js                    0.55 kB Γöé gzip:   0.32 kB
+.output/public/assets/redirect-BB44wZa9.js                   0.58 kB Γöé gzip:   0.35 kB
+.output/public/assets/useMatch-BbtwA1-m.js                   0.65 kB Γöé gzip:   0.40 kB
+.output/public/assets/useRouter-Rvnm1DNS.js                  0.69 kB Γöé gzip:   0.39 kB
+.output/public/assets/trophy-D94ugGK5.js                     0.70 kB Γöé gzip:   0.40 kB
+.output/public/assets/django-api-base-DaPbA_Zd.js            0.86 kB Γöé gzip:   0.50 kB
+.output/public/assets/createLucideIcon-DeQrcgrh.js           1.19 kB Γöé gzip:   0.69 kB
+.output/public/assets/auth.merchant-BM3iu6Xs.js              2.03 kB Γöé gzip:   0.69 kB
+.output/public/assets/image-upload-B3VPqPTm.js               2.10 kB Γöé gzip:   1.17 kB
+.output/public/assets/useMutation-dlg8IRvm.js                2.25 kB Γöé gzip:   0.94 kB
+.output/public/assets/missions-DQjKfgcX.js                   2.64 kB Γöé gzip:   1.04 kB
+.output/public/assets/auth-CzOpNF5l.js                       2.71 kB Γöé gzip:   0.80 kB
+.output/public/assets/TodaySpecialPopup-bOpz6J3D.js          3.03 kB Γöé gzip:   1.16 kB
+.output/public/assets/rewards-UNnzxZdl.js                    3.19 kB Γöé gzip:   1.33 kB
+.output/public/assets/auth.merchant.login-DBeXvTVO.js        3.32 kB Γöé gzip:   1.37 kB
+.output/public/assets/auth.signup-BPWQooHf.js                3.35 kB Γöé gzip:   1.40 kB
+.output/public/assets/auth.login-B1IthT4v.js                 3.38 kB Γöé gzip:   1.40 kB
+.output/public/assets/MobileShell-aVktoC64.js                3.48 kB Γöé gzip:   1.51 kB
+.output/public/assets/auth.forgot-password-Cvw6UiTJ.js       3.49 kB Γöé gzip:   1.45 kB
+.output/public/assets/react-dom-DUKFG4MT.js                  3.54 kB Γöé gzip:   1.34 kB
+.output/public/assets/m._slug-DrdtFl2Q.js                    3.56 kB Γöé gzip:   1.40 kB
+.output/public/assets/auth.reset-password-CxbPJ559.js        3.63 kB Γöé gzip:   1.49 kB
+.output/public/assets/auth.merchant.signup-Y8UDmwlA.js       3.71 kB Γöé gzip:   1.47 kB
+.output/public/assets/stores-DiIq4HwD.js                     4.22 kB Γöé gzip:   1.72 kB
+.output/public/assets/store-szBQ0YLF.js                      4.26 kB Γöé gzip:   1.93 kB
+.output/public/assets/merchant-CIg6nZTO.js                   4.39 kB Γöé gzip:   1.72 kB
+.output/public/assets/cart-BmqDdSc_.js                       4.47 kB Γöé gzip:   1.75 kB
+.output/public/assets/routes-CU936A9B.js                     4.89 kB Γöé gzip:   1.93 kB
+.output/public/assets/profile-D70izPWc.js                    5.08 kB Γöé gzip:   1.80 kB
+.output/public/assets/customer.merchant._slug-CvDT6Dvl.js    5.92 kB Γöé gzip:   1.85 kB
+.output/public/assets/customer.orders-CZC5j0Xu.js            6.12 kB Γöé gzip:   2.06 kB
+.output/public/assets/orders._id-CEAMzILv.js                 6.41 kB Γöé gzip:   2.17 kB
+.output/public/assets/merchant.analytics-CQSceZtR.js         6.49 kB Γöé gzip:   1.89 kB
+.output/public/assets/stores_._id-BrQglrs-.js                6.87 kB Γöé gzip:   2.53 kB
+.output/public/assets/merchant.index-BoII5jWG.js             7.00 kB Γöé gzip:   2.52 kB
+.output/public/assets/merchant.orders-BKgQ7_vd.js            7.11 kB Γöé gzip:   2.48 kB
+.output/public/assets/api-BcHfMaWS.js                        7.25 kB Γöé gzip:   1.66 kB
+.output/public/assets/leaderboard-CAQflKKD.js                7.44 kB Γöé gzip:   2.25 kB
+.output/public/assets/jsx-runtime-bzQ4Vb5N.js                8.40 kB Γöé gzip:   3.20 kB
+.output/public/assets/MerchantSpecialsPage-C4Q_KHuN.js      10.27 kB Γöé gzip:   3.16 kB
+.output/public/assets/loyalty-CO3DAS6W.js                   12.24 kB Γöé gzip:   3.52 kB
+.output/public/assets/customer.order-C2t-RGd4.js            12.91 kB Γöé gzip:   3.60 kB
+.output/public/assets/merchant.menu-BjD5vNrp.js             16.41 kB Γöé gzip:   4.66 kB
+.output/public/assets/merchant.store-Bqa2FdHw.js            17.34 kB Γöé gzip:   5.03 kB
+.output/public/assets/dist-CYZwm4K0.js                      18.94 kB Γöé gzip:   4.37 kB
+.output/public/assets/merchant.loyalty-DNKcuJSl.js          22.04 kB Γöé gzip:   4.90 kB
+.output/public/assets/link-BsKHF0ue.js                      22.74 kB Γöé gzip:   8.49 kB
+.output/public/assets/utils-B6KiDbIe.js                     27.26 kB Γöé gzip:   8.69 kB
+.output/public/assets/merchant.onboarding-B11Tuybp.js       47.22 kB Γöé gzip:  16.42 kB
+.output/public/assets/index-rGvqugjZ.js                    381.94 kB Γöé gzip: 114.06 kB
+
+[32mΓ£ô built in 4.14s[39m
+[36mvite v8.0.16 [32mbuilding ssr environment for production...[36m[39m
+[2K
+transforming...Γ£ô 156 modules transformed.
+rendering chunks...
+computing gzip size...
+node_modules/.nitro/vite/services/ssr/assets/styles-DGrnw3xb.css                     103.98 kB Γöé gzip: 17.22 kB
+node_modules/.nitro/vite/services/ssr/assets/utils-C_uf36nf.js                         0.18 kB Γöé gzip:  0.15 kB
+node_modules/.nitro/vite/services/ssr/assets/empty-plugin-adapters-D9UWiqvJ.js         0.22 kB Γöé gzip:  0.16 kB
+node_modules/.nitro/vite/services/ssr/assets/merchant.specials-U4rtXcRV.js             0.23 kB Γöé gzip:  0.16 kB
+node_modules/.nitro/vite/services/ssr/assets/m._slug-rUzv0fl6.js                       0.39 kB Γöé gzip:  0.26 kB
+node_modules/.nitro/vite/services/ssr/assets/customer.merchant._slug-BMpNoe8R.js       0.44 kB Γöé gzip:  0.28 kB
+node_modules/.nitro/vite/services/ssr/assets/auth.reset-password-CSGYnYBP.js           0.48 kB Γöé gzip:  0.30 kB
+node_modules/.nitro/vite/services/ssr/assets/stores_._id-DcahAApH.js                   0.48 kB Γöé gzip:  0.31 kB
+node_modules/.nitro/vite/services/ssr/assets/orders._id-Csto_Cmi.js                    0.49 kB Γöé gzip:  0.32 kB
+node_modules/.nitro/vite/services/ssr/assets/start-Ok9K6Nid.js                         0.64 kB Γöé gzip:  0.39 kB
+node_modules/.nitro/vite/services/ssr/assets/django-api-base-DMoqYR2R.js               1.34 kB Γöé gzip:  0.71 kB
+node_modules/.nitro/vite/services/ssr/assets/auth-guard-CRAN2PYM.js                    1.37 kB Γöé gzip:  0.54 kB
+node_modules/.nitro/vite/services/ssr/assets/createStart-Dt05N14y.js                   1.65 kB Γöé gzip:  0.57 kB
+node_modules/.nitro/vite/services/ssr/assets/auth.merchant-D2k7-5KA.js                 2.77 kB Γöé gzip:  0.82 kB
+node_modules/.nitro/vite/services/ssr/assets/store-DJKZfEeg.js                         2.81 kB Γöé gzip:  1.07 kB
+node_modules/.nitro/vite/services/ssr/index.js                                         3.27 kB Γöé gzip:  1.42 kB
+node_modules/.nitro/vite/services/ssr/assets/auth-D--Lv5Xc.js                          3.64 kB Γöé gzip:  0.95 kB
+node_modules/.nitro/vite/services/ssr/assets/image-upload-BR5nNCyE.js                  3.78 kB Γöé gzip:  1.72 kB
+node_modules/.nitro/vite/services/ssr/assets/missions-CNlSYgwU.js                      4.22 kB Γöé gzip:  1.36 kB
+node_modules/.nitro/vite/services/ssr/assets/MobileShell-BoM90YCM.js                   4.32 kB Γöé gzip:  1.57 kB
+node_modules/.nitro/vite/services/ssr/assets/TodaySpecialPopup-Da-7OWSW.js             4.43 kB Γöé gzip:  1.43 kB
+node_modules/.nitro/vite/services/ssr/assets/auth.merchant.login-De6971K9.js           4.70 kB Γöé gzip:  1.64 kB
+node_modules/.nitro/vite/services/ssr/assets/auth.login-CqStkwXS.js                    4.74 kB Γöé gzip:  1.67 kB
+node_modules/.nitro/vite/services/ssr/assets/auth.signup-BwDNfAMJ.js                   4.74 kB Γöé gzip:  1.66 kB
+node_modules/.nitro/vite/services/ssr/assets/auth.forgot-password-Cnde0txu.js          4.80 kB Γöé gzip:  1.69 kB
+node_modules/.nitro/vite/services/ssr/assets/merchant-Cs9EKzY7.js                      4.93 kB Γöé gzip:  1.63 kB
+node_modules/.nitro/vite/services/ssr/assets/auth.reset-password-CUzxZrtU.js           5.13 kB Γöé gzip:  1.78 kB
+node_modules/.nitro/vite/services/ssr/assets/rewards-DrwzDM0Y.js                       5.19 kB Γöé gzip:  1.72 kB
+node_modules/.nitro/vite/services/ssr/assets/auth.merchant.signup-BjfyVtB_.js          5.29 kB Γöé gzip:  1.74 kB
+node_modules/.nitro/vite/services/ssr/assets/m._slug-lkL77F97.js                       5.32 kB Γöé gzip:  1.71 kB
+node_modules/.nitro/vite/services/ssr/assets/stores-rs6-zLwY.js                        5.83 kB Γöé gzip:  2.02 kB
+node_modules/.nitro/vite/services/ssr/assets/auth-DckCXPdT.js                          6.16 kB Γöé gzip:  1.80 kB
+node_modules/.nitro/vite/services/ssr/assets/cart-B-dcqI4v.js                          6.61 kB Γöé gzip:  2.14 kB
+node_modules/.nitro/vite/services/ssr/assets/profile-4nfhDeQt.js                       6.87 kB Γöé gzip:  1.95 kB
+node_modules/.nitro/vite/services/ssr/assets/routes-BF9Uag9I.js                        7.30 kB Γöé gzip:  2.41 kB
+node_modules/.nitro/vite/services/ssr/assets/customer.merchant._slug-DxRfAdlZ.js       8.89 kB Γöé gzip:  2.23 kB
+node_modules/.nitro/vite/services/ssr/assets/customer.orders-CE5c8h_L.js               8.95 kB Γöé gzip:  2.52 kB
+node_modules/.nitro/vite/services/ssr/assets/orders._id-CGdztMP1.js                    9.40 kB Γöé gzip:  2.70 kB
+node_modules/.nitro/vite/services/ssr/assets/merchant.analytics-CfxirSig.js            9.68 kB Γöé gzip:  2.48 kB
+node_modules/.nitro/vite/services/ssr/assets/merchant.index-CPCPHOTl.js               10.28 kB Γöé gzip:  2.90 kB
+node_modules/.nitro/vite/services/ssr/assets/stores_._id-SzWCg3aT.js                  10.47 kB Γöé gzip:  3.19 kB
+node_modules/.nitro/vite/services/ssr/assets/merchant.orders-YegBWsnc.js              10.60 kB Γöé gzip:  3.14 kB
+node_modules/.nitro/vite/services/ssr/assets/leaderboard-BPj7kc4Q.js                  11.82 kB Γöé gzip:  2.95 kB
+node_modules/.nitro/vite/services/ssr/assets/api-DtfHA0oz.js                          12.31 kB Γöé gzip:  2.36 kB
+node_modules/.nitro/vite/services/ssr/assets/_tanstack-start-manifest_v-CiQyfH1B.js   12.73 kB Γöé gzip:  1.96 kB
+node_modules/.nitro/vite/services/ssr/assets/merchant.onboarding-B9IBkNFS.js          12.92 kB Γöé gzip:  3.20 kB
+node_modules/.nitro/vite/services/ssr/assets/MerchantSpecialsPage-DabdrbLd.js         15.29 kB Γöé gzip:  3.92 kB
+node_modules/.nitro/vite/services/ssr/assets/customer.order-DPlozt9S.js               19.39 kB Γöé gzip:  4.44 kB
+node_modules/.nitro/vite/services/ssr/assets/loyalty-B_UcxMrz.js                      19.75 kB Γöé gzip:  4.56 kB
+node_modules/.nitro/vite/services/ssr/assets/router-BMtlGmPN.js                       20.73 kB Γöé gzip:  4.59 kB
+node_modules/.nitro/vite/services/ssr/assets/merchant.store-C11g3-BS.js               23.92 kB Γöé gzip:  5.73 kB
+node_modules/.nitro/vite/services/ssr/assets/merchant.menu-DRMMaWk4.js                24.29 kB Γöé gzip:  5.54 kB
+node_modules/.nitro/vite/services/ssr/assets/merchant.loyalty-C-xdvMHO.js             35.49 kB Γöé gzip:  6.42 kB
+node_modules/.nitro/vite/services/ssr/assets/server-DqN6h9nX.js                       58.69 kB Γöé gzip: 15.11 kB
+
+[32mΓ£ô built in 2.81s[39m
+
+[90m[[90mnitro[90m][39m [35mΓùÉ[39m Building [[35mNitro[39m] [2m(preset: [36mnode-server[39m, compatibility: [36m2026-07-02[39m)[22m
+[90m[[90mnitro[90m][39m [32mΓ£ö[39m Generated public [36m.output/public[39m
+[36mvite v8.0.16 [32mbuilding nitro environment for production...[36m[39m
+[2K
+transforming...Γ£ô 2044 modules transformed.
+rendering chunks...
+computing gzip size...
+.output/server/_ssr/empty-plugin-adapters-D9UWiqvJ.mjs      0.23 kB Γöé gzip:   0.16 kB
+.output/server/_ssr/merchant.specials-U4rtXcRV.mjs          0.26 kB Γöé gzip:   0.18 kB
+.output/server/_ssr/utils-C_uf36nf.mjs                      0.29 kB Γöé gzip:   0.21 kB
+.output/server/_ssr/m._slug-rUzv0fl6.mjs                    0.46 kB Γöé gzip:   0.31 kB
+.output/server/_ssr/customer.merchant._slug-BMpNoe8R.mjs    0.51 kB Γöé gzip:   0.33 kB
+.output/server/_ssr/auth.reset-password-CSGYnYBP.mjs        0.56 kB Γöé gzip:   0.35 kB
+.output/server/_ssr/stores_._id-DcahAApH.mjs                0.56 kB Γöé gzip:   0.36 kB
+.output/server/_ssr/orders._id-Csto_Cmi.mjs                 0.56 kB Γöé gzip:   0.36 kB
+.output/server/_chunks/ssr-renderer.mjs                     0.60 kB Γöé gzip:   0.36 kB
+.output/server/_ssr/start-Ok9K6Nid.mjs                      0.69 kB Γöé gzip:   0.42 kB
+.output/server/_libs/radix-ui__react-compose-refs.mjs       1.00 kB Γöé gzip:   0.50 kB
+.output/server/_runtime.mjs                                 1.26 kB Γöé gzip:   0.63 kB
+.output/server/_ssr/django-api-base-DMoqYR2R.mjs            1.39 kB Γöé gzip:   0.74 kB
+.output/server/_ssr/auth-guard-CRAN2PYM.mjs                 1.44 kB Γöé gzip:   0.58 kB
+.output/server/_ssr/createStart-Dt05N14y.mjs                1.56 kB Γöé gzip:   0.57 kB
+.output/server/_libs/tanstack__react-query.mjs              2.08 kB Γöé gzip:   0.79 kB
+.output/server/_libs/ufo.mjs                                2.21 kB Γöé gzip:   0.72 kB
+.output/server/_ssr/store-DJKZfEeg.mjs                      2.84 kB Γöé gzip:   1.11 kB
+.output/server/_libs/class-variance-authority+clsx.mjs      3.17 kB Γöé gzip:   1.24 kB
+.output/server/_ssr/ssr.mjs                                 3.21 kB Γöé gzip:   1.42 kB
+.output/server/_ssr/auth.merchant-D2k7-5KA.mjs              3.29 kB Γöé gzip:   0.90 kB
+.output/server/_ssr/image-upload-BR5nNCyE.mjs               3.78 kB Γöé gzip:   1.75 kB
+.output/server/_ssr/auth-D--Lv5Xc.mjs                       4.28 kB Γöé gzip:   1.03 kB
+.output/server/_ssr/MobileShell-BoM90YCM.mjs                5.05 kB Γöé gzip:   1.68 kB
+.output/server/_ssr/missions-CNlSYgwU.mjs                   5.05 kB Γöé gzip:   1.46 kB
+.output/server/_ssr/TodaySpecialPopup-Da-7OWSW.mjs          5.25 kB Γöé gzip:   1.55 kB
+.output/server/_ssr/auth.merchant.login-De6971K9.mjs        5.68 kB Γöé gzip:   1.79 kB
+.output/server/_ssr/auth.login-CqStkwXS.mjs                 5.72 kB Γöé gzip:   1.82 kB
+.output/server/_ssr/auth.signup-BwDNfAMJ.mjs                5.77 kB Γöé gzip:   1.82 kB
+.output/server/_ssr/auth.forgot-password-Cnde0txu.mjs       5.83 kB Γöé gzip:   1.84 kB
+.output/server/_ssr/merchant-Cs9EKzY7.mjs                   5.84 kB Γöé gzip:   1.78 kB
+.output/server/_ssr/rewards-DrwzDM0Y.mjs                    6.05 kB Γöé gzip:   1.83 kB
+.output/server/_ssr/auth.reset-password-CUzxZrtU.mjs        6.17 kB Γöé gzip:   1.94 kB
+.output/server/_ssr/m._slug-lkL77F97.mjs                    6.31 kB Γöé gzip:   1.86 kB
+.output/server/_ssr/auth.merchant.signup-BjfyVtB_.mjs       6.42 kB Γöé gzip:   1.89 kB
+.output/server/_libs/zustand.mjs                            6.67 kB Γöé gzip:   2.07 kB
+.output/server/_ssr/auth-DckCXPdT.mjs                       6.67 kB Γöé gzip:   1.94 kB
+.output/server/_ssr/stores-rs6-zLwY.mjs                     6.93 kB Γöé gzip:   2.13 kB
+.output/server/_ssr/cart-B-dcqI4v.mjs                       7.83 kB Γöé gzip:   2.27 kB
+.output/server/_ssr/profile-4nfhDeQt.mjs                    8.27 kB Γöé gzip:   2.08 kB
+.output/server/_ssr/routes-BF9Uag9I.mjs                     8.56 kB Γöé gzip:   2.57 kB
+.output/server/_libs/h3-v2.mjs                              9.62 kB Γöé gzip:   2.98 kB
+.output/server/_ssr/customer.orders-CE5c8h_L.mjs           10.44 kB Γöé gzip:   2.66 kB
+.output/server/_ssr/customer.merchant._slug-DxRfAdlZ.mjs   10.51 kB Γöé gzip:   2.39 kB
+.output/server/_ssr/orders._id-CGdztMP1.mjs                11.17 kB Γöé gzip:   2.85 kB
+.output/server/_ssr/merchant.analytics-CfxirSig.mjs        11.46 kB Γöé gzip:   2.60 kB
+.output/server/_ssr/merchant.index-CPCPHOTl.mjs            11.79 kB Γöé gzip:   3.06 kB
+.output/server/_libs/tanstack__history.mjs                 12.09 kB Γöé gzip:   3.48 kB
+.output/server/_ssr/merchant.orders-YegBWsnc.mjs           12.18 kB Γöé gzip:   3.26 kB
+.output/server/_ssr/stores_._id-SzWCg3aT.mjs               12.21 kB Γöé gzip:   3.33 kB
+.output/server/_ssr/api-DtfHA0oz.mjs                       12.36 kB Γöé gzip:   2.40 kB
+.output/server/_tanstack-start-manifest_v-CiQyfH1B.mjs     12.79 kB Γöé gzip:   2.00 kB
+.output/server/_ssr/leaderboard-BPj7kc4Q.mjs               13.75 kB Γöé gzip:   3.07 kB
+.output/server/_libs/@radix-ui/react-label+[...].mjs       13.87 kB Γöé gzip:   3.92 kB
+.output/server/_ssr/merchant.onboarding-B9IBkNFS.mjs       14.41 kB Γöé gzip:   3.28 kB
+.output/server/_ssr/MerchantSpecialsPage-DabdrbLd.mjs      17.69 kB Γöé gzip:   4.10 kB
+.output/server/_ssr/router-BMtlGmPN.mjs                    20.18 kB Γöé gzip:   4.58 kB
+.output/server/_ssr/customer.order-DPlozt9S.mjs            22.50 kB Γöé gzip:   4.63 kB
+.output/server/_libs/sonner.mjs                            22.72 kB Γöé gzip:   4.95 kB
+.output/server/_ssr/loyalty-B_UcxMrz.mjs                   22.78 kB Γöé gzip:   4.71 kB
+.output/server/_libs/lucide-react.mjs                      26.99 kB Γöé gzip:   5.59 kB
+.output/server/_ssr/merchant.store-C11g3-BS.mjs            27.33 kB Γöé gzip:   5.91 kB
+.output/server/_ssr/merchant.menu-DRMMaWk4.mjs             27.41 kB Γöé gzip:   5.72 kB
+.output/server/index.mjs                                   28.01 kB Γöé gzip:   7.72 kB
+.output/server/_libs/h3+rou3+srvx.mjs                      40.74 kB Γöé gzip:  11.06 kB
+.output/server/_ssr/merchant.loyalty-C-xdvMHO.mjs          41.25 kB Γöé gzip:   6.60 kB
+.output/server/_libs/tanstack__query-core.mjs              51.50 kB Γöé gzip:  11.30 kB
+.output/server/_ssr/server-DqN6h9nX.mjs                    56.88 kB Γöé gzip:  14.94 kB
+.output/server/_libs/@tanstack/router-core+[...].mjs       79.22 kB Γöé gzip:  19.92 kB
+.output/server/_libs/tailwind-merge.mjs                    88.13 kB Γöé gzip:  15.66 kB
+.output/server/_libs/zod.mjs                               99.89 kB Γöé gzip:  17.26 kB
+.output/server/_libs/@hookform/resolvers+[...].mjs        104.25 kB Γöé gzip:  25.17 kB
+.output/server/_libs/@tanstack/react-router+[...].mjs     662.97 kB Γöé gzip: 138.72 kB
+
+[32mΓ£ô built in 2.32s[39m
+[36mΓä╣[39m Generated [36m.output/nitro.json[39m
+
+[90m[[90mnitro[90m][39m [32mΓ£ö[39m You can preview this build using [36mnpx vite preview[39m

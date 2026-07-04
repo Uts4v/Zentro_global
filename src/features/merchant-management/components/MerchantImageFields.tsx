@@ -10,7 +10,7 @@
 //     onBannerChange={(url) => setForm((f) => ({ ...f, banner_url: url }))}
 //   />
 
-import { ImageUploader } from "@/components/ImageUploader";
+import { ImageUploader } from "@/components/image-uploader";
 
 interface MerchantImageFieldsProps {
   merchantId: string;

@@ -67,7 +67,11 @@ type AuthContextType = {
     name: string,
     meta?: { role?: Role; store_name?: string }
   ) => Promise<{ error: string | null }>;
-  signIn: (email: string, password: string) => Promise<{ error: string | null }>;
+  signIn: (
+    email: string,
+    password: string,
+    meta?: { role?: Role }
+  ) => Promise<{ error: string | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   refreshMerchantProfile: () => Promise<void>;
@@ -252,7 +256,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ── Sign in ────────────────────────────────────────────────────────────────
 
   const signIn = useCallback(
-    async (email: string, password: string): Promise<{ error: string | null }> => {
+    async (
+      email: string,
+      password: string,
+      meta?: { role?: Role }
+    ): Promise<{ error: string | null }> => {
       try {
         const data = await djangoFetch<{
           access: string;
@@ -263,7 +271,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }>(apiUrl("/auth/login/"), {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify({
+            email,
+            password,
+            ...(meta?.role ? { role: meta.role } : {}),
+          }),
         });
         tokenStore.set(data.access, data.refresh);
         scheduleRefresh(data.access);
