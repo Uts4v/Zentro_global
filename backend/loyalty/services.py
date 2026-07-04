@@ -5,9 +5,41 @@ Merchant-scoped loyalty helpers — wallets, onboarding, point operations.
 """
 
 from django.utils import timezone
+from django.db import transaction
 
-from .models import CustomerMerchantProfile, CustomerMerchantWallet, PointTransaction
+from .models import (
+    CustomerMerchantProfile,
+    CustomerMerchantWallet,
+    PointTransaction,
+    Notification,
+)
 
+
+def create_notification(
+    user,
+    title: str,
+    message: str,
+    merchant=None,
+    notification_type: str = "generic",
+    context_url: str = "",
+):
+    def _create():
+        Notification.objects.create(
+            user=user,
+            merchant=merchant,
+            notification_type=notification_type,
+            title=title,
+            message=message,
+            context_url=context_url,
+        )
+
+    # Schedule notification creation to run after the current DB transaction
+    # commits. If there's no active transaction, the callback runs immediately.
+    try:
+        transaction.on_commit(_create)
+    except Exception:
+        # Fallback to best-effort immediate create
+        _create()
 
 def get_or_create_wallet(customer, merchant) -> CustomerMerchantWallet:
     wallet, _ = CustomerMerchantWallet.objects.get_or_create(

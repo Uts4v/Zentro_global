@@ -1,8 +1,8 @@
 // routes/customer/order.tsx
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
 import { ShoppingCart, Plus, Minus, X, Loader2, Star, Zap } from "lucide-react";
-import { menuApi, orderApi, merchantApi, type MenuItem, type MerchantProfile } from "@/lib/api";
+import { menuApi, orderApi, merchantApi, specialApi, type MenuItem, type MerchantProfile, type TodaySpecial } from "@/lib/api";
 import { useStore } from "@/lib/store";
 
 export const Route = createFileRoute("/customer/order")({
@@ -27,9 +27,11 @@ function CustomerOrder() {
   const [notes, setNotes] = useState("");
   const [filterCat, setFilterCat] = useState("All");
   const [cartOpen, setCartOpen] = useState(false);
+  const [special, setSpecial] = useState<TodaySpecial | null>(null);
   const [loading, setLoading] = useState(false);
   const [menuLoading, setMenuLoading] = useState(false);
   const [placing, setPlacing] = useState(false);
+  const navigate = useNavigate();
   const [error, setError] = useState("");
   const [success, setSuccess] = useState<{ orderId: string; points: number } | null>(null);
 
@@ -51,6 +53,26 @@ function CustomerOrder() {
     }
     load();
   }, []);
+
+  useEffect(() => {
+    if (!selectedMerchant?.slug) {
+      setSpecial(null);
+      return;
+    }
+
+    let cancelled = false;
+    specialApi.forSlug(selectedMerchant.slug)
+      .then((s) => {
+        if (!cancelled) setSpecial(s);
+      })
+      .catch(() => {
+        if (!cancelled) setSpecial(null);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedMerchant]);
 
   async function selectMerchant(m: MerchantProfile) {
     setLocalMerchant(m);
@@ -245,6 +267,54 @@ function CustomerOrder() {
           {error}
           <button onClick={() => setError("")} className="ml-3 underline">Dismiss</button>
         </div>
+      )}
+
+      {special && (
+        <section className="glass rounded-[28px] p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">Today's special</p>
+              <h2 className="font-display mt-2 text-3xl text-ink">{special.title}</h2>
+              {special.description && (
+                <p className="mt-2 text-sm text-muted-foreground">{special.description}</p>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {special.linked_menu_item_name && (
+                <span className="rounded-full bg-ember-soft px-3 py-1 text-xs font-medium text-ember">
+                  Menu: {special.linked_menu_item_name}
+                </span>
+              )}
+              {special.linked_reward_name && (
+                <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
+                  Reward: {special.linked_reward_name}
+                </span>
+              )}
+              {(special.linked_menu_item || special.linked_reward) && (
+                <button
+                  onClick={() => {
+                    if (special.linked_menu_item) {
+                      addToCart({
+                        id: special.linked_menu_item,
+                        name: special.linked_menu_item_name ?? "",
+                        price: "0",
+                        description: "",
+                        category: "",
+                        image_url: null,
+                      } as MenuItem);
+                      setCartOpen(true);
+                    } else if (special.linked_reward) {
+                      navigate({ to: "/rewards" as any });
+                    }
+                  }}
+                  className="rounded-2xl bg-ink px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+                >
+                  {special.linked_menu_item ? "Order today's special" : "View today's reward"}
+                </button>
+              )}
+            </div>
+          </div>
+        </section>
       )}
 
       {/* Category tabs */}

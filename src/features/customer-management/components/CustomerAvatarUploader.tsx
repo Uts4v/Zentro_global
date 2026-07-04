@@ -6,7 +6,7 @@
  */
 
 import { useState } from "react";
-import { ImageUploader } from "@/components/ImageUploader";
+import { ImageUploader } from "@/components/image-uploader";
 import { apiUrl, djangoFetch } from "@/lib/django-api-base";
 import { djangoHeaders as authHeaders } from "@/lib/auth";
 import { Loader2 } from "lucide-react";

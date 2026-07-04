@@ -21,12 +21,18 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     """
     Extends the default JWT serializer to:
     1. Accept "email" instead of "username" for login.
-    2. Embed role and full_name in the JWT payload.
+    2. Enforce the requested account role for customer vs merchant sign-in.
+    3. Embed role and full_name in the JWT payload.
     """
 
     # Add an explicit email field; remove the default username field
     email = serializers.EmailField(write_only=True)
     password = serializers.CharField(write_only=True)
+    role = serializers.ChoiceField(
+        choices=[("customer", "customer"), ("merchant", "merchant")],
+        required=False,
+        allow_blank=False,
+    )
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -52,12 +58,23 @@ class CustomTokenObtainPairSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         email = attrs.get("email", "")
         password = attrs.get("password", "")
+        requested_role = attrs.get("role")
 
         try:
             user = User.objects.get(email=email)
         except User.DoesNotExist:
             raise serializers.ValidationError(
                 {"detail": "No active account found with the given credentials."}
+            )
+
+        if requested_role and requested_role != user.role:
+            raise serializers.ValidationError(
+                {
+                    "detail": (
+                        f"This account is a {user.role} account. "
+                        f"Please use the {user.role} sign in page."
+                    )
+                }
             )
 
         if not user.check_password(password):

@@ -15,6 +15,7 @@ from .models import (
     CustomerPunchCard,
     PointTransaction,
     TodaySpecial,
+    Notification,
 )
 
 class LoyaltyRulesSerializer(serializers.ModelSerializer):
@@ -200,6 +201,27 @@ class RewardSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "merchant", "merchant_name", "created_at"]
 
+class NotificationSerializer(serializers.ModelSerializer):
+    merchant_name = serializers.CharField(source="merchant.business_name", read_only=True, default="")
+
+    class Meta:
+        model = Notification
+        fields = [
+            "id",
+            "notification_type",
+            "title",
+            "message",
+            "context_url",
+            "is_read",
+            "merchant",
+            "merchant_name",
+            "created_at",
+        ]
+        read_only_fields = [
+            "id",
+            "merchant_name",
+            "created_at",
+        ]
 
 class RedemptionSerializer(serializers.ModelSerializer):
     reward = RewardSerializer(read_only=True)
@@ -215,11 +237,12 @@ class RedemptionSerializer(serializers.ModelSerializer):
             "points_spent",
             "status",
             "code",
+            "order",
             "confirmed_at",
             "expires_at",
             "created_at",
         ]
-        read_only_fields = ["id", "customer", "customer_name", "reward", "created_at"]
+        read_only_fields = ["id", "customer", "customer_name", "reward", "order", "created_at"]
 
 
 class CustomerMerchantProfileSerializer(serializers.ModelSerializer):

@@ -1,4 +1,5 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+// C:\Users\ACER\Desktop\NTE Loyalty\zentro-glow-loyalty\src\routes\__root.tsx
+import { QueryClient, QueryClientProvider, useQuery } from "@tanstack/react-query";
 import {
   Outlet,
   Link,
@@ -9,12 +10,15 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useEffect, useMemo, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { Loader2 } from "lucide-react";
+import { toast } from "sonner";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
+import { Toaster } from "@/components/ui/sonner";
+import { notificationApi } from "@/lib/api";
 
 // Routes that never require auth
 const PUBLIC_ROUTES = [
@@ -42,13 +46,13 @@ function AuthGate() {
     if (isMerchant) {
       navigate({
         to: "/auth/merchant" as any,
-        search: { redirect: pathname },
+        search: { redirect: pathname } as any,
         replace: true,
       });
     } else {
       navigate({
         to: "/auth" as any,
-        search: { redirect: pathname },
+        search: { redirect: pathname } as any,
         replace: true,
       });
     }
@@ -126,7 +130,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
 // ── Route definition ──────────────────────────────────────────────────────────
 type RouterContext = {
   queryClient: QueryClient;
-  auth: ReturnType<typeof useAuth>;
+  auth?: ReturnType<typeof useAuth>;
 };
 
 export const Route = createRootRouteWithContext<RouterContext>()({
@@ -172,6 +176,43 @@ function InnerRoot() {
   return <Outlet />;
 }
 
+function GlobalNotificationToasts() {
+  const { user } = useAuth();
+  const seenIds = useRef<Set<string> | null>(null);
+
+  const { data } = useQuery({
+    queryKey: ["notifications", "list"],
+    queryFn: () => notificationApi.list(),
+    enabled: Boolean(user),
+    staleTime: 5_000,
+    refetchInterval: 10_000,
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (!data) return;
+
+    // First load — just remember what's already there, don't toast for history.
+    if (seenIds.current === null) {
+      seenIds.current = new Set(data.map((n) => n.id));
+      return;
+    }
+
+    const fresh = data.filter((n) => !seenIds.current!.has(n.id));
+    fresh.forEach((n) => seenIds.current!.add(n.id));
+
+    // Newest first in the API response — toast oldest-of-the-new first so order feels right.
+    [...fresh].reverse().forEach((n) => {
+      toast.success(n.title, {
+        description: n.message,
+        duration: 6000,
+      });
+    });
+  }, [data]);
+
+  return null;
+}
+
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
 
@@ -180,7 +221,9 @@ function RootComponent() {
       <AuthProvider>
         {/* AuthGate sits inside AuthProvider so useAuth() is available */}
         {/* The router context is now aware of auth state */}
+        <GlobalNotificationToasts />
         <InnerRoot />
+        <Toaster position="top-center" richColors expand visibleToasts={4} />
       </AuthProvider>
     </QueryClientProvider>
   );

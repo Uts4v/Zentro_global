@@ -49,6 +49,12 @@ path("merchant/specials/<int:pk>/",    views.merchant_special_detail,    name="m
     path("redemptions/confirm/", views.confirm_redemption, name="confirm-redemption"),
     path("redemptions/merchant/", views.merchant_redemptions, name="merchant-redemptions"),
 
+    # Notifications
+    path("notifications/", views.notifications_list, name="notifications-list"),
+    path("notifications/unread-count/", views.notification_unread_count, name="notifications-unread-count"),
+    path("notifications/<int:pk>/read/", views.notification_mark_read, name="notification-mark-read"),
+    path("notifications/read-all/", views.notification_mark_all_read, name="notification-mark-all-read"),
+
     # Leaderboard
     path("leaderboard/", views.leaderboard, name="leaderboard"),
 ]

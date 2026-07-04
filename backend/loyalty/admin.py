@@ -14,6 +14,7 @@ from .models import (
     MerchantPunchCard,
     CustomerPunchCard,
     PointTransaction,
+    Notification,
 )
 
 
@@ -64,6 +65,13 @@ class PointTransactionAdmin(admin.ModelAdmin):
     list_display = ["transaction_type", "customer", "merchant", "points", "status", "created_at"]
     list_filter = ["transaction_type", "status"]
     search_fields = ["customer__full_name", "merchant__business_name"]
+
+
+@admin.register(Notification)
+class NotificationAdmin(admin.ModelAdmin):
+    list_display = ["title", "user", "merchant", "notification_type", "is_read", "created_at"]
+    list_filter = ["notification_type", "is_read", "merchant"]
+    search_fields = ["title", "message", "user__email", "merchant__business_name"]
 
 
 @admin.register(Mission)

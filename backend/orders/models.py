@@ -44,6 +44,10 @@ class Order(models.Model):
         default=False,
         help_text="True once merchant-scoped loyalty has been credited on completion.",
     )
+    is_reward_order = models.BooleanField(
+        default=False,
+        help_text="True if this order was auto-created from a reward redemption.",
+    )
     notes = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -286,6 +286,18 @@ export interface Redemption {
   created_at: string;
 }
 
+export interface Notification {
+  id: string;
+  notification_type: string;
+  title: string;
+  message: string;
+  context_url?: string | null;
+  is_read: boolean;
+  merchant_id?: string | null;
+  merchant_name?: string;
+  created_at: string;
+}
+
 export interface LoyaltyRules {
   id: string;
   merchant_id: string;
@@ -709,7 +721,35 @@ export const transactionApi = {
     });
   },
 };
+export const notificationApi = {
+  list: async (): Promise<Notification[]> => {
+    return djangoFetch<Notification[]>(apiUrl("/loyalty/notifications/"), {
+      headers: authHeaders(),
+    });
+  },
 
+  unreadCount: async (): Promise<{ unread_count: number }> => {
+    return djangoFetch<{ unread_count: number }>(apiUrl("/loyalty/notifications/unread-count/"), {
+      headers: authHeaders(),
+    });
+  },
+
+  markRead: async (id: string): Promise<Notification> => {
+    return djangoFetch<Notification>(apiUrl(`/loyalty/notifications/${id}/read/`), {
+      method: "PATCH",
+      headers: authHeaders(),
+      body: JSON.stringify({}),
+    });
+  },
+
+  markAllRead: async (): Promise<{ marked_read: number }> => {
+    return djangoFetch<{ marked_read: number }>(apiUrl("/loyalty/notifications/read-all/"), {
+      method: "PATCH",
+      headers: authHeaders(),
+      body: JSON.stringify({}),
+    });
+  },
+};
 // ── Punch Cards ───────────────────────────────────────────────────────────────
 
 export const punchCardApi = {

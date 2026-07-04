@@ -10,7 +10,7 @@
 //     onChange={(url) => setForm((f) => ({ ...f, image_url: url }))}
 //   />
 
-import { ImageUploader } from "@/components/ImageUploader";
+import { ImageUploader } from "@/components/image-uploader";
 
 interface ProductImageFieldProps {
   merchantId: string;

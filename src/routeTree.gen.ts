@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as StoresRouteImport } from './routes/stores'
 import { Route as RewardsRouteImport } from './routes/rewards'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as MissionsRouteImport } from './routes/missions'
 import { Route as MerchantRouteImport } from './routes/merchant'
 import { Route as LoyaltyRouteImport } from './routes/loyalty'
@@ -32,10 +33,14 @@ import { Route as MerchantAnalyticsRouteImport } from './routes/merchant.analyti
 import { Route as MSlugRouteImport } from './routes/m.$slug'
 import { Route as CustomerOrdersRouteImport } from './routes/customer.orders'
 import { Route as CustomerOrderRouteImport } from './routes/customer.order'
+import { Route as AuthSignupRouteImport } from './routes/auth.signup'
 import { Route as AuthResetPasswordRouteImport } from './routes/auth.reset-password'
 import { Route as AuthMerchantRouteImport } from './routes/auth.merchant'
+import { Route as AuthLoginRouteImport } from './routes/auth.login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth.forgot-password'
 import { Route as CustomerMerchantSlugRouteImport } from './routes/customer.merchant.$slug'
+import { Route as AuthMerchantSignupRouteImport } from './routes/auth.merchant.signup'
+import { Route as AuthMerchantLoginRouteImport } from './routes/auth.merchant.login'
 
 const StoresRoute = StoresRouteImport.update({
   id: '/stores',
@@ -50,6 +55,11 @@ const RewardsRoute = RewardsRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MissionsRoute = MissionsRouteImport.update({
@@ -152,6 +162,11 @@ const CustomerOrderRoute = CustomerOrderRouteImport.update({
   path: '/customer/order',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthSignupRoute = AuthSignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => AuthRoute,
+} as any)
 const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
@@ -160,6 +175,11 @@ const AuthResetPasswordRoute = AuthResetPasswordRouteImport.update({
 const AuthMerchantRoute = AuthMerchantRouteImport.update({
   id: '/merchant',
   path: '/merchant',
+  getParentRoute: () => AuthRoute,
+} as any)
+const AuthLoginRoute = AuthLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => AuthRoute,
 } as any)
 const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
@@ -172,6 +192,16 @@ const CustomerMerchantSlugRoute = CustomerMerchantSlugRouteImport.update({
   path: '/customer/merchant/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthMerchantSignupRoute = AuthMerchantSignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
+  getParentRoute: () => AuthMerchantRoute,
+} as any)
+const AuthMerchantLoginRoute = AuthMerchantLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => AuthMerchantRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -181,12 +211,15 @@ export interface FileRoutesByFullPath {
   '/loyalty': typeof LoyaltyRoute
   '/merchant': typeof MerchantRouteWithChildren
   '/missions': typeof MissionsRoute
+  '/notifications': typeof NotificationsRoute
   '/profile': typeof ProfileRoute
   '/rewards': typeof RewardsRoute
   '/stores': typeof StoresRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
-  '/auth/merchant': typeof AuthMerchantRoute
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/merchant': typeof AuthMerchantRouteWithChildren
   '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/auth/signup': typeof AuthSignupRoute
   '/customer/order': typeof CustomerOrderRoute
   '/customer/orders': typeof CustomerOrdersRoute
   '/m/$slug': typeof MSlugRoute
@@ -200,6 +233,8 @@ export interface FileRoutesByFullPath {
   '/orders/$id': typeof OrdersIdRoute
   '/stores/$id': typeof StoresIdRoute
   '/merchant/': typeof MerchantIndexRoute
+  '/auth/merchant/login': typeof AuthMerchantLoginRoute
+  '/auth/merchant/signup': typeof AuthMerchantSignupRoute
   '/customer/merchant/$slug': typeof CustomerMerchantSlugRoute
 }
 export interface FileRoutesByTo {
@@ -209,12 +244,15 @@ export interface FileRoutesByTo {
   '/leaderboard': typeof LeaderboardRoute
   '/loyalty': typeof LoyaltyRoute
   '/missions': typeof MissionsRoute
+  '/notifications': typeof NotificationsRoute
   '/profile': typeof ProfileRoute
   '/rewards': typeof RewardsRoute
   '/stores': typeof StoresRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
-  '/auth/merchant': typeof AuthMerchantRoute
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/merchant': typeof AuthMerchantRouteWithChildren
   '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/auth/signup': typeof AuthSignupRoute
   '/customer/order': typeof CustomerOrderRoute
   '/customer/orders': typeof CustomerOrdersRoute
   '/m/$slug': typeof MSlugRoute
@@ -228,6 +266,8 @@ export interface FileRoutesByTo {
   '/orders/$id': typeof OrdersIdRoute
   '/stores/$id': typeof StoresIdRoute
   '/merchant': typeof MerchantIndexRoute
+  '/auth/merchant/login': typeof AuthMerchantLoginRoute
+  '/auth/merchant/signup': typeof AuthMerchantSignupRoute
   '/customer/merchant/$slug': typeof CustomerMerchantSlugRoute
 }
 export interface FileRoutesById {
@@ -239,12 +279,15 @@ export interface FileRoutesById {
   '/loyalty': typeof LoyaltyRoute
   '/merchant': typeof MerchantRouteWithChildren
   '/missions': typeof MissionsRoute
+  '/notifications': typeof NotificationsRoute
   '/profile': typeof ProfileRoute
   '/rewards': typeof RewardsRoute
   '/stores': typeof StoresRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
-  '/auth/merchant': typeof AuthMerchantRoute
+  '/auth/login': typeof AuthLoginRoute
+  '/auth/merchant': typeof AuthMerchantRouteWithChildren
   '/auth/reset-password': typeof AuthResetPasswordRoute
+  '/auth/signup': typeof AuthSignupRoute
   '/customer/order': typeof CustomerOrderRoute
   '/customer/orders': typeof CustomerOrdersRoute
   '/m/$slug': typeof MSlugRoute
@@ -258,6 +301,8 @@ export interface FileRoutesById {
   '/orders/$id': typeof OrdersIdRoute
   '/stores_/$id': typeof StoresIdRoute
   '/merchant/': typeof MerchantIndexRoute
+  '/auth/merchant/login': typeof AuthMerchantLoginRoute
+  '/auth/merchant/signup': typeof AuthMerchantSignupRoute
   '/customer/merchant/$slug': typeof CustomerMerchantSlugRoute
 }
 export interface FileRouteTypes {
@@ -270,12 +315,15 @@ export interface FileRouteTypes {
     | '/loyalty'
     | '/merchant'
     | '/missions'
+    | '/notifications'
     | '/profile'
     | '/rewards'
     | '/stores'
     | '/auth/forgot-password'
+    | '/auth/login'
     | '/auth/merchant'
     | '/auth/reset-password'
+    | '/auth/signup'
     | '/customer/order'
     | '/customer/orders'
     | '/m/$slug'
@@ -289,6 +337,8 @@ export interface FileRouteTypes {
     | '/orders/$id'
     | '/stores/$id'
     | '/merchant/'
+    | '/auth/merchant/login'
+    | '/auth/merchant/signup'
     | '/customer/merchant/$slug'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -298,12 +348,15 @@ export interface FileRouteTypes {
     | '/leaderboard'
     | '/loyalty'
     | '/missions'
+    | '/notifications'
     | '/profile'
     | '/rewards'
     | '/stores'
     | '/auth/forgot-password'
+    | '/auth/login'
     | '/auth/merchant'
     | '/auth/reset-password'
+    | '/auth/signup'
     | '/customer/order'
     | '/customer/orders'
     | '/m/$slug'
@@ -317,6 +370,8 @@ export interface FileRouteTypes {
     | '/orders/$id'
     | '/stores/$id'
     | '/merchant'
+    | '/auth/merchant/login'
+    | '/auth/merchant/signup'
     | '/customer/merchant/$slug'
   id:
     | '__root__'
@@ -327,12 +382,15 @@ export interface FileRouteTypes {
     | '/loyalty'
     | '/merchant'
     | '/missions'
+    | '/notifications'
     | '/profile'
     | '/rewards'
     | '/stores'
     | '/auth/forgot-password'
+    | '/auth/login'
     | '/auth/merchant'
     | '/auth/reset-password'
+    | '/auth/signup'
     | '/customer/order'
     | '/customer/orders'
     | '/m/$slug'
@@ -346,6 +404,8 @@ export interface FileRouteTypes {
     | '/orders/$id'
     | '/stores_/$id'
     | '/merchant/'
+    | '/auth/merchant/login'
+    | '/auth/merchant/signup'
     | '/customer/merchant/$slug'
   fileRoutesById: FileRoutesById
 }
@@ -357,6 +417,7 @@ export interface RootRouteChildren {
   LoyaltyRoute: typeof LoyaltyRoute
   MerchantRoute: typeof MerchantRouteWithChildren
   MissionsRoute: typeof MissionsRoute
+  NotificationsRoute: typeof NotificationsRoute
   ProfileRoute: typeof ProfileRoute
   RewardsRoute: typeof RewardsRoute
   StoresRoute: typeof StoresRoute
@@ -389,6 +450,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/missions': {
@@ -531,6 +599,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CustomerOrderRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/signup': {
+      id: '/auth/signup'
+      path: '/signup'
+      fullPath: '/auth/signup'
+      preLoaderRoute: typeof AuthSignupRouteImport
+      parentRoute: typeof AuthRoute
+    }
     '/auth/reset-password': {
       id: '/auth/reset-password'
       path: '/reset-password'
@@ -543,6 +618,13 @@ declare module '@tanstack/react-router' {
       path: '/merchant'
       fullPath: '/auth/merchant'
       preLoaderRoute: typeof AuthMerchantRouteImport
+      parentRoute: typeof AuthRoute
+    }
+    '/auth/login': {
+      id: '/auth/login'
+      path: '/login'
+      fullPath: '/auth/login'
+      preLoaderRoute: typeof AuthLoginRouteImport
       parentRoute: typeof AuthRoute
     }
     '/auth/forgot-password': {
@@ -559,19 +641,51 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CustomerMerchantSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/auth/merchant/signup': {
+      id: '/auth/merchant/signup'
+      path: '/signup'
+      fullPath: '/auth/merchant/signup'
+      preLoaderRoute: typeof AuthMerchantSignupRouteImport
+      parentRoute: typeof AuthMerchantRoute
+    }
+    '/auth/merchant/login': {
+      id: '/auth/merchant/login'
+      path: '/login'
+      fullPath: '/auth/merchant/login'
+      preLoaderRoute: typeof AuthMerchantLoginRouteImport
+      parentRoute: typeof AuthMerchantRoute
+    }
   }
 }
 
+interface AuthMerchantRouteChildren {
+  AuthMerchantLoginRoute: typeof AuthMerchantLoginRoute
+  AuthMerchantSignupRoute: typeof AuthMerchantSignupRoute
+}
+
+const AuthMerchantRouteChildren: AuthMerchantRouteChildren = {
+  AuthMerchantLoginRoute: AuthMerchantLoginRoute,
+  AuthMerchantSignupRoute: AuthMerchantSignupRoute,
+}
+
+const AuthMerchantRouteWithChildren = AuthMerchantRoute._addFileChildren(
+  AuthMerchantRouteChildren,
+)
+
 interface AuthRouteChildren {
   AuthForgotPasswordRoute: typeof AuthForgotPasswordRoute
-  AuthMerchantRoute: typeof AuthMerchantRoute
+  AuthLoginRoute: typeof AuthLoginRoute
+  AuthMerchantRoute: typeof AuthMerchantRouteWithChildren
   AuthResetPasswordRoute: typeof AuthResetPasswordRoute
+  AuthSignupRoute: typeof AuthSignupRoute
 }
 
 const AuthRouteChildren: AuthRouteChildren = {
   AuthForgotPasswordRoute: AuthForgotPasswordRoute,
-  AuthMerchantRoute: AuthMerchantRoute,
+  AuthLoginRoute: AuthLoginRoute,
+  AuthMerchantRoute: AuthMerchantRouteWithChildren,
   AuthResetPasswordRoute: AuthResetPasswordRoute,
+  AuthSignupRoute: AuthSignupRoute,
 }
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
@@ -610,6 +724,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoyaltyRoute: LoyaltyRoute,
   MerchantRoute: MerchantRouteWithChildren,
   MissionsRoute: MissionsRoute,
+  NotificationsRoute: NotificationsRoute,
   ProfileRoute: ProfileRoute,
   RewardsRoute: RewardsRoute,
   StoresRoute: StoresRoute,
