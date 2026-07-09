@@ -5,7 +5,7 @@ import { analyticsApi } from "@/lib/api";
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface DailyPoint { date: string; revenue: number; orders: number }
-interface TopItem    { name: string; total_qty: number; total_revenue: number }
+interface TopItem { name: string; total_qty: number; total_revenue: number }
 interface TopCustomer { name: string; order_count: number; total_spent: number }
 
 interface AnalyticsData {
@@ -23,9 +23,9 @@ interface AnalyticsData {
 
 export function MerchantAnalyticsPage() {
   const [range, setRange] = useState<14 | 30 | 90>(30);
-  const [data, setData]   = useState<AnalyticsData | null>(null);
+  const [data, setData] = useState<AnalyticsData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState("");
+  const [error, setError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -42,10 +42,10 @@ export function MerchantAnalyticsPage() {
   }, [range]);
 
   if (loading) return <div className="flex justify-center py-24"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>;
-  if (error)   return <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>;
+  if (error) return <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>;
 
-  const daily  = data?.daily_revenue ?? [];
-  const items  = data?.top_items ?? [];
+  const daily = data?.daily_revenue ?? [];
+  const items = data?.top_items ?? [];
   const customers = data?.top_customers ?? [];
 
   return (
@@ -57,9 +57,9 @@ export function MerchantAnalyticsPage() {
 
       {/* KPI row */}
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-        <Kpi label="Revenue"     value={`NPR ${Number(data?.total_revenue ?? 0).toLocaleString()}`} />
-        <Kpi label="Orders"      value={String(data?.total_orders ?? 0)} />
-        <Kpi label="Avg order"   value={`NPR ${Number(data?.avg_order_value ?? 0).toLocaleString()}`} />
+        <Kpi label="Revenue" value={`NPR ${Number(data?.total_revenue ?? 0).toLocaleString()}`} />
+        <Kpi label="Orders" value={String(data?.total_orders ?? 0)} />
+        <Kpi label="Avg order" value={`NPR ${Number(data?.avg_order_value ?? 0).toLocaleString()}`} />
       </div>
 
       {/* Revenue chart */}
@@ -133,9 +133,8 @@ export function MerchantAnalyticsPage() {
             <ul className="mt-5 space-y-3">
               {customers.map((c, i) => (
                 <li key={i} className="flex items-center gap-3">
-                  <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-medium ${
-                    i === 0 ? "bg-amber-100 text-amber-700" : i === 1 ? "bg-slate-100 text-slate-600" : i === 2 ? "bg-orange-100 text-orange-700" : "bg-mist text-muted-foreground"
-                  }`}>{i + 1}</span>
+                  <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-medium ${i === 0 ? "bg-amber-100 text-amber-700" : i === 1 ? "bg-slate-100 text-slate-600" : i === 2 ? "bg-orange-100 text-orange-700" : "bg-mist text-muted-foreground"
+                    }`}>{i + 1}</span>
                   <span className="flex-1 truncate text-sm text-ink">{c.name}</span>
                   <span className="text-xs text-muted-foreground">{c.order_count} order{c.order_count !== 1 ? "s" : ""}</span>
                   <span className="font-display text-sm text-ember">

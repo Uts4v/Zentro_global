@@ -1,3 +1,4 @@
+// C:\Users\ACER\Desktop\NTE Loyalty\zentro-glow-loyalty\src\features\customer-management\pages\CustomerProfilePage.tsx 
 import { Link, useNavigate } from "@tanstack/react-router";
 import { MobileShell, TopBar } from "@/components/MobileShell";
 import { useAuth } from "@/lib/auth";

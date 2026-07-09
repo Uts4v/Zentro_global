@@ -1,3 +1,4 @@
+// business-profile/MerchantStore.tsx 
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   MapPin, Clock, Loader2, Save, Check, X,

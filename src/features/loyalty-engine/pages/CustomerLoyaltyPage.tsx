@@ -234,7 +234,7 @@ export function CustomerLoyaltyPage() {
             {punchError}
           </div>
         )}
-        
+
         {punchLoading && punchCards.active.length === 0 && punchCards.completed.length === 0 ? (
           <div className="glass-strong rounded-3xl p-5 text-center">
             <p className="text-xs text-muted-foreground animate-pulse">Loading punch cards...</p>
@@ -249,30 +249,30 @@ export function CustomerLoyaltyPage() {
             const punchesNeeded = config.stamps_required;
             const punchCount = card.current_stamps;
             const freeRewardReady = card.is_completed && !card.is_redeemed;
-            
+
             return (
-              <div 
-                key={card.id} 
+              <div
+                key={card.id}
                 className="glass-strong rounded-3xl p-5 relative overflow-hidden"
-                style={config.color_scheme ? { 
+                style={config.color_scheme ? {
                   backgroundColor: `${config.color_scheme}1A`,
                   borderColor: `${config.color_scheme}33`
                 } : undefined}
               >
                 {(config.background_image || config.animated_gif_background) && (
                   <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
-                    <img 
-                      src={config.animated_gif_background || config.background_image} 
+                    <img
+                      src={config.animated_gif_background || config.background_image}
                       alt=""
                       className="w-full h-full object-cover"
                     />
                   </div>
                 )}
-                
+
                 <div className="relative z-10">
                   <div className="flex items-center justify-between">
                     <div>
-                      <p className="text-[11px] uppercase tracking-[0.2em]" 
+                      <p className="text-[11px] uppercase tracking-[0.2em]"
                         style={{ color: config.color_scheme || 'inherit', opacity: 0.8 }}>
                         {config.mode === 'per_streak' ? 'Streak Card' : 'Punch Card'}
                       </p>
@@ -302,13 +302,12 @@ export function CustomerLoyaltyPage() {
                       return (
                         <div
                           key={i}
-                          className={`grid aspect-square place-items-center rounded-2xl text-lg transition-all duration-300 ${
-                            filled
+                          className={`grid aspect-square place-items-center rounded-2xl text-lg transition-all duration-300 ${filled
                               ? freeRewardReady && isFreeSlot
                                 ? "shadow-md"
                                 : "bg-ink/90"
                               : "border-2 border-dashed border-border bg-mist"
-                          }`}
+                            }`}
                           style={filled && freeRewardReady && isFreeSlot && config.color_scheme ? { backgroundColor: config.color_scheme } : {}}
                         >
                           {filled ? (

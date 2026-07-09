@@ -1,6 +1,6 @@
-// src/MobileShrell.tsx 
+// src/components/MobileShell.tsx
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, ScanLine, Trophy, Gift, User, Bell } from "lucide-react";
+import { Home, Map, Trophy, Gift, User, Bell } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useQuery } from "@tanstack/react-query";
 import { notificationApi } from "@/lib/api";
@@ -8,11 +8,11 @@ import type { ReactNode } from "react";
 
 type NavItem = { to: string; label: string; icon: typeof Home; center?: boolean };
 const nav: NavItem[] = [
-  { to: "/",            label: "Shop",    icon: Home },
-  { to: "/missions",    label: "Missions", icon: ScanLine },
-  { to: "/loyalty",     label: "Card",    icon: User, center: true },
-  { to: "/rewards",     label: "Rewards", icon: Gift },
-  { to: "/leaderboard", label: "Ranks",   icon: Trophy },
+  { to: "/",            label: "Shop",     icon: Home },
+  { to: "/map",         label: "Discover", icon: Map },
+  { to: "/loyalty",     label: "Card",     icon: User, center: true },
+  { to: "/rewards",     label: "Rewards",  icon: Gift },
+  { to: "/leaderboard", label: "Ranks",    icon: Trophy },
 ];
 
 export function MobileShell({ children }: { children: ReactNode }) {
@@ -88,7 +88,6 @@ export function TopBar({ title, right }: { title?: string; right?: ReactNode }) 
   return (
     <header className="sticky top-0 z-40 px-5 pb-3 pt-5">
       <div className="flex items-center justify-between">
-        {/* Left: logo */}
         <Link to="/" className="font-display text-2xl tracking-tight text-ink">
           zentro<span className="text-ember">.</span>
         </Link>
@@ -99,11 +98,10 @@ export function TopBar({ title, right }: { title?: string; right?: ReactNode }) 
           </p>
         )}
 
-        {/* Right: avatar + notifications */}
         <div className="flex items-center gap-2">
           {right}
           <Link
-            to={'/notifications' as any}
+            to={"/notifications" as any}
             aria-label="Notifications"
             className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border text-muted-foreground hover:bg-mist"
           >
@@ -115,7 +113,7 @@ export function TopBar({ title, right }: { title?: string; right?: ReactNode }) 
             ) : null}
           </Link>
           <Link
-            to={'/profile' as any}
+            to={"/profile" as any}
             aria-label="Profile"
             className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full bg-ink text-xs font-medium text-primary-foreground overflow-hidden"
           >
@@ -132,7 +130,6 @@ export function TopBar({ title, right }: { title?: string; right?: ReactNode }) 
         </div>
       </div>
 
-      {/* Welcome row — only shown on home page (no title passed) */}
       {!title && (
         <div className="mt-3">
           {loading ? (
@@ -141,10 +138,7 @@ export function TopBar({ title, right }: { title?: string; right?: ReactNode }) 
             <p className="text-sm text-muted-foreground">
               {greeting}
               {firstName ? (
-                <>
-                  ,{" "}
-                  <span className="font-medium text-ink">{firstName}</span>
-                </>
+                <>, <span className="font-medium text-ink">{firstName}</span></>
               ) : null}{" "}
               👋
             </p>

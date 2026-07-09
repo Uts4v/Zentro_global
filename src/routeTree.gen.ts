@@ -15,6 +15,7 @@ import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as MissionsRouteImport } from './routes/missions'
 import { Route as MerchantRouteImport } from './routes/merchant'
+import { Route as MapRouteImport } from './routes/map'
 import { Route as LoyaltyRouteImport } from './routes/loyalty'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as CartRouteImport } from './routes/cart'
@@ -33,6 +34,7 @@ import { Route as MerchantAnalyticsRouteImport } from './routes/merchant.analyti
 import { Route as MSlugRouteImport } from './routes/m.$slug'
 import { Route as CustomerOrdersRouteImport } from './routes/customer.orders'
 import { Route as CustomerOrderRouteImport } from './routes/customer.order'
+import { Route as CustomerMerchantsRouteImport } from './routes/customer.merchants'
 import { Route as AuthSignupRouteImport } from './routes/auth.signup'
 import { Route as AuthResetPasswordRouteImport } from './routes/auth.reset-password'
 import { Route as AuthMerchantRouteImport } from './routes/auth.merchant'
@@ -70,6 +72,11 @@ const MissionsRoute = MissionsRouteImport.update({
 const MerchantRoute = MerchantRouteImport.update({
   id: '/merchant',
   path: '/merchant',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MapRoute = MapRouteImport.update({
+  id: '/map',
+  path: '/map',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoyaltyRoute = LoyaltyRouteImport.update({
@@ -162,6 +169,11 @@ const CustomerOrderRoute = CustomerOrderRouteImport.update({
   path: '/customer/order',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CustomerMerchantsRoute = CustomerMerchantsRouteImport.update({
+  id: '/customer/merchants',
+  path: '/customer/merchants',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthSignupRoute = AuthSignupRouteImport.update({
   id: '/signup',
   path: '/signup',
@@ -209,6 +221,7 @@ export interface FileRoutesByFullPath {
   '/cart': typeof CartRoute
   '/leaderboard': typeof LeaderboardRoute
   '/loyalty': typeof LoyaltyRoute
+  '/map': typeof MapRoute
   '/merchant': typeof MerchantRouteWithChildren
   '/missions': typeof MissionsRoute
   '/notifications': typeof NotificationsRoute
@@ -220,6 +233,7 @@ export interface FileRoutesByFullPath {
   '/auth/merchant': typeof AuthMerchantRouteWithChildren
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/auth/signup': typeof AuthSignupRoute
+  '/customer/merchants': typeof CustomerMerchantsRoute
   '/customer/order': typeof CustomerOrderRoute
   '/customer/orders': typeof CustomerOrdersRoute
   '/m/$slug': typeof MSlugRoute
@@ -243,6 +257,7 @@ export interface FileRoutesByTo {
   '/cart': typeof CartRoute
   '/leaderboard': typeof LeaderboardRoute
   '/loyalty': typeof LoyaltyRoute
+  '/map': typeof MapRoute
   '/missions': typeof MissionsRoute
   '/notifications': typeof NotificationsRoute
   '/profile': typeof ProfileRoute
@@ -253,6 +268,7 @@ export interface FileRoutesByTo {
   '/auth/merchant': typeof AuthMerchantRouteWithChildren
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/auth/signup': typeof AuthSignupRoute
+  '/customer/merchants': typeof CustomerMerchantsRoute
   '/customer/order': typeof CustomerOrderRoute
   '/customer/orders': typeof CustomerOrdersRoute
   '/m/$slug': typeof MSlugRoute
@@ -277,6 +293,7 @@ export interface FileRoutesById {
   '/cart': typeof CartRoute
   '/leaderboard': typeof LeaderboardRoute
   '/loyalty': typeof LoyaltyRoute
+  '/map': typeof MapRoute
   '/merchant': typeof MerchantRouteWithChildren
   '/missions': typeof MissionsRoute
   '/notifications': typeof NotificationsRoute
@@ -288,6 +305,7 @@ export interface FileRoutesById {
   '/auth/merchant': typeof AuthMerchantRouteWithChildren
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/auth/signup': typeof AuthSignupRoute
+  '/customer/merchants': typeof CustomerMerchantsRoute
   '/customer/order': typeof CustomerOrderRoute
   '/customer/orders': typeof CustomerOrdersRoute
   '/m/$slug': typeof MSlugRoute
@@ -313,6 +331,7 @@ export interface FileRouteTypes {
     | '/cart'
     | '/leaderboard'
     | '/loyalty'
+    | '/map'
     | '/merchant'
     | '/missions'
     | '/notifications'
@@ -324,6 +343,7 @@ export interface FileRouteTypes {
     | '/auth/merchant'
     | '/auth/reset-password'
     | '/auth/signup'
+    | '/customer/merchants'
     | '/customer/order'
     | '/customer/orders'
     | '/m/$slug'
@@ -347,6 +367,7 @@ export interface FileRouteTypes {
     | '/cart'
     | '/leaderboard'
     | '/loyalty'
+    | '/map'
     | '/missions'
     | '/notifications'
     | '/profile'
@@ -357,6 +378,7 @@ export interface FileRouteTypes {
     | '/auth/merchant'
     | '/auth/reset-password'
     | '/auth/signup'
+    | '/customer/merchants'
     | '/customer/order'
     | '/customer/orders'
     | '/m/$slug'
@@ -380,6 +402,7 @@ export interface FileRouteTypes {
     | '/cart'
     | '/leaderboard'
     | '/loyalty'
+    | '/map'
     | '/merchant'
     | '/missions'
     | '/notifications'
@@ -391,6 +414,7 @@ export interface FileRouteTypes {
     | '/auth/merchant'
     | '/auth/reset-password'
     | '/auth/signup'
+    | '/customer/merchants'
     | '/customer/order'
     | '/customer/orders'
     | '/m/$slug'
@@ -415,12 +439,14 @@ export interface RootRouteChildren {
   CartRoute: typeof CartRoute
   LeaderboardRoute: typeof LeaderboardRoute
   LoyaltyRoute: typeof LoyaltyRoute
+  MapRoute: typeof MapRoute
   MerchantRoute: typeof MerchantRouteWithChildren
   MissionsRoute: typeof MissionsRoute
   NotificationsRoute: typeof NotificationsRoute
   ProfileRoute: typeof ProfileRoute
   RewardsRoute: typeof RewardsRoute
   StoresRoute: typeof StoresRoute
+  CustomerMerchantsRoute: typeof CustomerMerchantsRoute
   CustomerOrderRoute: typeof CustomerOrderRoute
   CustomerOrdersRoute: typeof CustomerOrdersRoute
   MSlugRoute: typeof MSlugRoute
@@ -471,6 +497,13 @@ declare module '@tanstack/react-router' {
       path: '/merchant'
       fullPath: '/merchant'
       preLoaderRoute: typeof MerchantRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/map': {
+      id: '/map'
+      path: '/map'
+      fullPath: '/map'
+      preLoaderRoute: typeof MapRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/loyalty': {
@@ -599,6 +632,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CustomerOrderRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/customer/merchants': {
+      id: '/customer/merchants'
+      path: '/customer/merchants'
+      fullPath: '/customer/merchants'
+      preLoaderRoute: typeof CustomerMerchantsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/signup': {
       id: '/auth/signup'
       path: '/signup'
@@ -722,12 +762,14 @@ const rootRouteChildren: RootRouteChildren = {
   CartRoute: CartRoute,
   LeaderboardRoute: LeaderboardRoute,
   LoyaltyRoute: LoyaltyRoute,
+  MapRoute: MapRoute,
   MerchantRoute: MerchantRouteWithChildren,
   MissionsRoute: MissionsRoute,
   NotificationsRoute: NotificationsRoute,
   ProfileRoute: ProfileRoute,
   RewardsRoute: RewardsRoute,
   StoresRoute: StoresRoute,
+  CustomerMerchantsRoute: CustomerMerchantsRoute,
   CustomerOrderRoute: CustomerOrderRoute,
   CustomerOrdersRoute: CustomerOrdersRoute,
   MSlugRoute: MSlugRoute,

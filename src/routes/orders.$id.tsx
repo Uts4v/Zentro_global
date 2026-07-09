@@ -1,3 +1,4 @@
+// routes/orders.$id.tsx 
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { type OrderStatus } from "@/lib/store";
 import { MobileShell, TopBar } from "@/components/MobileShell";
@@ -13,18 +14,18 @@ export const Route = createFileRoute("/orders/$id")({
 });
 
 const STEPS: { key: OrderStatus; label: string; emoji: string }[] = [
-  { key: "pending",   label: "Order placed",   emoji: "🧾" },
-  { key: "confirmed", label: "Accepted",        emoji: "✅" },
-  { key: "preparing", label: "Brewing",         emoji: "☕" },
-  { key: "ready",     label: "Ready for pickup",emoji: "🔔" },
-  { key: "completed", label: "Picked up",       emoji: "🎉" },
+  { key: "pending", label: "Order placed", emoji: "🧾" },
+  { key: "confirmed", label: "Accepted", emoji: "✅" },
+  { key: "preparing", label: "Brewing", emoji: "☕" },
+  { key: "ready", label: "Ready for pickup", emoji: "🔔" },
+  { key: "completed", label: "Picked up", emoji: "🎉" },
 ];
 
 const STATUS_MESSAGE: Record<OrderStatus, string> = {
-  pending:   "Waiting for the merchant to confirm…",
+  pending: "Waiting for the merchant to confirm…",
   confirmed: "Your order has been accepted!",
   preparing: "Your order is being prepared…",
-  ready:     "Your order is ready — come pick it up! 🔔",
+  ready: "Your order is ready — come pick it up! 🔔",
   completed: "Enjoy! Thanks for ordering.",
   cancelled: "This order was cancelled.",
 };
@@ -141,15 +142,14 @@ function OrderPage() {
         )}
 
         {/* Live status message */}
-        <div className={`mt-4 rounded-2xl px-4 py-3 text-sm transition-all ${
-          justUpdated
+        <div className={`mt-4 rounded-2xl px-4 py-3 text-sm transition-all ${justUpdated
             ? "bg-emerald-50 text-emerald-700 ring-2 ring-emerald-200"
             : isCancelled
-            ? "bg-rose-50 text-rose-700"
-            : isCompleted
-            ? "bg-emerald-50 text-emerald-700"
-            : "bg-ember-soft text-ink"
-        }`}>
+              ? "bg-rose-50 text-rose-700"
+              : isCompleted
+                ? "bg-emerald-50 text-emerald-700"
+                : "bg-ember-soft text-ink"
+          }`}>
           {justUpdated && <span className="mr-1.5">✨</span>}
           {STATUS_MESSAGE[order.status]}
         </div>
@@ -165,11 +165,10 @@ function OrderPage() {
                 const active = i === currentIdx && !isCompleted;
                 return (
                   <li key={s.key} className="flex items-center gap-4">
-                    <div className={`relative grid h-10 w-10 shrink-0 place-items-center rounded-full text-lg transition-all duration-500 ${
-                      done
+                    <div className={`relative grid h-10 w-10 shrink-0 place-items-center rounded-full text-lg transition-all duration-500 ${done
                         ? "bg-ink text-primary-foreground"
                         : "bg-mist text-muted-foreground"
-                    } ${active ? "ring-4 ring-ember/30 scale-110" : ""}`}>
+                      } ${active ? "ring-4 ring-ember/30 scale-110" : ""}`}>
                       {done && !active ? <Check className="h-4 w-4" /> : s.emoji}
                       {/* Pulse dot for active step */}
                       {active && (
@@ -179,9 +178,8 @@ function OrderPage() {
                       )}
                     </div>
                     <div className="flex-1">
-                      <p className={`text-sm font-medium transition-colors ${
-                        done ? "text-ink" : "text-muted-foreground"
-                      }`}>
+                      <p className={`text-sm font-medium transition-colors ${done ? "text-ink" : "text-muted-foreground"
+                        }`}>
                         {s.label}
                       </p>
                       {active && (
@@ -205,6 +203,30 @@ function OrderPage() {
           </div>
         </div>
       )}
+      {isCancelled && (
+  <div className="mt-6 px-5">
+    <div className="glass-strong rounded-3xl p-5 text-center">
+      <p className="text-4xl">❌</p>
+      <p className="mt-3 font-medium text-ink">This order was cancelled</p>
+      {order.cancellation_reason && (
+        <p className="mt-1 text-sm text-muted-foreground">
+          Reason: {order.cancellation_reason.replace("_", " ")}
+        </p>
+      )}
+      {order.cancelled_by && (
+        <p className="mt-1 text-xs text-muted-foreground capitalize">
+          Cancelled by: {order.cancelled_by}
+        </p>
+      )}
+      <Link
+        to="/"
+        className="mt-4 inline-flex h-10 items-center justify-center rounded-full bg-ink px-5 text-xs font-medium text-primary-foreground"
+      >
+        Order again
+      </Link>
+    </div>
+  </div>
+)}
 
       {isCancelled && (
         <div className="mt-6 px-5">

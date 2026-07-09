@@ -1,10 +1,12 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+// routes/index.tsx 
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useStore, cartTotal, type MenuItem } from "@/lib/store";
 import { merchantApi, menuApi, customerApi, specialApi, type TodaySpecial } from "@/lib/api";
 import { MobileShell, TopBar } from "@/components/MobileShell";
-import { Plus, ShoppingBag, Flame } from "lucide-react";
-import { useEffect, useState } from "react";
+import { Plus, ShoppingBag, Flame, Search, X as XIcon } from "lucide-react";
 import { requireAuth } from "@/lib/auth-guard";
+import { useState, useEffect, useMemo } from "react";
+import { TodaySpecialPopup } from "@/features/merchant-management/components/TodaySpecialPopup";
 
 export const Route = createFileRoute("/")({
   beforeLoad: requireAuth,
@@ -17,7 +19,6 @@ export const Route = createFileRoute("/")({
   component: Index,
 });
 
-// ── Menu item card with image support ────────────────────────────────────────
 function MenuItemCard({
   item,
   onAdd,
@@ -33,7 +34,6 @@ function MenuItemCard({
 
   return (
     <article className="glass group relative flex flex-col rounded-3xl overflow-hidden">
-      {/* Image or emoji thumbnail */}
       {hasImage ? (
         <img
           src={item.image_url ?? undefined}
@@ -47,7 +47,6 @@ function MenuItemCard({
           {item.emoji || "☕"}
         </div>
       )}
-
       <div className="flex flex-1 flex-col p-4">
         <h3 className="text-sm font-semibold text-ink">{item.name}</h3>
         <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">{item.description}</p>
@@ -74,12 +73,12 @@ function Index() {
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [merchantName, setMerchantName] = useState("Select a store");
   const [merchantSlug, setMerchantSlug] = useState<string | null>(null);
-  const [special, setSpecial] = useState<TodaySpecial | null>(null);
   const [points, setPoints] = useState(0);
   const [streak, setStreak] = useState(0);
   const [loading, setLoading] = useState(true);
   const [cat, setCat] = useState<string>("All");
-  const navigate = useNavigate();
+  const [search, setSearch] = useState("");
+  const [todaySpecial, setTodaySpecial] = useState<TodaySpecial | null>(null);
 
   useEffect(() => {
     if (!selectedMerchantId) {
@@ -89,49 +88,50 @@ function Index() {
     setLoading(true);
     Promise.all([
       menuApi.forMerchant(selectedMerchantId)
-        .then((items) => setMenuItems(items.map((i) => ({ ...i, price: parseFloat(i.price as any) }))
-        ))
+        .then((items) => setMenuItems(items.map((i) => ({ ...i, price: parseFloat(i.price as any) }))))
         .catch(() => setMenuItems([])),
       merchantApi.get(selectedMerchantId)
         .then((m) => {
           setMerchantName(m.business_name);
-          setMerchantSlug(m.slug);
+          setMerchantSlug(m.slug ?? null);
         })
-        .catch(() => {
-          setSelectedMerchant(null);
-          setMerchantSlug(null);
-        }),
+        .catch(() => setSelectedMerchant(null)),
       customerApi.getWallet(selectedMerchantId)
         .then((w) => {
           setPoints(w?.points_balance ?? 0);
           setStreak(w?.streak_days ?? 0);
         })
-        .catch(() => setSelectedMerchant(null)),
+        .catch(() => {}),
     ]).finally(() => setLoading(false));
   }, [selectedMerchantId]);
 
   useEffect(() => {
     if (!merchantSlug) {
-      setSpecial(null);
+      setTodaySpecial(null);
       return;
     }
-
-    let cancelled = false;
     specialApi.forSlug(merchantSlug)
-      .then((s) => {
-        if (!cancelled) setSpecial(s);
-      })
-      .catch(() => {
-        if (!cancelled) setSpecial(null);
-      });
-
-    return () => {
-      cancelled = true;
-    };
+      .then((s) => setTodaySpecial(s))
+      .catch(() => setTodaySpecial(null));
   }, [merchantSlug]);
 
-  const cats = ["All", ...Array.from(new Set(menuItems.map((m) => m.category).filter(Boolean)))];
-  const items = cat === "All" ? menuItems : menuItems.filter((m) => m.category === cat);
+  const cats = useMemo(() => (
+    ["All", ...Array.from(new Set(menuItems.map((m) => m.category).filter(Boolean)))]
+  ), [menuItems]);
+
+  const filteredItems = useMemo(() => {
+    let result = cat === "All" ? menuItems : menuItems.filter((m) => m.category === cat);
+    if (search.trim()) {
+      const q = search.trim().toLowerCase();
+      result = result.filter(
+        (m) =>
+          m.name.toLowerCase().includes(q) ||
+          (m.description ?? "").toLowerCase().includes(q)
+      );
+    }
+    return result;
+  }, [menuItems, cat, search]);
+
   const count = cart.reduce((s, c) => s + c.qty, 0);
   const storeItems = menuItems.map((m) => ({ ...m, price: parseFloat(m.price as any) }));
   const total = cartTotal(cart, storeItems);
@@ -139,6 +139,11 @@ function Index() {
   return (
     <MobileShell>
       <TopBar />
+
+      {/* Today's Special popup — shown once per session when merchant has an active special */}
+      {merchantSlug && (
+        <TodaySpecialPopup slug={merchantSlug} />
+      )}
 
       {/* Merchant hero */}
       <section className="px-5">
@@ -160,49 +165,42 @@ function Index() {
           )}
           {!selectedMerchantId && (
             <p className="mt-2 text-sm text-muted-foreground">
-              <Link to="/stores" className="text-ember underline">Browse stores</Link> to start ordering.
+              <Link to="/map" className="text-ember underline">Browse stores</Link> to start ordering.
             </p>
           )}
         </div>
       </section>
 
-      {/* Category filter */}
-      {special && (
-        <section className="mt-6 px-5">
-          <div className="glass rounded-[28px] p-5">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <p className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">Today's special</p>
-                <h2 className="font-display mt-2 text-3xl text-ink">{special.title}</h2>
-                {special.description && (
-                  <p className="mt-2 text-sm text-muted-foreground">{special.description}</p>
-                )}
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {special.linked_menu_item_name && (
-                  <span className="rounded-full bg-ember-soft px-3 py-1 text-xs font-medium text-ember">
-                    Menu: {special.linked_menu_item_name}
+      {/* Today's Special Banner */}
+      {selectedMerchantId && todaySpecial && (
+        <section className="px-5 mt-4">
+          <div className="glass-strong relative overflow-hidden rounded-[28px] border border-ember/20 p-5 bg-gradient-to-br from-amber-500/10 to-ember/5">
+            <div className="flex gap-4">
+              {todaySpecial.image_url && (
+                <img
+                  src={todaySpecial.image_url}
+                  alt={todaySpecial.title}
+                  className="h-20 w-20 rounded-2xl object-cover shrink-0"
+                />
+              )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] uppercase tracking-[0.2em] text-ember font-semibold bg-ember-soft px-2 py-0.5 rounded-full">
+                    🔥 Today's Special
                   </span>
+                </div>
+                <h3 className="font-display mt-2 text-xl text-ink leading-tight truncate">
+                  {todaySpecial.title}
+                </h3>
+                {todaySpecial.description && (
+                  <p className="mt-1 text-xs text-muted-foreground line-clamp-2">
+                    {todaySpecial.description}
+                  </p>
                 )}
-                {special.linked_reward_name && (
-                  <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
-                    Reward: {special.linked_reward_name}
+                {(todaySpecial.linked_menu_item_name || todaySpecial.linked_reward_name) && (
+                  <span className="mt-2 inline-flex items-center gap-1 text-[10px] text-ember font-medium">
+                    ✨ Linked: {todaySpecial.linked_menu_item_name ?? todaySpecial.linked_reward_name}
                   </span>
-                )}
-                {(special.linked_menu_item || special.linked_reward) && (
-                  <button
-                    onClick={() => {
-                      if (special.linked_menu_item) {
-                        add(special.linked_menu_item);
-                        navigate({ to: "/cart" as any });
-                      } else if (special.linked_reward) {
-                        navigate({ to: "/rewards" as any });
-                      }
-                    }}
-                    className="rounded-2xl bg-ink px-4 py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
-                  >
-                    {special.linked_menu_item ? "Order today's special" : "View today's reward"}
-                  </button>
                 )}
               </div>
             </div>
@@ -210,8 +208,32 @@ function Index() {
         </section>
       )}
 
-      {menuItems.length > 0 && (
-        <div className="no-scrollbar mt-6 flex gap-2 overflow-x-auto px-5 pb-1">
+      {/* Search bar */}
+      {selectedMerchantId && menuItems.length > 0 && (
+        <div className="mt-4 px-5">
+          <div className="relative">
+            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search menu…"
+              className="h-11 w-full rounded-2xl bg-mist pl-10 pr-10 text-sm text-ink placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-ink/20"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-ink"
+              >
+                <XIcon className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Category filter */}
+      {menuItems.length > 0 && !search && (
+        <div className="no-scrollbar mt-4 flex gap-2 overflow-x-auto px-5 pb-1">
           {cats.map((c) => (
             <button
               key={c}
@@ -228,6 +250,13 @@ function Index() {
         </div>
       )}
 
+      {/* Search result count */}
+      {search && (
+        <p className="mt-2 px-5 text-xs text-muted-foreground">
+          {filteredItems.length} result{filteredItems.length !== 1 ? "s" : ""} for &quot;{search}&quot;
+        </p>
+      )}
+
       {/* Menu */}
       <section className="mt-3 grid grid-cols-2 gap-3 px-5 pb-32">
         {loading && selectedMerchantId && (
@@ -241,7 +270,12 @@ function Index() {
             Select a store to see the menu.
           </p>
         )}
-        {items.map((m) => (
+        {search && filteredItems.length === 0 && (
+          <p className="col-span-2 text-center text-sm text-muted-foreground">
+            No items match &quot;{search}&quot;
+          </p>
+        )}
+        {filteredItems.map((m) => (
           <MenuItemCard
             key={m.id}
             item={m}
