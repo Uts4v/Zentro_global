@@ -324,11 +324,10 @@ function CustomerOrder() {
             <button
               key={cat}
               onClick={() => setFilterCat(cat)}
-              className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
-                filterCat === cat
+              className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${filterCat === cat
                   ? "bg-ink text-primary-foreground"
                   : "bg-mist text-ink hover:bg-ink/10"
-              }`}
+                }`}
             >
               {cat}
             </button>

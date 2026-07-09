@@ -6,11 +6,11 @@ export function RewardModal({ initial, saving, onSave, onClose }: {
   initial: Reward | null; saving: boolean;
   onSave: (d: Omit<Reward, "id" | "merchant_id" | "created_at">) => void; onClose: () => void;
 }) {
-  const [name, setName]           = useState(initial?.name ?? "");
-  const [description, setDesc]    = useState(initial?.description ?? "");
-  const [emoji, setEmoji]         = useState(initial?.emoji ?? "🎁");
-  const [pointsCost, setPoints]   = useState(String(initial?.points_cost ?? 100));
-  const [stock, setStock]         = useState(String(initial?.stock ?? -1));
+  const [name, setName] = useState(initial?.name ?? "");
+  const [description, setDesc] = useState(initial?.description ?? "");
+  const [emoji, setEmoji] = useState(initial?.emoji ?? "🎁");
+  const [pointsCost, setPoints] = useState(String(initial?.points_cost ?? 100));
+  const [stock, setStock] = useState(String(initial?.stock ?? -1));
   return (
     <Modal title={initial ? "Edit reward" : "New reward"} onClose={onClose}>
       <div className="space-y-3">

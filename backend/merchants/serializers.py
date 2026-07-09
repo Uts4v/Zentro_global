@@ -1,3 +1,4 @@
+# merchants/serializers.py 
 from rest_framework import serializers
 from .models import MerchantProfile, MenuItem
 import re

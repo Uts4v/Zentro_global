@@ -1,16 +1,11 @@
 """
 loyalty/models.py
-
-All loyalty-related models:
-  - PunchCard       : per-customer, per-merchant punch tracking
-  - LoyaltyRules    : per-merchant configurable loyalty rules
-  - Mission         : challenges/goals merchants create
-  - CustomerMission : tracks customer progress on a mission
-  - Reward          : redeemable rewards merchants create
-  - Redemption      : records of reward redemptions by customers
 """
-
+import uuid
 from django.db import models
+from django.utils import timezone
+from datetime import timedelta
+
 class TodaySpecial(models.Model):
     merchant = models.ForeignKey(
         "merchants.MerchantProfile",
@@ -43,11 +38,8 @@ class TodaySpecial(models.Model):
     def __str__(self):
         return f"{self.title} — {self.merchant.business_name}"
 
-class CustomerMerchantProfile(models.Model):
-    """
-    Links a customer to a merchant after QR scan / slug onboarding.
-    """
 
+class CustomerMerchantProfile(models.Model):
     STATUS_ACTIVE = "active"
     STATUS_INACTIVE = "inactive"
     STATUS_CHOICES = [
@@ -84,10 +76,6 @@ class CustomerMerchantProfile(models.Model):
 
 
 class CustomerMerchantWallet(models.Model):
-    """
-    Per-merchant point wallet. Points are never shared across merchants.
-    """
-
     TIER_BRONZE = "bronze"
     TIER_SILVER = "silver"
     TIER_GOLD = "gold"
@@ -136,25 +124,15 @@ class CustomerMerchantWallet(models.Model):
 
 
 class LoyaltyRules(models.Model):
-    """
-    Per-merchant loyalty configuration.
-    Auto-created with sensible defaults when a merchant requests their rules.
-    """
-
     merchant = models.OneToOneField(
         "merchants.MerchantProfile",
         on_delete=models.CASCADE,
         related_name="loyalty_rules",
     )
-    # Points awarded per unit of currency (e.g., 1 point per NPR 1 spent)
     points_per_npr = models.FloatField(default=1.0)
-    # Multiplier applied to points when a streak is active
     streak_multiplier = models.FloatField(default=1.5)
-    # Bonus points awarded on first order (welcome bonus)
     welcome_bonus = models.IntegerField(default=50)
-    # Bonus points awarded on customer birthday
     birthday_bonus = models.IntegerField(default=100)
-    # Minimum order amount (in NPR) required to increment the streak
     streak_min_amount = models.DecimalField(max_digits=10, decimal_places=2, default=100)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -166,9 +144,6 @@ class LoyaltyRules(models.Model):
 
 
 class MerchantPunchCard(models.Model):
-    """
-    Merchant's configuration for a punch card.
-    """
     MODE_PER_ORDER = "per_order"
     MODE_PER_STREAK = "per_streak"
     MODE_CHOICES = [
@@ -184,15 +159,12 @@ class MerchantPunchCard(models.Model):
     name = models.CharField(max_length=255)
     mode = models.CharField(max_length=20, choices=MODE_CHOICES, default=MODE_PER_ORDER)
     stamps_required = models.IntegerField(default=5)
-    reward_text = models.CharField(max_length=255, help_text="Text description of the reward (e.g., 'Free Coffee')")
-    
-    # Customization
+    reward_text = models.CharField(max_length=255)
     background_image = models.URLField(blank=True)
     animated_gif_background = models.URLField(blank=True)
-    color_scheme = models.CharField(max_length=20, default="#FFFFFF", help_text="Hex color code")
-    stamp_icon = models.CharField(max_length=255, default="☕", help_text="Emoji or URL to stamp icon")
+    color_scheme = models.CharField(max_length=20, default="#FFFFFF")
+    stamp_icon = models.CharField(max_length=255, default="☕")
     logo = models.URLField(blank=True)
-    
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -206,9 +178,6 @@ class MerchantPunchCard(models.Model):
 
 
 class CustomerPunchCard(models.Model):
-    """
-    Tracks a customer's progress on a specific MerchantPunchCard.
-    """
     customer = models.ForeignKey(
         "accounts.CustomerProfile",
         on_delete=models.CASCADE,
@@ -228,24 +197,37 @@ class CustomerPunchCard(models.Model):
     is_completed = models.BooleanField(default=False)
     completed_at = models.DateTimeField(null=True, blank=True)
     is_redeemed = models.BooleanField(default=False)
+    # Add inside CustomerPunchCard model, after is_redeemed fields:
+    proof_code            = models.CharField(max_length=10, blank=True, default="")
+    proof_code_expires_at = models.DateTimeField(null=True, blank=True)
+    proof_code_used       = models.BooleanField(default=False)
     redeemed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         db_table = "customer_punch_cards"
-        unique_together = ["customer", "punch_card", "is_completed"] # Can only have one active card of the same type at a time. Once completed, they can start a new one.
+        # No unique_together here — partial constraint handled in application logic
 
     def __str__(self):
         return f"{self.customer} - {self.punch_card.name}: {self.current_stamps}/{self.punch_card.stamps_required}"
-
+    def generate_proof_code(self) -> str:
+    
+    
+        if not self.is_completed:
+            raise ValueError("Card is not completed yet.")
+        if self.is_redeemed:
+            raise ValueError("Card is already redeemed.")
+        self.proof_code            = uuid.uuid4().hex[:6].upper()
+        self.proof_code_expires_at = timezone.now() + timedelta(minutes=30)
+        self.proof_code_used       = False
+        self.save(update_fields=["proof_code", "proof_code_expires_at", "proof_code_used", "updated_at"])
+        return self.proof_code
     def add_punch(self) -> bool:
-        """
-        Award one punch. Returns True if this punch completed the card.
-        """
+        """Award one punch. Returns True if this punch completed the card."""
         if self.is_completed:
             return False
-            
+
         self.current_stamps += 1
         completed = False
         if self.current_stamps >= self.punch_card.stamps_required:
@@ -253,15 +235,16 @@ class CustomerPunchCard(models.Model):
             from django.utils import timezone
             self.completed_at = timezone.now()
             completed = True
-        self.save()
+
+        # Use update_fields to avoid triggering unique constraint issues
+        self.save(update_fields=["current_stamps", "is_completed", "completed_at", "updated_at"])
         return completed
-        
+
     def redeem(self):
         if not self.is_completed:
             raise ValueError("Card is not completed yet.")
         if self.is_redeemed:
             raise ValueError("Card is already redeemed.")
-        
         self.is_redeemed = True
         from django.utils import timezone
         self.redeemed_at = timezone.now()
@@ -269,9 +252,6 @@ class CustomerPunchCard(models.Model):
 
 
 class PointTransaction(models.Model):
-    """
-    Ledger for all point changes. Points should never be modified without a transaction.
-    """
     TRANSACTION_TYPES = [
         ("EARNED", "Earned"),
         ("REDEEMED", "Redeemed"),
@@ -283,18 +263,47 @@ class PointTransaction(models.Model):
         ("TRANSFER_RECEIVED", "Transfer Received"),
     ]
 
-    merchant = models.ForeignKey("merchants.MerchantProfile", on_delete=models.CASCADE, related_name="point_transactions")
-    customer = models.ForeignKey("accounts.CustomerProfile", on_delete=models.CASCADE, related_name="point_transactions")
-    wallet = models.ForeignKey(CustomerMerchantWallet, on_delete=models.CASCADE, related_name="transactions")
-    
-    # Context references
-    order = models.ForeignKey("orders.Order", on_delete=models.SET_NULL, null=True, blank=True, related_name="point_transactions")
-    reward = models.ForeignKey("Reward", on_delete=models.SET_NULL, null=True, blank=True, related_name="point_transactions")
-    mission = models.ForeignKey("Mission", on_delete=models.SET_NULL, null=True, blank=True, related_name="point_transactions")
-    punch_card = models.ForeignKey(CustomerPunchCard, on_delete=models.SET_NULL, null=True, blank=True, related_name="point_transactions")
-    
+    merchant = models.ForeignKey(
+        "merchants.MerchantProfile",
+        on_delete=models.CASCADE,
+        related_name="point_transactions",
+    )
+    customer = models.ForeignKey(
+        "accounts.CustomerProfile",
+        on_delete=models.CASCADE,
+        related_name="point_transactions",
+    )
+    wallet = models.ForeignKey(
+        CustomerMerchantWallet,
+        on_delete=models.CASCADE,
+        related_name="transactions",
+    )
+    order = models.ForeignKey(
+        "orders.Order",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="point_transactions",
+    )
+    reward = models.ForeignKey(
+        "Reward",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="point_transactions",
+    )
+    mission = models.ForeignKey(
+        "Mission",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="point_transactions",
+    )
+    punch_card = models.ForeignKey(
+        CustomerPunchCard,
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="point_transactions",
+    )
     transaction_type = models.CharField(max_length=50, choices=TRANSACTION_TYPES)
-    points = models.IntegerField() # Positive for earned, negative for redeemed
+    points = models.IntegerField()
     balance_before = models.IntegerField()
     balance_after = models.IntegerField()
     expiry_date = models.DateTimeField(null=True, blank=True)
@@ -311,8 +320,6 @@ class PointTransaction(models.Model):
 
 
 class Mission(models.Model):
-    """Loyalty missions / challenges that merchants create for their customers."""
-
     MISSION_TYPES = [
         ("order_count", "Order Count"),
         ("spend_amount", "Spend Amount"),
@@ -328,12 +335,11 @@ class Mission(models.Model):
     icon = models.CharField(max_length=50, blank=True, default="🎯")
     mission_type = models.CharField(max_length=20, choices=MISSION_TYPES, default="order_count")
     target_count = models.IntegerField(default=1)
-    reward_points = models.IntegerField(default=10)  # replaces points_reward for API parity
+    reward_points = models.IntegerField(default=10)
     required_merchant = models.ForeignKey(
         "merchants.MerchantProfile",
         on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+        null=True, blank=True,
         related_name="missions",
     )
     is_active = models.BooleanField(default=True)
@@ -350,15 +356,17 @@ class Mission(models.Model):
 
 
 class CustomerMission(models.Model):
-    """Tracks a customer's progress on a specific mission."""
-
     customer = models.ForeignKey(
         "accounts.CustomerProfile",
         on_delete=models.CASCADE,
         related_name="missions",
     )
-    mission = models.ForeignKey(Mission, on_delete=models.CASCADE, related_name="progress_entries")
-    current_count = models.IntegerField(default=0)   # replaces `progress` for API parity
+    mission = models.ForeignKey(
+        Mission,
+        on_delete=models.CASCADE,
+        related_name="progress_entries",
+    )
+    current_count = models.IntegerField(default=0)
     is_completed = models.BooleanField(default=False)
     completed_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -373,8 +381,6 @@ class CustomerMission(models.Model):
 
 
 class Reward(models.Model):
-    """A redeemable reward that a merchant offers to customers."""
-
     merchant = models.ForeignKey(
         "merchants.MerchantProfile",
         on_delete=models.CASCADE,
@@ -386,7 +392,7 @@ class Reward(models.Model):
     points_cost = models.IntegerField()
     image_url = models.URLField(blank=True)
     is_active = models.BooleanField(default=True)
-    stock = models.IntegerField(default=-1)  # -1 = unlimited
+    stock = models.IntegerField(default=-1)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -402,8 +408,6 @@ class Reward(models.Model):
 
 
 class Redemption(models.Model):
-    """Records a customer redeeming a reward."""
-
     STATUS_PENDING = "pending"
     STATUS_CONFIRMED = "confirmed"
     STATUS_EXPIRED = "expired"
@@ -420,7 +424,11 @@ class Redemption(models.Model):
         on_delete=models.CASCADE,
         related_name="redemptions",
     )
-    reward = models.ForeignKey(Reward, on_delete=models.CASCADE, related_name="redemptions")
+    reward = models.ForeignKey(
+        Reward,
+        on_delete=models.CASCADE,
+        related_name="redemptions",
+    )
     points_spent = models.IntegerField()
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
     code = models.CharField(max_length=50, unique=True, db_index=True)

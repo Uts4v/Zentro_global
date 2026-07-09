@@ -1,26 +1,29 @@
-// routes/notification.tsx
+// routes/notifications.tsx 
 import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { requireCustomer } from "@/lib/auth-guard";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { requireAuth } from "@/lib/auth-guard";
 import { notificationApi, type Notification } from "@/lib/api";
 import {
-  Bell,
-  ShoppingBag,
-  Target,
-  Gift,
-  Stamp,
-  Sparkles,
-  CheckCheck,
+  Bell, ShoppingBag, Target, Gift, Stamp,
+  Sparkles, CheckCheck, Trash2, Loader2,
 } from "lucide-react";
 import type { ComponentType } from "react";
 
-const TYPE_ICON: Record<string, ComponentType<{ className?: string }>> = {
+export const Route = createFileRoute("/notifications")({
+  beforeLoad: requireAuth,
+  head: () => ({ meta: [{ title: "Notifications · Zentro" }] }),
+  component: NotificationsPage,
+});
+
+const TYPE_ICON: Record<string, ComponentType<{ className?: string; strokeWidth?: number }>> = {
   new_order: ShoppingBag,
+  order_update: ShoppingBag,
   order_status: ShoppingBag,
   mission_completed: Target,
   reward_redeemed: Gift,
   redemption_confirmed: Gift,
   punch_card_completed: Stamp,
+  punch_card: Stamp,
   special_offer: Sparkles,
   generic: Bell,
 };
@@ -39,6 +42,8 @@ function formatWhen(iso: string): string {
 }
 
 function NotificationsPage() {
+  const queryClient = useQueryClient();
+
   const { data, isLoading, isError, refetch } = useQuery<Notification[]>({
     queryKey: ["notifications", "list"],
     queryFn: notificationApi.list,
@@ -48,118 +53,136 @@ function NotificationsPage() {
 
   const markAllRead = useMutation({
     mutationFn: () => notificationApi.markAllRead(),
-    onSuccess: () => refetch(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
   });
 
   const markRead = useMutation({
     mutationFn: (id: string) => notificationApi.markRead(id),
-    onSuccess: () => refetch(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
+  });
+
+  const clearAll = useMutation({
+    mutationFn: () => notificationApi.clearAll(),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    },
   });
 
   const unreadCount = data?.filter((n) => !n.is_read).length ?? 0;
 
   return (
-    <div className="mx-auto max-w-3xl px-4 pb-20 pt-6 sm:px-6">
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="mx-auto max-w-[480px] px-5 pb-28 pt-6">
+      {/* Header */}
+      <div className="mb-6 flex items-start justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">
-            Notifications
-          </p>
-          <h1 className="font-display mt-2 text-3xl text-ink">
-            Activity & updates
-          </h1>
+          <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Inbox</p>
+          <h1 className="font-display mt-1 text-4xl text-ink">Notifications</h1>
+          <p className="mt-1 text-xs text-muted-foreground">Last 7 days</p>
         </div>
-        {unreadCount > 0 && (
-          <button
-            type="button"
-            onClick={() => markAllRead.mutate()}
-            disabled={markAllRead.isPending}
-            className="inline-flex items-center gap-1.5 rounded-full border border-border bg-white px-4 py-2 text-sm font-medium text-ink transition hover:bg-mist disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            <CheckCheck className="h-3.5 w-3.5" />
-            Mark all read
-          </button>
-        )}
+        <div className="flex flex-col items-end gap-2 pt-1">
+          {unreadCount > 0 && (
+            <button
+              onClick={() => markAllRead.mutate()}
+              disabled={markAllRead.isPending}
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-ink hover:bg-mist disabled:opacity-50"
+            >
+              <CheckCheck className="h-3.5 w-3.5" />
+              Mark all read
+            </button>
+          )}
+          {(data?.length ?? 0) > 0 && (
+            <button
+              onClick={() => clearAll.mutate()}
+              disabled={clearAll.isPending}
+              className="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-100 disabled:opacity-50"
+            >
+              {clearAll.isPending
+                ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                : <Trash2 className="h-3.5 w-3.5" />}
+              Clear all
+            </button>
+          )}
+        </div>
       </div>
 
+      {/* States */}
       {isLoading ? (
         <div className="space-y-3">
-          {[...Array(4)].map((_, index) => (
-            <div key={index} className="h-24 animate-pulse rounded-3xl bg-mist" />
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="h-24 animate-pulse rounded-3xl bg-mist" />
           ))}
         </div>
       ) : isError ? (
         <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
-          Unable to load notifications. Please refresh.
+          Unable to load notifications.{" "}
+          <button onClick={() => refetch()} className="underline">Retry</button>
         </div>
       ) : !data || data.length === 0 ? (
         <div className="glass rounded-3xl p-12 text-center">
           <Bell className="mx-auto h-8 w-8 text-muted-foreground" strokeWidth={1.5} />
-          <p className="mt-4 text-sm text-muted-foreground">
-            Nothing yet — orders, missions, and rewards will show up here.
+          <p className="mt-4 text-sm font-medium text-ink">All quiet</p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Orders, missions, and rewards will show up here.
           </p>
         </div>
       ) : (
-        <div className="space-y-3">
-          {data.map((notification) => {
-            const Icon = TYPE_ICON[notification.notification_type] ?? Bell;
+        <div className="space-y-2">
+          {data.map((n) => {
+            const Icon = TYPE_ICON[n.notification_type] ?? Bell;
             return (
               <div
-                key={notification.id}
-                className={`rounded-3xl border px-4 py-4 shadow-sm transition ${
-                  notification.is_read
-                    ? "border-border bg-white"
+                key={n.id}
+                className={`rounded-3xl border px-4 py-4 transition-all ${
+                  n.is_read
+                    ? "border-border bg-background"
                     : "border-ember/20 bg-ember/5"
                 }`}
               >
                 <div className="flex items-start gap-3">
-                  <div
-                    className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${
-                      notification.is_read ? "bg-mist text-muted-foreground" : "gradient-ember text-white"
-                    }`}
-                  >
+                  <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${
+                    n.is_read ? "bg-mist text-muted-foreground" : "gradient-ember text-white"
+                  }`}>
                     <Icon className="h-4 w-4" strokeWidth={2} />
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-start justify-between gap-2">
-                      <p className="text-sm font-semibold text-ink">
-                        {notification.title}
-                      </p>
-                      <span className="shrink-0 text-xs text-muted-foreground">
-                        {formatWhen(notification.created_at)}
+                    <div className="flex flex-wrap items-start justify-between gap-1">
+                      <p className="text-sm font-semibold text-ink">{n.title}</p>
+                      <span className="text-[10px] text-muted-foreground shrink-0">
+                        {formatWhen(n.created_at)}
                       </span>
                     </div>
-                    <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                      {notification.message}
+                    <p className="mt-0.5 text-sm leading-relaxed text-muted-foreground">
+                      {n.message}
                     </p>
 
-                    <div className="mt-3 flex flex-wrap items-center gap-3">
-                      {notification.merchant_name ? (
-                        <span className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                          {notification.merchant_name}
+                    <div className="mt-2 flex flex-wrap items-center gap-3">
+                      {n.merchant_name && (
+                        <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                          {n.merchant_name}
                         </span>
-                      ) : null}
-
-                      {notification.context_url ? (
-                        
-                         <a href={notification.context_url}
-                          className="text-xs font-semibold text-ember underline-offset-4 hover:underline"
+                      )}
+                      {n.context_url && (
+                        <a
+                          href={n.context_url}
+                          className="text-xs font-medium text-ember underline-offset-2 hover:underline"
                         >
-                          View details →
+                          View →
                         </a>
-                      ) : null}
-
-                      {!notification.is_read ? (
+                      )}
+                      {!n.is_read && (
                         <button
-                          type="button"
-                          onClick={() => markRead.mutate(notification.id)}
+                          onClick={() => markRead.mutate(n.id)}
                           disabled={markRead.isPending}
-                          className="ml-auto rounded-full border border-border bg-white px-3 py-1 text-xs font-semibold text-ink transition hover:bg-mist disabled:cursor-not-allowed disabled:opacity-50"
+                          className="ml-auto rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-ink hover:bg-mist disabled:opacity-50"
                         >
                           Mark read
                         </button>
-                      ) : null}
+                      )}
                     </div>
                   </div>
                 </div>
@@ -171,9 +194,3 @@ function NotificationsPage() {
     </div>
   );
 }
-
-export const Route = createFileRoute("/notifications")({
-  beforeLoad: requireCustomer,
-  head: () => ({ meta: [{ title: "Notifications · Zentro" }] }),
-  component: NotificationsPage,
-});

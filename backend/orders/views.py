@@ -1,31 +1,26 @@
-"""
-orders/views.py
-
-Order endpoints — fully Django-native, no Supabase.
-
-Endpoints:
-  GET  /api/orders/my-orders/            — customer's own orders
-  GET  /api/orders/store-orders/         — merchant's orders (+ ?status= filter)
-  POST /api/orders/create/               — customer places an order
-  GET  /api/orders/<id>/                 — order detail
-  PATCH /api/orders/<id>/update-status/  — merchant changes order status
-  PATCH /api/orders/<id>/cancel/         — customer cancels pending order
-"""
-
+# orders/views.py
 import logging
 
 from django.db import transaction
 from django.utils import timezone
+
+from datetime import timedelta
+from django.db.models import Q
+from accounts.models import CustomerProfile
 
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from accounts.models import CustomerProfile
 from merchants.models import MerchantProfile, MenuItem
-from loyalty.models import MerchantPunchCard, CustomerPunchCard, CustomerMission, Mission, CustomerMerchantProfile
-from loyalty.services import get_or_create_wallet, award_wallet_points, update_wallet_streak
+from loyalty.models import (
+    MerchantPunchCard, CustomerPunchCard,
+    CustomerMission, Mission, CustomerMerchantProfile,
+)
+from loyalty.services import (
+    get_or_create_wallet, award_wallet_points, update_wallet_streak,
+)
 from notifications.services import send_notification
 from notifications.models import Notification
 
@@ -35,13 +30,7 @@ from .serializers import OrderSerializer, CreateOrderSerializer
 logger = logging.getLogger(__name__)
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
 def _notify_safe(**kwargs):
-    """
-    Send a notification without ever letting a failure here roll back
-    an order transaction. Errors are logged, not raised.
-    """
     try:
         send_notification(**kwargs)
     except Exception:
@@ -49,97 +38,98 @@ def _notify_safe(**kwargs):
 
 
 def _award_loyalty(order: Order):
-    """
-    Award merchant-scoped loyalty when an order is COMPLETED.
-    Points, streak, tier, and missions are per merchant wallet — never global.
-    """
     customer = order.customer
-    wallet = get_or_create_wallet(customer, order.merchant)
+    wallet   = get_or_create_wallet(customer, order.merchant)
 
-    # 1. Points (merchant wallet only)
     if order.points_earned > 0:
-        award_wallet_points(wallet, order.points_earned, transaction_type="EARNED", description=f"Points earned for Order #{order.id}", order=order)
+        award_wallet_points(
+            wallet, order.points_earned,
+            transaction_type="EARNED",
+            description=f"Points earned for Order #{order.id}",
+            order=order,
+        )
 
-    # 2. Order count + streak (merchant wallet)
     wallet.order_count += 1
     wallet.save(update_fields=["order_count", "updated_at"])
     streak_incremented = update_wallet_streak(wallet)
 
-    # 3. Punch cards
-    active_merchant_cards = MerchantPunchCard.objects.filter(
-        merchant=order.merchant,
-        is_active=True
-    )
-
-    for merchant_card in active_merchant_cards:
-        # Get or create an active customer card for this type
+    # Punch cards
+    for merchant_card in MerchantPunchCard.objects.filter(
+        merchant=order.merchant, is_active=True
+    ):
         customer_card, _ = CustomerPunchCard.objects.get_or_create(
             customer=customer,
             punch_card=merchant_card,
             merchant=order.merchant,
             is_completed=False,
-            defaults={"current_stamps": 0}
+            defaults={"current_stamps": 0},
         )
-
-        should_punch = False
-        if merchant_card.mode == MerchantPunchCard.MODE_PER_ORDER:
-            should_punch = True
-        elif merchant_card.mode == MerchantPunchCard.MODE_PER_STREAK and streak_incremented:
-            should_punch = True
-
+        should_punch = (
+            merchant_card.mode == MerchantPunchCard.MODE_PER_ORDER
+            or (merchant_card.mode == MerchantPunchCard.MODE_PER_STREAK and streak_incremented)
+        )
         if should_punch:
             completed = customer_card.add_punch()
             if completed:
-                # Assuming Punch Card reward is physical or claimed manually by customer later.
-                # If we were to award points, we could do it here, but reward_text is free text.
-                pass
+                # Notify customer their punch card is complete
+                transaction.on_commit(lambda: _notify_safe(
+                    user=customer.user,
+                    title="Punch card complete! 🎉",
+                    message=f"Show your card to claim: {merchant_card.reward_text}",
+                    notification_type=Notification.TYPE_PUNCH_CARD,
+                    merchant_name=order.merchant.business_name,
+                    context_url=f"/customer/merchant/{order.merchant.slug}",
+                    merchant_id=order.merchant.id,
+                ))
 
-    # 4. Mission progress — order_count, spend_amount, visit_streak types
     _update_mission_progress(customer, order, wallet, streak_incremented)
 
 
-def _update_mission_progress(customer: CustomerProfile, order: Order, wallet, streak_incremented: bool):
-    """
-    Update progress for missions relevant to this completed order:
-      - order_count:   +1 per completed order
-      - spend_amount:  +order.total_amount per completed order
-      - visit_streak:  +1 only on orders that actually incremented the streak
-    """
+def _update_mission_progress(customer, order, wallet, streak_incremented):
     from loyalty.services import award_wallet_points as award_pts
 
     missions = Mission.objects.filter(
         is_active=True,
         mission_type__in=["order_count", "spend_amount", "visit_streak"],
-    ).filter(
-        required_merchant__in=[order.merchant, None]
-    )
+    ).filter(required_merchant__in=[order.merchant, None])
 
     for mission in missions:
-        # Streak missions only move forward on orders that grew the streak
         if mission.mission_type == "visit_streak" and not streak_incremented:
             continue
 
         cm, _ = CustomerMission.objects.get_or_create(
-            customer=customer,
-            mission=mission,
+            customer=customer, mission=mission,
         )
         if cm.is_completed:
             continue
 
         if mission.mission_type == "spend_amount":
             cm.current_count += int(order.total_amount)
-        else:  # order_count, visit_streak
+        else:
             cm.current_count += 1
 
         if cm.current_count >= mission.target_count:
-            cm.is_completed = True
-            cm.completed_at = timezone.now()
-            # Mission reward points go to the order's merchant wallet
-            if mission.required_merchant_id:
-                mission_wallet = get_or_create_wallet(customer, mission.required_merchant)
-            else:
-                mission_wallet = wallet
-            award_pts(mission_wallet, mission.reward_points, transaction_type="MISSION_BONUS", description=f"Mission '{mission.title}' completed", mission=mission)
+            cm.is_completed  = True
+            cm.completed_at  = timezone.now()
+            mission_wallet   = (
+                get_or_create_wallet(customer, mission.required_merchant)
+                if mission.required_merchant_id else wallet
+            )
+            award_pts(
+                mission_wallet, mission.reward_points,
+                transaction_type="MISSION_BONUS",
+                description=f"Mission '{mission.title}' completed",
+                mission=mission,
+            )
+            transaction.on_commit(lambda: _notify_safe(
+                user=customer.user,
+                title=f"Mission complete: {mission.title} 🎯",
+                message=f"You earned {mission.reward_points} bonus points!",
+                notification_type=Notification.TYPE_MISSION_COMPLETE,
+                merchant_name=order.merchant.business_name,
+                context_url=f"/customer/merchant/{order.merchant.slug}",
+                merchant_id=order.merchant.id,
+            ))
         cm.save()
 
 
@@ -148,7 +138,6 @@ def _update_mission_progress(customer: CustomerProfile, order: Order, wallet, st
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def my_orders(request):
-    """GET /api/orders/my-orders/ — customer's own order history."""
     try:
         customer = request.user.customer_profile
     except CustomerProfile.DoesNotExist:
@@ -167,7 +156,6 @@ def my_orders(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def store_orders(request):
-    """GET /api/orders/store-orders/ — merchant's incoming orders. ?status= for filtering."""
     try:
         merchant = request.user.merchant_profile
     except MerchantProfile.DoesNotExist:
@@ -192,23 +180,17 @@ def store_orders(request):
 @permission_classes([IsAuthenticated])
 @transaction.atomic
 def create_order(request):
-    """
-    POST /api/orders/create/
-    Body: { merchant_id, items: [{menu_item_id, quantity}], notes? }
-    """
     serializer = CreateOrderSerializer(data=request.data)
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     data = serializer.validated_data
 
-    # Customer profile
     try:
         customer = request.user.customer_profile
     except CustomerProfile.DoesNotExist:
         return Response({"error": "No customer profile found."}, status=status.HTTP_404_NOT_FOUND)
 
-    # Merchant
     try:
         merchant = MerchantProfile.objects.get(id=data["merchant_id"])
     except MerchantProfile.DoesNotExist:
@@ -217,10 +199,8 @@ def create_order(request):
     if not merchant.is_open:
         return Response({"error": "This store is currently closed."}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Customer must be linked to this merchant (QR / slug onboarding)
     if not CustomerMerchantProfile.objects.filter(
-        customer=customer,
-        merchant=merchant,
+        customer=customer, merchant=merchant,
         status=CustomerMerchantProfile.STATUS_ACTIVE,
     ).exists():
         return Response(
@@ -228,9 +208,8 @@ def create_order(request):
             status=status.HTTP_403_FORBIDDEN,
         )
 
-    # Build order items
-    total_amount = 0
-    points_earned = 0
+    total_amount   = 0
+    points_earned  = 0
     order_items_data = []
 
     for item_data in data["items"]:
@@ -246,8 +225,8 @@ def create_order(request):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        quantity = item_data["quantity"]
-        subtotal = menu_item.price * quantity
+        quantity  = item_data["quantity"]
+        subtotal  = menu_item.price * quantity
         total_amount += subtotal
 
         if menu_item.loyalty_reward:
@@ -255,13 +234,12 @@ def create_order(request):
 
         order_items_data.append({
             "menu_item": menu_item,
-            "name": menu_item.name,
-            "price": menu_item.price,
-            "quantity": quantity,
-            "subtotal": subtotal,
+            "name":      menu_item.name,
+            "price":     menu_item.price,
+            "quantity":  quantity,
+            "subtotal":  subtotal,
         })
 
-    # Create order (status = pending; points NOT awarded yet)
     order = Order.objects.create(
         customer=customer,
         merchant=merchant,
@@ -269,22 +247,19 @@ def create_order(request):
         points_earned=points_earned,
         notes=data.get("notes", ""),
         status=Order.STATUS_PENDING,
+        order_type=Order.ORDER_TYPE_REGULAR,
     )
 
     for item in order_items_data:
         OrderItem.objects.create(order=order, **item)
 
-    # Notify the merchant that a new order has come in.
-    # Deferred with on_commit: runs only after this transaction succeeds,
-    # and a failure here can never poison the order-creation transaction
-    # itself (unlike calling it directly inside this atomic block).
     transaction.on_commit(lambda: _notify_safe(
         user=merchant.user,
-        title="New order received",
-        message=f"New order #{order.id} — NPR {total_amount}",
+        title="New order received 🔔",
+        message=f"Order #{order.id} from {customer.full_name or 'Customer'} — NPR {total_amount}",
         notification_type=Notification.TYPE_NEW_ORDER,
         merchant_name=merchant.business_name,
-        context_url=f"/merchant/orders/{order.id}",
+        context_url="/merchant/orders",
         order_id=order.id,
         merchant_id=merchant.id,
     ))
@@ -295,7 +270,6 @@ def create_order(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def order_detail(request, pk):
-    """GET /api/orders/<id>/ — single order details."""
     try:
         order = (
             Order.objects
@@ -306,8 +280,7 @@ def order_detail(request, pk):
     except Order.DoesNotExist:
         return Response({"error": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
 
-    # Access control: only the customer or the merchant can view
-    user = request.user
+    user     = request.user
     is_owner = (
         (hasattr(user, "customer_profile") and order.customer == user.customer_profile)
         or (hasattr(user, "merchant_profile") and order.merchant == user.merchant_profile)
@@ -322,12 +295,6 @@ def order_detail(request, pk):
 @permission_classes([IsAuthenticated])
 @transaction.atomic
 def update_order_status(request, pk):
-    """
-    PATCH /api/orders/<id>/update-status/
-    Body: { "status": "confirmed" | "preparing" | "ready" | "completed" | "cancelled" }
-    Only the merchant who owns the order can update its status.
-    Merchant-scoped points + punch card are awarded when status becomes "completed".
-    """
     try:
         order = Order.objects.select_related("customer__user", "merchant").get(pk=pk)
     except Order.DoesNotExist:
@@ -342,20 +309,16 @@ def update_order_status(request, pk):
         return Response({"error": "This order does not belong to your store."}, status=status.HTTP_403_FORBIDDEN)
 
     new_status = request.data.get("status")
-    valid_statuses = dict(Order.STATUS_CHOICES).keys()
-    if new_status not in valid_statuses:
+    if new_status not in dict(Order.STATUS_CHOICES):
         return Response(
-            {"error": f"Invalid status. Choose from: {', '.join(valid_statuses)}"},
+            {"error": f"Invalid status. Choose from: {', '.join(dict(Order.STATUS_CHOICES).keys())}"},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    previous_status = order.status
-
-    # Award loyalty once on first transition INTO "completed"
     if (
         new_status == Order.STATUS_COMPLETED
         and not order.loyalty_awarded
-        and previous_status != Order.STATUS_CANCELLED
+        and order.status != Order.STATUS_CANCELLED
     ):
         _award_loyalty(order)
         order.loyalty_awarded = True
@@ -363,12 +326,17 @@ def update_order_status(request, pk):
     order.status = new_status
     order.save(update_fields=["status", "loyalty_awarded", "updated_at"])
 
-    # Notify the customer that their order status changed.
-    # Deferred with on_commit — see note in create_order above.
+    status_msg = {
+        "confirmed": "Your order has been accepted! ✅",
+        "preparing": "Your order is being prepared ☕",
+        "ready":     "Your order is ready for pickup! 🔔",
+        "completed": "Order complete — enjoy! 🎉",
+    }.get(new_status, f"Your order is now {new_status}.")
+
     transaction.on_commit(lambda: _notify_safe(
         user=order.customer.user,
         title="Order update",
-        message=f"Your order #{order.id} is now {new_status}.",
+        message=status_msg,
         notification_type=Notification.TYPE_ORDER_UPDATE,
         merchant_name=order.merchant.business_name,
         context_url=f"/orders/{order.id}",
@@ -381,30 +349,172 @@ def update_order_status(request, pk):
 
 @api_view(["PATCH"])
 @permission_classes([IsAuthenticated])
+@transaction.atomic
 def cancel_order(request, pk):
-    """
-    PATCH /api/orders/<id>/cancel/
-    Customer cancels a pending order.
-    """
     try:
-        order = Order.objects.get(pk=pk)
+        order = Order.objects.select_related(
+            "customer__user", "merchant__user"
+        ).get(pk=pk)
     except Order.DoesNotExist:
         return Response({"error": "Order not found."}, status=status.HTTP_404_NOT_FOUND)
 
-    try:
-        customer = request.user.customer_profile
-    except CustomerProfile.DoesNotExist:
-        return Response({"error": "No customer profile."}, status=status.HTTP_403_FORBIDDEN)
+    reason = request.data.get("reason", "")
+    user   = request.user
 
-    if order.customer != customer:
-        return Response({"error": "Not your order."}, status=status.HTTP_403_FORBIDDEN)
+    # Determine who is cancelling
+    is_customer = hasattr(user, "customer_profile") and order.customer == user.customer_profile
+    is_merchant = hasattr(user, "merchant_profile") and order.merchant == user.merchant_profile
 
-    if order.status != Order.STATUS_PENDING:
+    if not is_customer and not is_merchant:
+        return Response({"error": "Not authorised."}, status=status.HTTP_403_FORBIDDEN)
+
+    # Customers can only cancel pending orders
+    if is_customer and order.status != Order.STATUS_PENDING:
         return Response(
-            {"error": "Only pending orders can be cancelled."},
+            {"error": "You can only cancel pending orders."},
             status=status.HTTP_400_BAD_REQUEST,
         )
 
-    order.status = Order.STATUS_CANCELLED
-    order.save(update_fields=["status", "updated_at"])
+    # Merchants can cancel pending or confirmed orders
+    if is_merchant and order.status not in [Order.STATUS_PENDING, Order.STATUS_CONFIRMED]:
+        return Response(
+            {"error": "You can only cancel pending or confirmed orders."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    order.status       = Order.STATUS_CANCELLED
+    order.cancelled_by = Order.CANCELLED_BY_CUSTOMER if is_customer else Order.CANCELLED_BY_MERCHANT
+    order.cancellation_reason = reason
+    order.save(update_fields=["status", "cancelled_by", "cancellation_reason", "updated_at"])
+
+    reason_label = dict(Order.CANCEL_REASON_CHOICES).get(reason, "")
+
+    if is_customer:
+        msg = f"Order #{order.id} was cancelled by customer"
+        if reason_label:
+            msg += f" — {reason_label}"
+        transaction.on_commit(lambda: _notify_safe(
+            user=order.merchant.user,
+            title="Order cancelled",
+            message=msg,
+            notification_type=Notification.TYPE_ORDER_UPDATE,
+            merchant_name=order.merchant.business_name,
+            context_url="/merchant/orders",
+            order_id=order.id,
+            merchant_id=order.merchant.id,
+        ))
+    else:
+        msg = f"Your order at {order.merchant.business_name} was cancelled"
+        if reason_label:
+            msg += f" — {reason_label}"
+        transaction.on_commit(lambda: _notify_safe(
+            user=order.customer.user,
+            title="Order cancelled",
+            message=msg,
+            notification_type=Notification.TYPE_ORDER_UPDATE,
+            merchant_name=order.merchant.business_name,
+            context_url=f"/orders/{order.id}",
+            order_id=order.id,
+            merchant_id=order.merchant.id,
+        ))
+
     return Response(OrderSerializer(order).data)
+
+# Add these two views to orders/views.py
+# They enforce the 1-month (customer) and 2-month (merchant) limits
+# and support search + status filtering via query params
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def customer_order_history(request):
+    
+    try:
+        customer = request.user.customer_profile
+    except CustomerProfile.DoesNotExist:
+        return Response({"error": "No customer profile."}, status=403)
+
+    one_month_ago = timezone.now() - timedelta(days=30)
+    qs = Order.objects.filter(
+        customer=customer,
+        created_at__gte=one_month_ago,
+    ).prefetch_related("items").select_related("merchant").order_by("-created_at")
+
+    search = request.query_params.get("search", "").strip()
+    if search:
+        qs = qs.filter(
+            Q(id__icontains=search) |
+            Q(items__name__icontains=search) |
+            Q(merchant__business_name__icontains=search)
+        ).distinct()
+
+    status_filter = request.query_params.get("status", "").strip()
+    if status_filter:
+        qs = qs.filter(status=status_filter)
+
+    from .serializers import OrderSerializer
+    return Response(OrderSerializer(qs, many=True).data)
+
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def customer_clear_order_history(request):
+    """
+    DELETE /api/orders/history/clear/
+    Soft-clears: marks orders as hidden from history (doesn't delete DB rows).
+    If you want hard delete, swap the update() for delete().
+    """
+    from accounts.models import CustomerProfile
+    try:
+        customer = request.user.customer_profile
+    except CustomerProfile.DoesNotExist:
+        return Response({"error": "No customer profile."}, status=403)
+
+    one_month_ago = timezone.now() - timedelta(days=30)
+    # Hard delete old orders from customer's history view
+    Order.objects.filter(
+        customer=customer,
+        created_at__gte=one_month_ago,
+        status__in=["completed", "cancelled"],
+    ).delete()
+
+    return Response({"status": "cleared"})
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def merchant_order_history(request):
+    """
+    GET /api/orders/merchant-history/
+    Returns merchant orders from the last 60 days.
+    Query params:
+      ?search=<text>    — filter by order id, customer name, or item name
+      ?status=<status>  — filter by status
+    """
+    from merchants.models import MerchantProfile
+    try:
+        merchant = request.user.merchant_profile
+    except MerchantProfile.DoesNotExist:
+        return Response({"error": "No merchant profile."}, status=403)
+
+    two_months_ago = timezone.now() - timedelta(days=60)
+    qs = Order.objects.filter(
+        merchant=merchant,
+        created_at__gte=two_months_ago,
+    ).prefetch_related("items").select_related("customer__user").order_by("-created_at")
+
+    search = request.query_params.get("search", "").strip()
+    if search:
+        qs = qs.filter(
+            Q(id__icontains=search) |
+            Q(items__name__icontains=search) |
+            Q(customer__full_name__icontains=search) |
+            Q(customer__user__email__icontains=search)
+        ).distinct()
+
+    status_filter = request.query_params.get("status", "").strip()
+    if status_filter:
+        qs = qs.filter(status=status_filter)
+
+    from .serializers import OrderSerializer
+    return Response(OrderSerializer(qs, many=True).data)

@@ -1,4 +1,4 @@
-// src/features/store-locator/CafeDiscoveryMapInner.tsx
+// src/features/store-locator/pages/CafeDiscoveryMapInner.tsx
 //
 // This file is only ever loaded via a dynamic import() from
 // CafeDiscoveryMap.tsx, which happens inside a useEffect (client-only).
@@ -40,6 +40,10 @@ export interface CafeDiscoveryMapProps {
   merchants: MerchantDiscoveryItem[];
   userLocation: { lat: number; lng: number } | null;
   onSelectSlug: (slug: string) => void;
+  /** Full className for the map's outer container — controls size/shape.
+   *  Defaults to a fixed-height rounded box. Pass e.g. "aspect-square w-full
+   *  overflow-hidden rounded-3xl" for a square map. */
+  className?: string;
 }
 
 function MapRecenter({ center }: { center: [number, number] }) {
@@ -56,7 +60,12 @@ function MapRecenter({ center }: { center: [number, number] }) {
   return null;
 }
 
-export function CafeDiscoveryMapInner({ merchants, userLocation, onSelectSlug }: CafeDiscoveryMapProps) {
+export function CafeDiscoveryMapInner({
+  merchants,
+  userLocation,
+  onSelectSlug,
+  className,
+}: CafeDiscoveryMapProps) {
   const pins = useMemo(
     () =>
       merchants
@@ -76,16 +85,20 @@ export function CafeDiscoveryMapInner({ merchants, userLocation, onSelectSlug }:
     return [27.7172, 85.324];
   }, [userLocation, pins]);
 
+  const containerClass = className ?? "glass overflow-hidden rounded-3xl h-[260px] w-full";
+
   if (pins.length === 0 && !userLocation) {
     return null;
   }
 
   return (
-    <div className="glass overflow-hidden rounded-3xl" style={{ height: 260 }}>
+    <div className={containerClass}>
       <MapContainer center={center} zoom={13} scrollWheelZoom={false} style={{ height: "100%", width: "100%" }}>
         <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
+          url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+          subdomains="abcd"
+          maxZoom={19}
         />
 
         <MapRecenter center={center} />

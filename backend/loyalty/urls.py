@@ -12,8 +12,12 @@ urlpatterns = [
     path("wallets/mine/", views.wallet_mine, name="wallet-mine"),
     path("wallets/", views.wallets_list, name="wallets-list"),
 
+    path("merchant-profiles/joined/", views.customer_joined_merchants, name="customer-joined-merchants"),
     # Loyalty rules (merchant)
     path("rules/", views.loyalty_rules, name="loyalty-rules"),
+
+    path("punch-cards/<int:pk>/generate-proof/", views.generate_punch_proof,  name="generate-punch-proof"),
+path("punch-cards/confirm-proof/",           views.confirm_punch_proof,    name="confirm-punch-proof"),
 
     # Transactions
     path("transactions/", views.customer_point_transactions, name="customer-transactions"),

@@ -238,9 +238,8 @@ export function MerchantMenuPage() {
             <button
               key={cat}
               onClick={() => setFilterCat(cat)}
-              className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${
-                filterCat === cat ? "bg-ink text-primary-foreground" : "bg-mist text-ink hover:bg-ink/10"
-              }`}
+              className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${filterCat === cat ? "bg-ink text-primary-foreground" : "bg-mist text-ink hover:bg-ink/10"
+                }`}
             >
               {cat}
             </button>
@@ -481,11 +480,10 @@ export function MerchantMenuPage() {
                     key={key}
                     type="button"
                     onClick={() => setForm((f) => ({ ...f, [key]: !f[key as keyof FormState] }))}
-                    className={`flex items-center justify-center gap-1.5 rounded-xl border py-2.5 text-xs font-medium transition-colors ${
-                      form[key as keyof FormState]
+                    className={`flex items-center justify-center gap-1.5 rounded-xl border py-2.5 text-xs font-medium transition-colors ${form[key as keyof FormState]
                         ? "border-ink bg-ink text-primary-foreground"
                         : "border-border bg-white/50 text-muted-foreground"
-                    }`}
+                      }`}
                   >
                     {form[key as keyof FormState] ? <Check className="h-3.5 w-3.5" /> : <X className="h-3.5 w-3.5" />}
                     {label}

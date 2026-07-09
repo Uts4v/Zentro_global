@@ -1,3 +1,4 @@
+// customerorderpage.tsx 
 import { useState, useEffect } from "react";
 import { Loader2, ChevronDown, ChevronUp, X } from "lucide-react";
 import { orderApi, type Order, type OrderStatus } from "@/lib/api";
@@ -21,7 +22,7 @@ const STATUS_STEP: Record<OrderStatus, number> = {
 };
 
 export function CustomerOrdersPage() {
-    if (typeof window === "undefined") return null;
+  if (typeof window === "undefined") return null;
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -192,11 +193,10 @@ function OrderRow({
                 <div key={label} className="flex flex-1 items-center">
                   <div className="flex flex-col items-center">
                     <div
-                      className={`h-6 w-6 rounded-full text-[10px] font-bold grid place-items-center transition-colors ${
-                        i <= step
+                      className={`h-6 w-6 rounded-full text-[10px] font-bold grid place-items-center transition-colors ${i <= step
                           ? "bg-ink text-primary-foreground"
                           : "bg-mist text-muted-foreground"
-                      }`}
+                        }`}
                     >
                       {i < step ? "✓" : i + 1}
                     </div>

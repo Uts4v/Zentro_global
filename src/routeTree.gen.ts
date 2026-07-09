@@ -34,6 +34,7 @@ import { Route as MerchantAnalyticsRouteImport } from './routes/merchant.analyti
 import { Route as MSlugRouteImport } from './routes/m.$slug'
 import { Route as CustomerOrdersRouteImport } from './routes/customer.orders'
 import { Route as CustomerOrderRouteImport } from './routes/customer.order'
+import { Route as CustomerMerchantsRouteImport } from './routes/customer.merchants'
 import { Route as AuthSignupRouteImport } from './routes/auth.signup'
 import { Route as AuthResetPasswordRouteImport } from './routes/auth.reset-password'
 import { Route as AuthMerchantRouteImport } from './routes/auth.merchant'
@@ -168,6 +169,11 @@ const CustomerOrderRoute = CustomerOrderRouteImport.update({
   path: '/customer/order',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CustomerMerchantsRoute = CustomerMerchantsRouteImport.update({
+  id: '/customer/merchants',
+  path: '/customer/merchants',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthSignupRoute = AuthSignupRouteImport.update({
   id: '/signup',
   path: '/signup',
@@ -227,6 +233,7 @@ export interface FileRoutesByFullPath {
   '/auth/merchant': typeof AuthMerchantRouteWithChildren
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/auth/signup': typeof AuthSignupRoute
+  '/customer/merchants': typeof CustomerMerchantsRoute
   '/customer/order': typeof CustomerOrderRoute
   '/customer/orders': typeof CustomerOrdersRoute
   '/m/$slug': typeof MSlugRoute
@@ -261,6 +268,7 @@ export interface FileRoutesByTo {
   '/auth/merchant': typeof AuthMerchantRouteWithChildren
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/auth/signup': typeof AuthSignupRoute
+  '/customer/merchants': typeof CustomerMerchantsRoute
   '/customer/order': typeof CustomerOrderRoute
   '/customer/orders': typeof CustomerOrdersRoute
   '/m/$slug': typeof MSlugRoute
@@ -297,6 +305,7 @@ export interface FileRoutesById {
   '/auth/merchant': typeof AuthMerchantRouteWithChildren
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/auth/signup': typeof AuthSignupRoute
+  '/customer/merchants': typeof CustomerMerchantsRoute
   '/customer/order': typeof CustomerOrderRoute
   '/customer/orders': typeof CustomerOrdersRoute
   '/m/$slug': typeof MSlugRoute
@@ -334,6 +343,7 @@ export interface FileRouteTypes {
     | '/auth/merchant'
     | '/auth/reset-password'
     | '/auth/signup'
+    | '/customer/merchants'
     | '/customer/order'
     | '/customer/orders'
     | '/m/$slug'
@@ -368,6 +378,7 @@ export interface FileRouteTypes {
     | '/auth/merchant'
     | '/auth/reset-password'
     | '/auth/signup'
+    | '/customer/merchants'
     | '/customer/order'
     | '/customer/orders'
     | '/m/$slug'
@@ -403,6 +414,7 @@ export interface FileRouteTypes {
     | '/auth/merchant'
     | '/auth/reset-password'
     | '/auth/signup'
+    | '/customer/merchants'
     | '/customer/order'
     | '/customer/orders'
     | '/m/$slug'
@@ -434,6 +446,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   RewardsRoute: typeof RewardsRoute
   StoresRoute: typeof StoresRoute
+  CustomerMerchantsRoute: typeof CustomerMerchantsRoute
   CustomerOrderRoute: typeof CustomerOrderRoute
   CustomerOrdersRoute: typeof CustomerOrdersRoute
   MSlugRoute: typeof MSlugRoute
@@ -619,6 +632,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CustomerOrderRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/customer/merchants': {
+      id: '/customer/merchants'
+      path: '/customer/merchants'
+      fullPath: '/customer/merchants'
+      preLoaderRoute: typeof CustomerMerchantsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth/signup': {
       id: '/auth/signup'
       path: '/signup'
@@ -749,6 +769,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   RewardsRoute: RewardsRoute,
   StoresRoute: StoresRoute,
+  CustomerMerchantsRoute: CustomerMerchantsRoute,
   CustomerOrderRoute: CustomerOrderRoute,
   CustomerOrdersRoute: CustomerOrdersRoute,
   MSlugRoute: MSlugRoute,
