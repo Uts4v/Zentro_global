@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TransfersRouteImport } from './routes/transfers'
 import { Route as StoresRouteImport } from './routes/stores'
 import { Route as RewardsRouteImport } from './routes/rewards'
 import { Route as ProfileRouteImport } from './routes/profile'
@@ -44,6 +45,11 @@ import { Route as CustomerMerchantSlugRouteImport } from './routes/customer.merc
 import { Route as AuthMerchantSignupRouteImport } from './routes/auth.merchant.signup'
 import { Route as AuthMerchantLoginRouteImport } from './routes/auth.merchant.login'
 
+const TransfersRoute = TransfersRouteImport.update({
+  id: '/transfers',
+  path: '/transfers',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const StoresRoute = StoresRouteImport.update({
   id: '/stores',
   path: '/stores',
@@ -228,6 +234,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof ProfileRoute
   '/rewards': typeof RewardsRoute
   '/stores': typeof StoresRoute
+  '/transfers': typeof TransfersRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/merchant': typeof AuthMerchantRouteWithChildren
@@ -263,6 +270,7 @@ export interface FileRoutesByTo {
   '/profile': typeof ProfileRoute
   '/rewards': typeof RewardsRoute
   '/stores': typeof StoresRoute
+  '/transfers': typeof TransfersRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/merchant': typeof AuthMerchantRouteWithChildren
@@ -300,6 +308,7 @@ export interface FileRoutesById {
   '/profile': typeof ProfileRoute
   '/rewards': typeof RewardsRoute
   '/stores': typeof StoresRoute
+  '/transfers': typeof TransfersRoute
   '/auth/forgot-password': typeof AuthForgotPasswordRoute
   '/auth/login': typeof AuthLoginRoute
   '/auth/merchant': typeof AuthMerchantRouteWithChildren
@@ -338,6 +347,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/rewards'
     | '/stores'
+    | '/transfers'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/merchant'
@@ -373,6 +383,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/rewards'
     | '/stores'
+    | '/transfers'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/merchant'
@@ -409,6 +420,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/rewards'
     | '/stores'
+    | '/transfers'
     | '/auth/forgot-password'
     | '/auth/login'
     | '/auth/merchant'
@@ -446,6 +458,7 @@ export interface RootRouteChildren {
   ProfileRoute: typeof ProfileRoute
   RewardsRoute: typeof RewardsRoute
   StoresRoute: typeof StoresRoute
+  TransfersRoute: typeof TransfersRoute
   CustomerMerchantsRoute: typeof CustomerMerchantsRoute
   CustomerOrderRoute: typeof CustomerOrderRoute
   CustomerOrdersRoute: typeof CustomerOrdersRoute
@@ -457,6 +470,13 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/transfers': {
+      id: '/transfers'
+      path: '/transfers'
+      fullPath: '/transfers'
+      preLoaderRoute: typeof TransfersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/stores': {
       id: '/stores'
       path: '/stores'
@@ -769,6 +789,7 @@ const rootRouteChildren: RootRouteChildren = {
   ProfileRoute: ProfileRoute,
   RewardsRoute: RewardsRoute,
   StoresRoute: StoresRoute,
+  TransfersRoute: TransfersRoute,
   CustomerMerchantsRoute: CustomerMerchantsRoute,
   CustomerOrderRoute: CustomerOrderRoute,
   CustomerOrdersRoute: CustomerOrdersRoute,

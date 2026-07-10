@@ -183,6 +183,11 @@ def me(request):
     PATCH /api/auth/me/ — update name, phone, avatar
     """
     if request.method == "GET":
+        # Ensure every customer has a transfer code
+        cp = getattr(request.user, "customer_profile", None)
+        if cp and not cp.transfer_code:
+            cp.transfer_code = CustomerProfile._generate_transfer_code()
+            cp.save(update_fields=["transfer_code"])
         serializer = UserProfileSerializer(request.user)
         return Response(serializer.data)
 

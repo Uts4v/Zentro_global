@@ -3,10 +3,12 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useStore, cartTotal, type MenuItem } from "@/lib/store";
 import { merchantApi, menuApi, customerApi, specialApi, type TodaySpecial } from "@/lib/api";
 import { MobileShell, TopBar } from "@/components/MobileShell";
-import { Plus, ShoppingBag, Flame, Search, X as XIcon } from "lucide-react";
+import { Plus, ShoppingBag, Flame, Search, X as XIcon, ArrowLeftRight, QrCode, SendHorizontal } from "lucide-react";
 import { requireAuth } from "@/lib/auth-guard";
 import { useState, useEffect, useMemo } from "react";
 import { TodaySpecialPopup } from "@/features/merchant-management/components/TodaySpecialPopup";
+import { TransferForm } from "@/features/transfers/components/TransferForm";
+import { PersonalQR } from "@/features/transfers/components/PersonalQR";
 
 export const Route = createFileRoute("/")({
   beforeLoad: requireAuth,
@@ -79,6 +81,8 @@ function Index() {
   const [cat, setCat] = useState<string>("All");
   const [search, setSearch] = useState("");
   const [todaySpecial, setTodaySpecial] = useState<TodaySpecial | null>(null);
+  const [showTransfer, setShowTransfer] = useState(false);
+  const [transferMode, setTransferMode] = useState<"send" | "receive">("send");
 
   useEffect(() => {
     if (!selectedMerchantId) {
@@ -205,6 +209,80 @@ function Index() {
               </div>
             </div>
           </div>
+        </section>
+      )}
+
+      {/* Transfer section */}
+      {selectedMerchantId && (
+        <section className="px-5 mt-4">
+          {!showTransfer ? (
+            <button
+              onClick={() => setShowTransfer(true)}
+              className="glass-strong w-full rounded-[20px] p-4 flex items-center justify-between transition-transform active:scale-[0.98]"
+            >
+              <div className="flex items-center gap-3">
+                <div className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-100 text-emerald-600">
+                  <ArrowLeftRight className="h-5 w-5" />
+                </div>
+                <div className="text-left">
+                  <p className="text-sm font-medium text-ink">Transfer points</p>
+                  <p className="text-xs text-muted-foreground">
+                    Send or receive at <span className="font-medium text-ink">{merchantName}</span>
+                  </p>
+                </div>
+              </div>
+              <span className="text-xs text-muted-foreground">{points} pts available</span>
+            </button>
+          ) : (
+            <div className="glass-strong rounded-[28px] p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-display text-xl text-ink">Transfer points</h3>
+                <button
+                  onClick={() => setShowTransfer(false)}
+                  className="text-xs text-muted-foreground hover:text-ink transition-colors"
+                >
+                  Close
+                </button>
+              </div>
+              <div className="flex gap-2 bg-mist rounded-xl p-1">
+                <button
+                  onClick={() => setTransferMode("send")}
+                  className={`flex-1 flex items-center justify-center gap-2 rounded-[10px] py-2 text-xs font-medium transition-all ${
+                    transferMode === "send"
+                      ? "bg-white text-ink shadow-soft"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  <SendHorizontal className="h-4 w-4" /> Send
+                </button>
+                <button
+                  onClick={() => setTransferMode("receive")}
+                  className={`flex-1 flex items-center justify-center gap-2 rounded-[10px] py-2 text-xs font-medium transition-all ${
+                    transferMode === "receive"
+                      ? "bg-white text-ink shadow-soft"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  <QrCode className="h-4 w-4" /> Receive
+                </button>
+              </div>
+
+              {transferMode === "send" ? (
+                <TransferForm
+                  preselectedMerchantId={selectedMerchantId}
+                  onSuccess={() => {
+                    customerApi.getWallet(selectedMerchantId).then((w) => {
+                      if (w) setPoints(w.points_balance);
+                    }).catch(() => {});
+                  }}
+                />
+              ) : (
+                <div className="py-2">
+                  <PersonalQR />
+                </div>
+              )}
+            </div>
+          )}
         </section>
       )}
 

@@ -17,6 +17,7 @@ import {
   ShoppingBag,
   Gift,
   Trophy,
+  ArrowLeftRight,
 } from "lucide-react";
 import {
   merchantApi,
@@ -222,6 +223,14 @@ function CustomerMerchantDashboard() {
             <Trophy className="h-5 w-5 text-ember" />
             <span className="text-sm font-medium text-ink">Leaderboard</span>
             <span className="text-[11px] text-muted-foreground">Top customers</span>
+          </Link>
+          <Link
+            to="/transfers"
+            className="glass flex flex-col items-start gap-2 rounded-2xl p-4 transition-transform active:scale-[0.98]"
+          >
+            <ArrowLeftRight className="h-5 w-5 text-ember" />
+            <span className="text-sm font-medium text-ink">Transfer</span>
+            <span className="text-[11px] text-muted-foreground">Send & receive points</span>
           </Link>
         </div>
 

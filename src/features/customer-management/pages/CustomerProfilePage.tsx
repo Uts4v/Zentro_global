@@ -2,20 +2,14 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { MobileShell, TopBar } from "@/components/MobileShell";
 import { useAuth } from "@/lib/auth";
-import { Settings, Bell, CreditCard, ChevronRight, LogOut, Loader2 } from "lucide-react";
-import { customerApi, orderApi, type Order } from "@/lib/api";
+import { Settings, Bell, CreditCard, ChevronRight, LogOut, Loader2, ArrowLeftRight } from "lucide-react";
+import { customerApi, orderApi, type Order, type CustomerProfile } from "@/lib/api";
 import { useState, useEffect } from "react";
 
 export function CustomerProfilePage() {
   const { user, signOut } = useAuth();
   const navigate = useNavigate();
-  const [customerProfile, setCustomerProfile] = useState<{
-    loyalty_points: number;
-    streak_days: number;
-    total_orders: number;
-    tier: string;
-    full_name: string | null;
-  } | null>(null);
+  const [customerProfile, setCustomerProfile] = useState<CustomerProfile | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -62,6 +56,25 @@ export function CustomerProfilePage() {
         <Stat label="Points" value={displayPoints.toLocaleString()} />
         <Stat label="Streak" value={`${displayStreak}d`} />
         <Stat label="Visits" value={String(displayVisits)} />
+      </section>
+
+      <section className="mt-3 px-5">
+        <div className="glass rounded-2xl p-4 flex items-center justify-between">
+          <div>
+            <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+              Your transfer code
+            </p>
+            <p className="mt-0.5 font-mono text-lg font-bold text-ink tracking-[0.15em]">
+              {user?.customer_profile?.transfer_code ?? customerProfile?.transfer_code ?? "—"}
+            </p>
+          </div>
+          <Link
+            to="/transfers"
+            className="inline-flex items-center gap-2 rounded-full bg-ink px-4 py-2 text-xs font-medium text-primary-foreground"
+          >
+            <ArrowLeftRight className="h-3.5 w-3.5" /> Transfer points
+          </Link>
+        </div>
       </section>
 
       <section className="mt-6 px-5">

@@ -4,6 +4,7 @@ loyalty/services.py
 Merchant-scoped loyalty helpers — wallets, onboarding, point operations.
 """
 
+import uuid
 from django.utils import timezone
 
 from .models import CustomerMerchantProfile, CustomerMerchantWallet, PointTransaction
@@ -149,3 +150,78 @@ def update_wallet_streak(wallet: CustomerMerchantWallet, now=None) -> bool:
     wallet.last_order_datetime = now
     wallet.save(update_fields=["streak_days", "last_order_datetime", "updated_at"])
     return incremented
+
+
+def transfer_points(sender_wallet: CustomerMerchantWallet, receiver_wallet: CustomerMerchantWallet, points: int, description: str = "") -> dict:
+    """
+    Transfer points between two wallets.
+    Both wallets must belong to the same merchant.
+    
+    Returns dict with:
+      - transfer_group: UUID used to link both transactions
+      - sent_transaction: PointTransaction for sender
+      - received_transaction: PointTransaction for receiver
+    
+    Raises ValueError on validation failure.
+    """
+    if sender_wallet.merchant_id != receiver_wallet.merchant_id:
+        raise ValueError(
+            "Cross-merchant transfers are not allowed. "
+            "Sender and receiver must belong to the same merchant."
+        )
+
+    if points <= 0:
+        raise ValueError("Transfer amount must be positive.")
+
+    if sender_wallet.customer_id == receiver_wallet.customer_id:
+        raise ValueError("Cannot transfer points to yourself.")
+
+    if sender_wallet.points_balance < points:
+        raise ValueError(
+            f"Insufficient points: sender has {sender_wallet.points_balance}, needs {points}."
+        )
+
+    merchant = sender_wallet.merchant
+    sender_customer = sender_wallet.customer
+    receiver_customer = receiver_wallet.customer
+    transfer_group = uuid.uuid4()
+
+    # Deduct from sender
+    sender_balance_before = sender_wallet.points_balance
+    sender_wallet.points_balance -= points
+    sender_wallet.save(update_fields=["points_balance", "updated_at"])
+
+    sent_txn = PointTransaction.objects.create(
+        merchant=merchant,
+        customer=sender_customer,
+        wallet=sender_wallet,
+        transaction_type="TRANSFER_SENT",
+        points=-points,
+        balance_before=sender_balance_before,
+        balance_after=sender_wallet.points_balance,
+        description=description or f"Transfer to {receiver_customer.full_name or receiver_customer.user.email}",
+        transfer_group=transfer_group,
+    )
+
+    # Add to receiver
+    receiver_balance_before = receiver_wallet.points_balance
+    receiver_wallet.points_balance += points
+    receiver_wallet.save(update_fields=["points_balance", "updated_at"])
+
+    received_txn = PointTransaction.objects.create(
+        merchant=merchant,
+        customer=receiver_customer,
+        wallet=receiver_wallet,
+        transaction_type="TRANSFER_RECEIVED",
+        points=points,
+        balance_before=receiver_balance_before,
+        balance_after=receiver_wallet.points_balance,
+        description=description or f"Transfer from {sender_customer.full_name or sender_customer.user.email}",
+        transfer_group=transfer_group,
+    )
+
+    return {
+        "transfer_group": transfer_group,
+        "sent_transaction": sent_txn,
+        "received_transaction": received_txn,
+    }

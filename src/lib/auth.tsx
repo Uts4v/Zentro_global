@@ -29,6 +29,7 @@ export type CustomerProfile = {
   streak_days: number;
   total_orders: number;
   tier: string;
+  transfer_code?: string;
 };
 
 export type MerchantProfile = {

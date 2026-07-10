@@ -55,4 +55,9 @@ path("merchant/specials/<int:pk>/",    views.merchant_special_detail,    name="m
 
     # Leaderboard
     path("leaderboard/", views.leaderboard, name="leaderboard"),
+
+    # Point Transfers
+    path("transfers/create/", views.transfer_create, name="transfer-create"),
+    path("transfers/", views.customer_transfers, name="customer-transfers"),
+    path("merchant/transfers/", views.merchant_transfer_history, name="merchant-transfers"),
 ]

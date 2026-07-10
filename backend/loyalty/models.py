@@ -278,6 +278,8 @@ class PointTransaction(models.Model):
         on_delete=models.CASCADE,
         related_name="transactions",
     )
+    transfer_group = models.UUIDField(null=True, blank=True, db_index=True)
+
     order = models.ForeignKey(
         "orders.Order",
         on_delete=models.SET_NULL,

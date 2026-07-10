@@ -283,6 +283,7 @@ export interface CustomerProfile {
   total_orders: number;
   last_streak_at?: string | null;
   streak_free_earned?: boolean;
+  transfer_code?: string;
 }
 
 export interface CustomerMerchantWallet {
@@ -560,12 +561,13 @@ export const customerApi = {
     });
     const cp = data.customer_profile ?? {};
     return {
-      id: String(data.id),
+      id: cp.id ? String(cp.id) : String(data.id),
       full_name: cp.full_name ?? null,
       loyalty_points: cp.loyalty_points ?? 0,
       streak_days: cp.streak_days ?? 0,
       tier: cp.tier ?? "bronze",
       total_orders: cp.total_orders ?? 0,
+      transfer_code: cp.transfer_code ?? undefined,
     };
   },
 
@@ -885,6 +887,44 @@ confirmProof: async (proofCode: string): Promise<{
 export const analyticsApi = {
   merchant: async (days = 30) => {
     return djangoFetch<any>(apiUrl(`/merchants/analytics/?days=${days}`), {
+      headers: authHeaders(),
+    });
+  },
+};
+
+// ── Point Transfers ───────────────────────────────────────────────────────────
+
+export interface TransferResponse {
+  transfer_group: string;
+  sent_transaction: PointTransaction;
+  received_transaction: PointTransaction;
+  sender_balance: number;
+  receiver_balance: number;
+}
+
+export const transferApi = {
+  create: async (payload: {
+    receiver_transfer_code: string;
+    merchant_id: number;
+    amount: number;
+    description?: string;
+  }): Promise<TransferResponse> => {
+    return djangoFetch<TransferResponse>(apiUrl("/loyalty/transfers/create/"), {
+      method: "POST",
+      headers: authHeaders(true),
+      body: JSON.stringify(payload),
+    });
+  },
+
+  customerList: async (merchantId?: string): Promise<PointTransaction[]> => {
+    const qs = merchantId ? `?merchant=${merchantId}` : "";
+    return djangoFetch<PointTransaction[]>(apiUrl(`/loyalty/transfers/${qs}`), {
+      headers: authHeaders(),
+    });
+  },
+
+  merchantList: async (): Promise<PointTransaction[]> => {
+    return djangoFetch<PointTransaction[]>(apiUrl("/loyalty/merchant/transfers/"), {
       headers: authHeaders(),
     });
   },

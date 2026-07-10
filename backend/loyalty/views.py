@@ -45,7 +45,7 @@ from .serializers import (
     CustomerPunchCardSerializer,
     PointTransactionSerializer,
 )
-from .services import join_merchant, get_or_create_wallet, deduct_wallet_points
+from .services import join_merchant, get_or_create_wallet, deduct_wallet_points, transfer_points
 
 from .models import TodaySpecial
 from .serializers import TodaySpecialSerializer
@@ -988,3 +988,170 @@ def leaderboard(request):
     ]
 
     return Response(result)
+
+
+# ── Point Transfers ────────────────────────────────────────────────────────────
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@transaction.atomic
+def transfer_create(request):
+    """
+    POST /api/loyalty/transfers/create/
+
+    Transfer points from the authenticated customer's wallet to another customer.
+
+    Body:
+      receiver_customer_id (int)  — recipient CustomerProfile id
+      merchant_id (int)           — merchant whose wallet is used
+      amount (int)                — points to transfer
+      description (str, optional)
+
+    Validation:
+      - Sender and receiver must both have wallets at the same merchant.
+      - Cross-merchant transfers are BLOCKED.
+      - Sender must have sufficient balance.
+    """
+    try:
+        sender_customer = get_customer_profile(request.user)
+    except PermissionError as e:
+        return _customer_error(str(e))
+
+    receiver_transfer_code = (request.data.get("receiver_transfer_code") or "").strip().upper()
+    merchant_id = request.data.get("merchant_id")
+    amount = request.data.get("amount")
+    description = (request.data.get("description") or "").strip()
+
+    if not all([receiver_transfer_code, merchant_id, amount]):
+        return Response(
+            {"error": "receiver_transfer_code, merchant_id, and amount are required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        amount = int(amount)
+    except (TypeError, ValueError):
+        return Response({"error": "amount must be an integer."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if amount <= 0:
+        return Response({"error": "amount must be positive."}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Resolve merchant
+    try:
+        merchant = MerchantProfile.objects.get(id=merchant_id)
+    except MerchantProfile.DoesNotExist:
+        return Response({"error": "Merchant not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    # Resolve receiver by transfer_code
+    try:
+        receiver_customer = CustomerProfile.objects.get(transfer_code=receiver_transfer_code)
+    except CustomerProfile.DoesNotExist:
+        return Response({"error": "Receiver not found. Check the transfer code."}, status=status.HTTP_404_NOT_FOUND)
+
+    # Security: verify receiver has joined this merchant
+    from .models import CustomerMerchantProfile
+    if not CustomerMerchantProfile.objects.filter(
+        customer=receiver_customer,
+        merchant=merchant,
+        status=CustomerMerchantProfile.STATUS_ACTIVE,
+    ).exists():
+        return Response(
+            {"error": "Receiver has not joined this merchant. They must visit the store first."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Get sender wallet
+    sender_wallet = get_or_create_wallet(sender_customer, merchant)
+
+    # Get or create receiver wallet
+    receiver_wallet = get_or_create_wallet(receiver_customer, merchant)
+
+    try:
+        result = transfer_points(
+            sender_wallet=sender_wallet,
+            receiver_wallet=receiver_wallet,
+            points=amount,
+            description=description,
+        )
+    except ValueError as e:
+        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Notify receiver
+    sender_name = sender_customer.full_name or request.user.email
+    receiver_user = receiver_customer.user
+    transaction.on_commit(lambda: _notify_safe(
+        user=receiver_user,
+        title="Points received",
+        message=f"{sender_name} sent you {amount} points at {merchant.business_name}.",
+        notification_type=Notification.TYPE_TRANSFER_RECEIVED,
+        merchant_name=merchant.business_name,
+        context_url=f"/customer/merchant/{merchant.slug}",
+        merchant_id=merchant.id,
+    ))
+
+    # Notify sender
+    transaction.on_commit(lambda: _notify_safe(
+        user=request.user,
+        title="Points sent",
+        message=f"You sent {amount} points to {receiver_customer.full_name or receiver_customer.user.email} at {merchant.business_name}.",
+        notification_type=Notification.TYPE_TRANSFER_SENT,
+        merchant_name=merchant.business_name,
+        context_url=f"/customer/merchant/{merchant.slug}",
+        merchant_id=merchant.id,
+    ))
+
+    return Response({
+        "transfer_group": str(result["transfer_group"]),
+        "sent_transaction": PointTransactionSerializer(result["sent_transaction"]).data,
+        "received_transaction": PointTransactionSerializer(result["received_transaction"]).data,
+        "sender_balance": sender_wallet.points_balance,
+        "receiver_balance": receiver_wallet.points_balance,
+    }, status=status.HTTP_201_CREATED)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def customer_transfers(request):
+    """
+    GET /api/loyalty/transfers/
+
+    Returns all TRANSFER_SENT and TRANSFER_RECEIVED transactions
+    for the authenticated customer, optionally filtered by merchant.
+    """
+    try:
+        customer = get_customer_profile(request.user)
+    except PermissionError as e:
+        return _customer_error(str(e))
+
+    qs = PointTransaction.objects.filter(
+        customer=customer,
+        transaction_type__in=["TRANSFER_SENT", "TRANSFER_RECEIVED"],
+    ).select_related("merchant").order_by("-created_at")
+
+    merchant_id = request.query_params.get("merchant")
+    if merchant_id:
+        qs = qs.filter(merchant_id=merchant_id)
+
+    return Response(PointTransactionSerializer(qs, many=True).data)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def merchant_transfer_history(request):
+    """
+    GET /api/loyalty/merchant/transfers/
+
+    Returns all transfer transactions for the merchant's store.
+    """
+    try:
+        merchant = get_merchant_profile(request.user)
+    except PermissionError as e:
+        return _merchant_error(str(e))
+
+    qs = PointTransaction.objects.filter(
+        merchant=merchant,
+        transaction_type__in=["TRANSFER_SENT", "TRANSFER_RECEIVED"],
+    ).select_related("customer__user").order_by("-created_at")
+
+    return Response(PointTransactionSerializer(qs, many=True).data)

@@ -155,10 +155,11 @@ class CustomerProfileSerializer(serializers.ModelSerializer):
             "streak_days",
             "total_orders",
             "tier",
+            "transfer_code",
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "loyalty_points", "streak_days", "total_orders", "tier", "created_at", "updated_at"]
+        read_only_fields = ["id", "loyalty_points", "streak_days", "total_orders", "tier", "transfer_code", "created_at", "updated_at"]
 
 
 class UserProfileSerializer(serializers.ModelSerializer):

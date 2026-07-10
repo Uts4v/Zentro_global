@@ -84,6 +84,7 @@ class CustomerProfile(models.Model):
     last_order_date = models.DateField(null=True, blank=True)
     total_orders = models.IntegerField(default=0)
     tier = models.CharField(max_length=20, choices=TIER_CHOICES, default=TIER_BRONZE)
+    transfer_code = models.CharField(max_length=8, unique=True, blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -92,6 +93,21 @@ class CustomerProfile(models.Model):
 
     def __str__(self):
         return f"Customer: {self.full_name or self.user.email}"
+
+    def save(self, *args, **kwargs):
+        if not self.transfer_code:
+            self.transfer_code = self._generate_transfer_code()
+        super().save(*args, **kwargs)
+
+    @staticmethod
+    def _generate_transfer_code() -> str:
+        import secrets
+        import string
+        alphabet = string.ascii_uppercase + string.digits
+        while True:
+            code = ''.join(secrets.choice(alphabet) for _ in range(6))
+            if not CustomerProfile.objects.filter(transfer_code=code).exists():
+                return code
 
     def recalculate_tier(self):
         """
