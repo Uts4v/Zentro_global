@@ -22,20 +22,20 @@ SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-dev-key-CHANGE-THIS-in-pro
 DEBUG = os.getenv("DEBUG", "True").lower() in ("true", "1", "yes")
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
 
-CSRF_TRUSTED_ORIGINS = [
-    origin.strip()
-    for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "https://zentro-global.onrender.com").split(",")
-    if origin.strip()
-]
-
 # Render terminates SSL at the proxy; tell Django the original request was HTTPS
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://zentro-global.onrender.com",
+    "https://zentro-global.onrender.com",
+]
 
 # ── Custom user model ─────────────────────────────────────────────────────────
 AUTH_USER_MODEL = "accounts.User"
 
 # ── Installed apps ────────────────────────────────────────────────────────────
 INSTALLED_APPS = [
+    "daphne",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     # Third-party
+    "channels",
     "rest_framework",
     "rest_framework_simplejwt",
     "rest_framework_simplejwt.token_blacklist",
@@ -54,10 +55,31 @@ INSTALLED_APPS = [
     "orders",
 ]
 
+# ── ASGI / Channels ───────────────────────────────────────────────────────────
+ASGI_APPLICATION = "config.asgi.application"
+
+_redis_url = os.getenv("REDIS_URL", "")
+if _redis_url:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": [_redis_url],
+            },
+        },
+    }
+else:
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer",
+        },
+    }
+
 # ── Middleware ────────────────────────────────────────────────────────────────
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -86,8 +108,6 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 # ── Database ──────────────────────────────────────────────────────────────────
-# SQLite by default (dev). Switch to PostgreSQL for VPS production by setting
-# DB_ENGINE=django.db.backends.postgresql and the DB_* vars in .env.
 DB_ENGINE = os.getenv("DB_ENGINE", "django.db.backends.sqlite3")
 
 if DB_ENGINE == "django.db.backends.postgresql":
@@ -99,7 +119,7 @@ if DB_ENGINE == "django.db.backends.postgresql":
             "PASSWORD": os.getenv("DB_PASSWORD", ""),
             "HOST": os.getenv("DB_HOST", "localhost"),
             "PORT": os.getenv("DB_PORT", "5432"),
-            "CONN_MAX_AGE": 60,   # connection pooling for production
+            "CONN_MAX_AGE": 60,
             "OPTIONS": {
                 "sslmode": os.getenv("DB_SSLMODE", "prefer"),
             },
@@ -130,6 +150,11 @@ USE_TZ = True
 # ── Static & media files ──────────────────────────────────────────────────────
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+STORAGES = {
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
@@ -160,7 +185,6 @@ REST_FRAMEWORK = {
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ],
     "DEFAULT_PERMISSION_CLASSES": [
-        # Most endpoints require authentication; override per-view as needed.
         "rest_framework.permissions.IsAuthenticated",
     ],
     "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
@@ -172,7 +196,6 @@ REST_FRAMEWORK = {
 
 # ── Simple JWT ────────────────────────────────────────────────────────────────
 SIMPLE_JWT = {
-    # Access token lifetime: 15 min in production; 1 day for dev convenience.
     "ACCESS_TOKEN_LIFETIME": timedelta(days=1) if DEBUG else timedelta(minutes=15),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=30),
     "ROTATE_REFRESH_TOKENS": True,
@@ -183,11 +206,10 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
     "USER_ID_FIELD": "id",
     "USER_ID_CLAIM": "user_id",
-    # Custom token so we can embed role + name in the payload
     "TOKEN_OBTAIN_SERIALIZER": "accounts.serializers.CustomTokenObtainPairSerializer",
 }
 
-# ── Email (console for dev; SMTP for production) ──────────────────────────────
+# ── Email ─────────────────────────────────────────────────────────────────────
 EMAIL_BACKEND = os.getenv(
     "EMAIL_BACKEND",
     "django.core.mail.backends.console.EmailBackend",
@@ -199,10 +221,9 @@ EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "Zentro <noreply@zentro.app>")
 
-# ── Frontend URL (used in password reset emails) ──────────────────────────────
+# ── Frontend URL ──────────────────────────────────────────────────────────────
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
 # ── File upload ───────────────────────────────────────────────────────────────
-# Max 5 MB per upload. Increase for production as needed.
 DATA_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
