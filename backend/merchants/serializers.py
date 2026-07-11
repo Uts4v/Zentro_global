@@ -28,7 +28,7 @@ class MerchantProfileSerializer(serializers.ModelSerializer):
             "latitude", "longitude", "qr_code",
             "menu_items", "created_at", "updated_at",
         ]
-        read_only_fields = ["id", "is_approved", "qr_code", "created_at", "updated_at"]
+        read_only_fields = ["id", "is_approved", "created_at", "updated_at"]
 
     def validate_slug(self, value):
         # Lowercase, replace spaces with hyphens, strip bad chars

@@ -190,6 +190,7 @@ function QRSection({
       merchantApi.update({
         business_name: profile?.business_name,
         slug: profile?.slug,
+        qr_code: "",
       }),
     onSuccess: async () => {
       await refreshMerchantProfile();
