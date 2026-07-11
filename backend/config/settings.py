@@ -22,6 +22,15 @@ SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-dev-key-CHANGE-THIS-in-pro
 DEBUG = os.getenv("DEBUG", "True").lower() in ("true", "1", "yes")
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
 
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "https://zentro-global.onrender.com").split(",")
+    if origin.strip()
+]
+
+# Render terminates SSL at the proxy; tell Django the original request was HTTPS
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
 # ── Custom user model ─────────────────────────────────────────────────────────
 AUTH_USER_MODEL = "accounts.User"
 
