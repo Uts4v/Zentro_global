@@ -19,7 +19,7 @@ from loyalty.models import (
     CustomerMission, Mission, CustomerMerchantProfile,
 )
 from loyalty.services import (
-    get_or_create_wallet, award_wallet_points, update_wallet_streak,
+    get_or_create_wallet, award_wallet_points, deduct_wallet_points, update_wallet_streak,
 )
 from notifications.services import send_notification
 from notifications.models import Notification
@@ -35,6 +35,31 @@ def _notify_safe(**kwargs):
         send_notification(**kwargs)
     except Exception:
         logger.exception("Failed to send notification (order flow continues)")
+
+
+def _deduct_reward_redemption_points(order: Order):
+    """Deduct points when a reward redemption order is completed by the merchant."""
+    redemption = order.reward_redemption
+    if not redemption or not redemption.points_spent:
+        return
+
+    customer = order.customer
+    wallet = get_or_create_wallet(customer, order.merchant)
+
+    try:
+        deduct_wallet_points(
+            wallet,
+            redemption.points_spent,
+            transaction_type="REDEEMED",
+            description=f"Redeemed reward: {redemption.reward.name} (Order #{order.id})",
+            reward=redemption.reward,
+            order=order,
+        )
+    except ValueError:
+        logger.warning(
+            "Could not deduct %s points for redemption %s — insufficient balance",
+            redemption.points_spent, redemption.id,
+        )
 
 
 def _award_loyalty(order: Order):
@@ -315,12 +340,21 @@ def update_order_status(request, pk):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    # When order is completed:
+    # - Regular orders: award loyalty points, punch card stamps, mission progress
+    # - Reward redemption orders: deduct the held points from customer wallet
     if (
         new_status == Order.STATUS_COMPLETED
         and not order.loyalty_awarded
         and order.status != Order.STATUS_CANCELLED
     ):
-        _award_loyalty(order)
+        if (
+            order.order_type == Order.ORDER_TYPE_REWARD_REDEMPTION
+            and order.reward_redemption
+        ):
+            _deduct_reward_redemption_points(order)
+        else:
+            _award_loyalty(order)
         order.loyalty_awarded = True
 
     order.status = new_status
@@ -488,10 +522,13 @@ def merchant_order_history(request):
     GET /api/orders/merchant-history/
     Returns merchant orders from the last 60 days.
     Query params:
-      ?search=<text>    — filter by order id, customer name, or item name
-      ?status=<status>  — filter by status
+      ?search=<text>      — filter by order id, customer name, or item name
+      ?status=<status>    — filter by status
+      ?date_from=YYYY-MM-DD  — start date (inclusive)
+      ?date_to=YYYY-MM-DD    — end date (inclusive)
     """
     from merchants.models import MerchantProfile
+    from datetime import datetime as dt
     try:
         merchant = request.user.merchant_profile
     except MerchantProfile.DoesNotExist:
@@ -515,6 +552,22 @@ def merchant_order_history(request):
     status_filter = request.query_params.get("status", "").strip()
     if status_filter:
         qs = qs.filter(status=status_filter)
+
+    date_from = request.query_params.get("date_from", "").strip()
+    if date_from:
+        try:
+            parsed = dt.strptime(date_from, "%Y-%m-%d")
+            qs = qs.filter(created_at__date__gte=parsed.date())
+        except ValueError:
+            pass
+
+    date_to = request.query_params.get("date_to", "").strip()
+    if date_to:
+        try:
+            parsed = dt.strptime(date_to, "%Y-%m-%d")
+            qs = qs.filter(created_at__date__lte=parsed.date())
+        except ValueError:
+            pass
 
     from .serializers import OrderSerializer
     return Response(OrderSerializer(qs, many=True).data)

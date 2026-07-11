@@ -12,6 +12,8 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, useMemo, type ReactNode } from "react";
 import { AuthProvider, useAuth } from "@/lib/auth";
+import { ThemeProvider } from "@/lib/theme";
+import { MerchantThemeProvider } from "@/lib/merchant-theme";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -181,7 +183,12 @@ function GlobalNotificationToasts() {
     const token = tokenStore.getAccess();
     if (!token) return;
 
-    const wsUrl = `ws://localhost:8000/ws/notifications/?token=${token}`;
+    const wsProto = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const apiHost = (import.meta.env.VITE_DJANGO_API_BASE_URL as string | undefined)
+      ?.replace(/^https?:\/\//, "")
+      ?.replace(/\/api\/?$/, "")
+      || window.location.host;
+    const wsUrl = `${wsProto}//${apiHost}/ws/notifications/?token=${token}`;
     const ws = new WebSocket(wsUrl);
 
     ws.onopen = () => {
@@ -224,11 +231,15 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <GlobalNotificationToasts />
-        <InnerRoot />
-        <Toaster position="top-center" richColors expand visibleToasts={4} />
-      </AuthProvider>
+      <ThemeProvider>
+        <MerchantThemeProvider>
+          <AuthProvider>
+            <GlobalNotificationToasts />
+            <InnerRoot />
+            <Toaster position="top-center" richColors expand visibleToasts={4} />
+          </AuthProvider>
+        </MerchantThemeProvider>
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }
@@ -236,9 +247,14 @@ function RootComponent() {
 // ── Shell ─────────────────────────────────────────────────────────────────────
 function RootShell({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem("zentro-theme");var d=t==="dark"||(t!=="light"&&matchMedia("(prefers-color-scheme:dark)").matches);if(d)document.documentElement.classList.add("dark")}catch(e){}})();`,
+          }}
+        />
       </head>
       <body>
         {children}

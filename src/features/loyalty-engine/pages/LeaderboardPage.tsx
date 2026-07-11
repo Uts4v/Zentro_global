@@ -81,7 +81,7 @@ export function LeaderboardPage() {
       <TopBar />
       <div className="px-5">
         <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Rankings</p>
-        <h1 className="font-display mt-1 text-4xl text-ink">Leaderboard</h1>
+        <h1 className="font-display mt-1 text-4xl text-foreground">Leaderboard</h1>
         <p className="mt-1 text-sm text-muted-foreground">Top customers at your current store.</p>
       </div>
 
@@ -109,7 +109,7 @@ export function LeaderboardPage() {
                   <p className="mt-1 text-sm text-white/70">{profile.full_name ?? "You"} · {tier.name}</p>
                 </div>
                 <div className="glass-strong rounded-2xl px-4 py-3 text-center">
-                  <p className="font-display text-3xl text-ink">{points.toLocaleString()}</p>
+                  <p className="font-display text-3xl text-foreground">{points.toLocaleString()}</p>
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground">pts</p>
                 </div>
               </div>
@@ -138,7 +138,7 @@ export function LeaderboardPage() {
               <div className="flex items-end gap-2">
                 {[leaders[1], leaders[0], leaders[2]].map((entry, col) => (
                   <div key={entry.customer_id} className="flex flex-1 flex-col items-center gap-2">
-                    <p className="text-xs font-medium text-ink truncate max-w-full text-center">{entry.full_name ?? "Customer"}</p>
+                    <p className="text-xs font-medium text-foreground truncate max-w-full text-center">{entry.full_name ?? "Customer"}</p>
                     <p className="text-xs text-muted-foreground">{entry.loyalty_points.toLocaleString()} pts</p>
                     <div className={`flex w-full items-center justify-center rounded-t-2xl text-2xl ${
                       col === 0 ? "h-16 bg-gray-200" : col === 1 ? "h-24 bg-amber-100" : "h-12 bg-orange-100"
@@ -162,7 +162,7 @@ export function LeaderboardPage() {
                   <div key={entry.customer_id} className={`flex items-center gap-3 rounded-2xl px-4 py-3 ${isMe ? "bg-ink text-primary-foreground shadow-ember" : "glass"}`}>
                     <RankBadge rank={entry.rank} />
                     <div className="min-w-0 flex-1">
-                      <p className={`truncate text-sm font-medium ${isMe ? "text-white" : "text-ink"}`}>
+                      <p className={`truncate text-sm font-medium ${isMe ? "text-white" : "text-foreground"}`}>
                         {entry.full_name ?? "Customer"}{isMe && <span className="ml-2 text-[10px] text-white/60">· You</span>}
                       </p>
                       <div className="flex items-center gap-2 mt-0.5">
@@ -175,7 +175,7 @@ export function LeaderboardPage() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className={`font-display text-lg ${isMe ? "text-white" : "text-ink"}`}>{entry.loyalty_points.toLocaleString()}</p>
+                      <p className={`font-display text-lg ${isMe ? "text-white" : "text-foreground"}`}>{entry.loyalty_points.toLocaleString()}</p>
                       <p className={`text-[10px] ${isMe ? "text-white/60" : "text-muted-foreground"}`}>pts</p>
                     </div>
                   </div>
@@ -189,7 +189,7 @@ export function LeaderboardPage() {
             <div className="glass rounded-3xl p-5">
               <div className="flex items-center gap-2 mb-4">
                 <Star className="h-4 w-4 text-ember" />
-                <p className="text-sm font-medium text-ink">Tier milestones</p>
+                <p className="text-sm font-medium text-foreground">Tier milestones</p>
               </div>
               <div className="space-y-3">
                 {TIER_CONFIG.map((t) => {
@@ -198,7 +198,7 @@ export function LeaderboardPage() {
                   return (
                     <div key={t.name} className="flex items-center gap-3">
                       <div className={`h-3 w-3 rounded-full ${t.dot} ${!reached ? "opacity-30" : ""}`} />
-                      <span className={`text-sm ${reached ? "font-medium text-ink" : "text-muted-foreground"}`}>
+                      <span className={`text-sm ${reached ? "font-medium text-foreground" : "text-muted-foreground"}`}>
                         {t.name}
                         {isCurrent && <span className="ml-2 rounded-full bg-ember-soft px-2 py-0.5 text-[10px] text-ember">Current</span>}
                       </span>

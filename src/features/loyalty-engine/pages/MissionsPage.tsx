@@ -19,7 +19,7 @@ export function MissionsPage() {
       <TopBar />
       <div className="px-5">
         <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">This month</p>
-        <h1 className="font-display mt-1 text-4xl text-ink">Missions</h1>
+        <h1 className="font-display mt-1 text-4xl text-foreground">Missions</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Small quests, real rewards. Refreshes every month.
         </p>
@@ -46,7 +46,7 @@ export function MissionsPage() {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-3">
-                    <h3 className="truncate text-base font-semibold text-ink">{m.title}</h3>
+                    <h3 className="truncate text-base font-semibold text-foreground">{m.title}</h3>
                     <span className="font-display shrink-0 text-lg text-ember">
                       {m.current_count}/{m.target_count}
                     </span>
@@ -54,16 +54,16 @@ export function MissionsPage() {
                   <p className="mt-0.5 text-xs text-muted-foreground">{m.description}</p>
                   <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-mist">
                     <div
-                      className={`h-full rounded-full transition-all ${done ? "bg-ink" : "gradient-ember"}`}
+                      className={`h-full rounded-full transition-all ${done ? "bg-slate-900 dark:bg-white" : "gradient-ember"}`}
                       style={{ width: `${pct}%` }}
                     />
                   </div>
                   <div className="mt-3 flex items-center justify-between">
                     <p className="text-xs text-muted-foreground">
-                      Reward · <span className="text-ink">+{m.reward_points} pts</span>
+                      Reward · <span className="text-foreground">+{m.reward_points} pts</span>
                     </p>
                     {done && (
-                      <span className="rounded-full bg-ink px-3 py-1 text-[10px] uppercase tracking-widest text-primary-foreground">
+                      <span className="rounded-full bg-slate-900 dark:bg-white px-3 py-1 text-[10px] uppercase tracking-widest text-white dark:text-slate-900">
                         Completed ✓
                       </span>
                     )}

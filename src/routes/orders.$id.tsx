@@ -134,7 +134,7 @@ function OrderPage() {
         <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
           Order #{orderLabel}
         </p>
-        <h1 className="font-display mt-1 text-4xl text-ink">
+        <h1 className="font-display mt-1 text-4xl text-foreground">
           {isCancelled ? "Order cancelled" : isCompleted ? "Enjoy your order" : "We're on it"}
         </h1>
         {merchantName && (
@@ -148,7 +148,7 @@ function OrderPage() {
               ? "bg-rose-50 text-rose-700"
               : isCompleted
                 ? "bg-emerald-50 text-emerald-700"
-                : "bg-ember-soft text-ink"
+                : "bg-ember-soft text-foreground"
           }`}>
           {justUpdated && <span className="mr-1.5">✨</span>}
           {STATUS_MESSAGE[order.status]}
@@ -178,7 +178,7 @@ function OrderPage() {
                       )}
                     </div>
                     <div className="flex-1">
-                      <p className={`text-sm font-medium transition-colors ${done ? "text-ink" : "text-muted-foreground"
+                      <p className={`text-sm font-medium transition-colors ${done ? "text-foreground" : "text-muted-foreground"
                         }`}>
                         {s.label}
                       </p>
@@ -207,7 +207,7 @@ function OrderPage() {
   <div className="mt-6 px-5">
     <div className="glass-strong rounded-3xl p-5 text-center">
       <p className="text-4xl">❌</p>
-      <p className="mt-3 font-medium text-ink">This order was cancelled</p>
+      <p className="mt-3 font-medium text-foreground">This order was cancelled</p>
       {order.cancellation_reason && (
         <p className="mt-1 text-sm text-muted-foreground">
           Reason: {order.cancellation_reason.replace("_", " ")}
@@ -249,7 +249,7 @@ function OrderPage() {
         <div className="glass space-y-2 rounded-2xl p-4">
           {(order.order_items ?? []).map((item, idx) => (
             <div key={idx} className="flex items-center justify-between">
-              <span className="text-sm text-ink">
+              <span className="text-sm text-foreground">
                 {item.quantity}× {item.name}
               </span>
               <span className="text-sm text-muted-foreground">
@@ -259,7 +259,7 @@ function OrderPage() {
           ))}
           <div className="!mt-3 border-t border-border pt-3 flex items-center justify-between">
             <span className="text-sm text-muted-foreground">Total</span>
-            <span className="font-display text-xl text-ink">
+            <span className="font-display text-xl text-foreground">
               NPR {Number(order.total_amount).toLocaleString()}
             </span>
           </div>
@@ -268,7 +268,7 @@ function OrderPage() {
 
       <div className="mt-4 px-5 pb-8">
         <div className="flex items-center justify-between rounded-2xl bg-ember-soft px-4 py-3">
-          <span className="text-xs text-ink">Points earned</span>
+          <span className="text-xs text-foreground">Points earned</span>
           <span className="font-display text-lg text-ember">+{order.points_earned} pts</span>
         </div>
       </div>

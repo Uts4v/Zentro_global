@@ -72,7 +72,7 @@ export function CartPage() {
         }
       />
       <div className="px-5">
-        <h1 className="font-display text-4xl text-ink">Your bag</h1>
+        <h1 className="font-display text-4xl text-foreground">Your bag</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           {cart.length === 0
             ? "Quiet for now. Add something lovely."
@@ -94,10 +94,10 @@ export function CartPage() {
                 {item?.emoji || "🍽️"}
               </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold text-ink">
+                <p className="truncate text-sm font-semibold text-foreground">
                   {item?.name || "Unknown item"}
                 </p>
-                <p className="font-display text-lg text-ink">
+                <p className="font-display text-lg text-foreground">
                   NPR {item ? (item.price * c.qty).toLocaleString() : "—"}
                 </p>
               </div>
@@ -129,7 +129,7 @@ export function CartPage() {
             <div className="my-3 border-t border-border" />
             <Row label="Total" value={`NPR ${total.toLocaleString()}`} bold />
             <div className="mt-3 flex items-center justify-between rounded-2xl bg-ember-soft px-4 py-3">
-              <span className="text-xs text-ink">You'll earn</span>
+              <span className="text-xs text-foreground">You'll earn</span>
               <span className="font-display text-lg text-ember">+{points} pts</span>
             </div>
 
@@ -172,12 +172,12 @@ function Row({
   return (
     <div className="flex items-center justify-between py-1">
       <span
-        className={`text-sm ${bold ? "font-medium text-ink" : "text-muted-foreground"}`}
+        className={`text-sm ${bold ? "font-medium text-foreground" : "text-muted-foreground"}`}
       >
         {label}
       </span>
       <span
-        className={`${bold ? "font-display text-2xl text-ink" : "text-sm text-ink"}`}
+        className={`${bold ? "font-display text-2xl text-foreground" : "text-sm text-foreground"}`}
       >
         {value}
       </span>

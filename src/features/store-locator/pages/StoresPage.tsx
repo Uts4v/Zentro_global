@@ -69,7 +69,7 @@ function CafeImage({ store, className }: { store: DiscoveryItem; className: stri
 function RatingBadge({ store }: { store: DiscoveryItem }) {
   if (!store.rating) return null;
   return (
-    <span className="inline-flex items-center gap-1 text-sm font-medium text-ink">
+    <span className="inline-flex items-center gap-1 text-sm font-medium text-foreground">
       <span className="text-ember">★</span> {store.rating.toFixed(1)}
       {store.review_count != null && (
         <span className="text-muted-foreground">({store.review_count})</span>
@@ -92,7 +92,7 @@ function FeaturedCard({ store, onOpen }: { store: DiscoveryItem; onOpen: () => v
     <div className="glass-strong overflow-hidden rounded-3xl md:flex">
       <div className="relative h-56 shrink-0 md:h-auto md:w-[42%]">
         <CafeImage store={store} className="h-full w-full" />
-        <span className="absolute left-4 top-4 inline-flex items-center gap-1 rounded-full bg-amber-400 px-3 py-1 text-xs font-semibold text-ink">
+        <span className="absolute left-4 top-4 inline-flex items-center gap-1 rounded-full bg-amber-400 dark:bg-amber-500 px-3 py-1 text-xs font-semibold text-foreground">
           ★ Featured
         </span>
       </div>
@@ -100,7 +100,7 @@ function FeaturedCard({ store, onOpen }: { store: DiscoveryItem; onOpen: () => v
       <div className="flex flex-1 flex-col justify-between gap-5 p-6">
         <div className="space-y-2">
           <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-            <h2 className="font-display text-3xl leading-tight text-ink">{store.business_name}</h2>
+            <h2 className="font-display text-3xl leading-tight text-foreground">{store.business_name}</h2>
             <RatingBadge store={store} />
           </div>
           {(store.address || store.distance_km !== null) && (
@@ -120,7 +120,7 @@ function FeaturedCard({ store, onOpen }: { store: DiscoveryItem; onOpen: () => v
             <GlowPoints store={store} />
             <span
               className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium ${
-                store.is_open ? "bg-emerald-100 text-emerald-700" : "bg-mist text-muted-foreground"
+                store.is_open ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700" : "bg-mist text-muted-foreground"
               }`}
             >
               <span className={`h-1.5 w-1.5 rounded-full ${store.is_open ? "bg-emerald-500" : "bg-muted-foreground"}`} />
@@ -148,7 +148,7 @@ function CafeGridCard({ store, onOpen }: { store: DiscoveryItem; onOpen: () => v
       <div className="flex min-w-0 flex-1 flex-col justify-between py-0.5">
         <div className="space-y-1">
           <div className="flex items-baseline justify-between gap-2">
-            <p className="truncate font-display text-lg leading-tight text-ink">{store.business_name}</p>
+            <p className="truncate font-display text-lg leading-tight text-foreground">{store.business_name}</p>
             <RatingBadge store={store} />
           </div>
           {(store.address || store.distance_km !== null) && (
@@ -168,7 +168,7 @@ function CafeGridCard({ store, onOpen }: { store: DiscoveryItem; onOpen: () => v
             <GlowPoints store={store} />
             <span
               className={`inline-flex w-fit items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium ${
-                store.is_open ? "bg-emerald-100 text-emerald-700" : "bg-mist text-muted-foreground"
+                store.is_open ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700" : "bg-mist text-muted-foreground"
               }`}
             >
               <span className={`h-1.5 w-1.5 rounded-full ${store.is_open ? "bg-emerald-500" : "bg-muted-foreground"}`} />
@@ -281,7 +281,7 @@ export function StoresPage() {
           <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
             {greeting.text} <span>{greeting.emoji}</span>
           </p>
-          <h1 className="font-display mt-1 text-4xl leading-tight text-ink sm:text-5xl">
+          <h1 className="font-display mt-1 text-4xl leading-tight text-foreground sm:text-5xl">
             Discover
             <br />
             <span className="text-ember">Nearby Cafés</span>
@@ -289,7 +289,7 @@ export function StoresPage() {
           <p className="mt-2 text-sm text-muted-foreground">Earn rewards while you sip.</p>
         </div>
 
-        <span className="mt-1 inline-flex shrink-0 items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-ink">
+        <span className="mt-1 inline-flex shrink-0 items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground">
           <MapPin className="h-3.5 w-3.5" />
           {userLocation ? "Using your location" : "Location off"}
           <span className={`h-1.5 w-1.5 rounded-full ${userLocation ? "bg-emerald-500" : "bg-muted-foreground"}`} />
@@ -303,10 +303,10 @@ export function StoresPage() {
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="Search cafés, places or cuisines..."
-          className="h-12 w-full rounded-full bg-mist pl-11 pr-11 text-sm text-ink placeholder:text-muted-foreground/70 outline-none focus:ring-2 focus:ring-ink/15"
+          className="h-12 w-full rounded-full bg-mist pl-11 pr-11 text-sm text-foreground placeholder:text-muted-foreground/70 outline-none focus:ring-2 focus:ring-ink/15"
         />
         <button
-          className="absolute right-1.5 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-background text-muted-foreground hover:text-ink"
+          className="absolute right-1.5 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-background text-muted-foreground hover:text-foreground"
           aria-label="Filters"
         >
           <SlidersHorizontal className="h-4 w-4" />
@@ -322,7 +322,7 @@ export function StoresPage() {
               key={key}
               onClick={() => setActiveFilter(key)}
               className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                active ? "bg-ink text-primary-foreground" : "glass text-muted-foreground hover:text-ink"
+                active ? "bg-ink text-primary-foreground" : "glass text-muted-foreground hover:text-foreground"
               }`}
             >
               <Icon className="h-3.5 w-3.5" /> {label}
@@ -332,7 +332,7 @@ export function StoresPage() {
       </div>
 
       {error && (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+        <div className="rounded-2xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/30 px-4 py-3 text-sm text-rose-700 dark:text-rose-400">
           {error}
         </div>
       )}
@@ -351,11 +351,11 @@ export function StoresPage() {
           {rest.length > 0 && (
             <section className="space-y-3">
               <div className="flex items-center justify-between">
-                <h2 className="font-display text-2xl text-ink">Nearby Cafés</h2>
+                <h2 className="font-display text-2xl text-foreground">Nearby Cafés</h2>
                 {rest.length > 4 && (
                   <button
                     onClick={() => setShowAll((v) => !v)}
-                    className="inline-flex items-center gap-1 text-sm font-medium text-ink"
+                    className="inline-flex items-center gap-1 text-sm font-medium text-foreground"
                   >
                     {showAll ? "Show less" : "View all"} <ChevronRight className="h-3.5 w-3.5" />
                   </button>
@@ -385,7 +385,7 @@ export function StoresPage() {
               <span className="inline-flex w-fit items-center gap-1.5 rounded-full bg-mist px-3 py-1 text-xs font-medium text-muted-foreground">
                 <MapPin className="h-3.5 w-3.5" /> {filtered.length} café{filtered.length === 1 ? "" : "s"} pinned
               </span>
-              <h2 className="font-display text-4xl leading-[1.1] tracking-tight text-ink sm:text-5xl">
+              <h2 className="font-display text-4xl leading-[1.1] tracking-tight text-foreground sm:text-5xl">
                 Find Cafés
                 <br />
                 <span className="text-ember">on the Map</span>

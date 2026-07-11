@@ -164,9 +164,9 @@ function CustomerOrder() {
       <div className="flex min-h-[60vh] flex-col items-center justify-center space-y-6 text-center">
         <div className="glass-strong rounded-3xl p-10">
           <p className="text-6xl">🎉</p>
-          <h2 className="font-display mt-4 text-3xl text-ink">Order placed!</h2>
+          <h2 className="font-display mt-4 text-3xl text-foreground">Order placed!</h2>
           <p className="mt-2 text-muted-foreground">
-            Order <span className="font-medium text-ink">#{success.orderId}</span> is being prepared
+            Order <span className="font-medium text-foreground">#{success.orderId}</span> is being prepared
           </p>
           {success.points > 0 && (
             <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-emerald-100 px-4 py-2 text-sm font-medium text-emerald-700">
@@ -191,7 +191,7 @@ function CustomerOrder() {
       <div className="space-y-8">
         <div>
           <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Browse</p>
-          <h1 className="font-display mt-1 text-5xl text-ink">Order</h1>
+          <h1 className="font-display mt-1 text-5xl text-foreground">Order</h1>
         </div>
         {loading ? (
           <div className="flex justify-center py-16">
@@ -217,7 +217,7 @@ function CustomerOrder() {
                     onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                   />
                 )}
-                <h3 className="font-display text-2xl text-ink">{m.business_name}</h3>
+                <h3 className="font-display text-2xl text-foreground">{m.business_name}</h3>
                 {m.description && (
                   <p className="mt-1 text-sm text-muted-foreground line-clamp-2">{m.description}</p>
                 )}
@@ -240,11 +240,11 @@ function CustomerOrder() {
         <div>
           <button
             onClick={() => setLocalMerchant(null)}
-            className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:text-ink"
+            className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground"
           >
             ← Back
           </button>
-          <h1 className="font-display mt-1 text-5xl text-ink">{selectedMerchant.business_name}</h1>
+          <h1 className="font-display mt-1 text-5xl text-foreground">{selectedMerchant.business_name}</h1>
         </div>
 
         {/* Cart button */}
@@ -274,7 +274,7 @@ function CustomerOrder() {
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">Today's special</p>
-              <h2 className="font-display mt-2 text-3xl text-ink">{special.title}</h2>
+              <h2 className="font-display mt-2 text-3xl text-foreground">{special.title}</h2>
               {special.description && (
                 <p className="mt-2 text-sm text-muted-foreground">{special.description}</p>
               )}
@@ -326,7 +326,7 @@ function CustomerOrder() {
               onClick={() => setFilterCat(cat)}
               className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${filterCat === cat
                   ? "bg-ink text-primary-foreground"
-                  : "bg-mist text-ink hover:bg-ink/10"
+                  : "bg-mist text-foreground hover:bg-ink/10"
                 }`}
             >
               {cat}
@@ -385,10 +385,10 @@ function CustomerOrder() {
         >
           <div className="glass-strong w-full max-w-lg rounded-t-3xl p-6 sm:rounded-3xl">
             <div className="mb-5 flex items-center justify-between">
-              <h2 className="font-display text-2xl text-ink">Your cart</h2>
+              <h2 className="font-display text-2xl text-foreground">Your cart</h2>
               <button
                 onClick={() => setCartOpen(false)}
-                className="grid h-8 w-8 place-items-center rounded-full bg-mist text-muted-foreground hover:text-ink"
+                className="grid h-8 w-8 place-items-center rounded-full bg-mist text-muted-foreground hover:text-foreground"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -413,7 +413,7 @@ function CustomerOrder() {
                     )}
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-medium text-ink">{item.name}</p>
+                    <p className="text-sm font-medium text-foreground">{item.name}</p>
                     <p className="text-xs text-muted-foreground">
                       NPR {Number(item.price).toLocaleString()} each
                       {item.loyalty_reward && (
@@ -424,14 +424,14 @@ function CustomerOrder() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => removeFromCart(item.id)}
-                      className="grid h-7 w-7 place-items-center rounded-lg bg-mist text-ink"
+                      className="grid h-7 w-7 place-items-center rounded-lg bg-mist text-foreground"
                     >
                       <Minus className="h-3 w-3" />
                     </button>
-                    <span className="w-4 text-center text-sm font-medium text-ink">{qty}</span>
+                    <span className="w-4 text-center text-sm font-medium text-foreground">{qty}</span>
                     <button
                       onClick={() => addToCart(item)}
-                      className="grid h-7 w-7 place-items-center rounded-lg bg-mist text-ink"
+                      className="grid h-7 w-7 place-items-center rounded-lg bg-mist text-foreground"
                     >
                       <Plus className="h-3 w-3" />
                     </button>
@@ -442,7 +442,7 @@ function CustomerOrder() {
                       <X className="h-3 w-3" />
                     </button>
                   </div>
-                  <span className="w-20 text-right text-sm text-ink">
+                  <span className="w-20 text-right text-sm text-foreground">
                     NPR {(Number(item.price) * qty).toLocaleString()}
                   </span>
                 </div>
@@ -459,7 +459,7 @@ function CustomerOrder() {
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Extra hot, no sugar…"
                 rows={2}
-                className="w-full resize-none rounded-xl border border-border bg-white/50 px-3 py-2.5 text-sm text-ink placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ink/20"
+                className="w-full resize-none rounded-xl border border-border bg-white/50 px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ink/20"
               />
             </div>
 
@@ -467,7 +467,7 @@ function CustomerOrder() {
             <div className="mt-4 space-y-1.5 rounded-2xl bg-mist p-4">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Subtotal</span>
-                <span className="text-ink">NPR {totalAmount.toLocaleString()}</span>
+                <span className="text-foreground">NPR {totalAmount.toLocaleString()}</span>
               </div>
               {totalPoints > 0 && (
                 <div className="flex justify-between text-sm">
@@ -476,8 +476,8 @@ function CustomerOrder() {
                 </div>
               )}
               <div className="flex justify-between border-t border-border pt-2 font-medium">
-                <span className="text-ink">Total</span>
-                <span className="font-display text-lg text-ink">NPR {totalAmount.toLocaleString()}</span>
+                <span className="text-foreground">Total</span>
+                <span className="font-display text-lg text-foreground">NPR {totalAmount.toLocaleString()}</span>
               </div>
             </div>
 
@@ -535,7 +535,7 @@ function MenuCard({
             <div className="flex items-center gap-1.5">
               {/* Show emoji next to name only when there's already a photo */}
               {hasImage && <span className="text-lg">{item.emoji}</span>}
-              <h3 className="font-display text-lg leading-tight text-ink">{item.name}</h3>
+              <h3 className="font-display text-lg leading-tight text-foreground">{item.name}</h3>
               {item.is_featured && (
                 <Star className="h-3.5 w-3.5 shrink-0 fill-amber-400 text-amber-400" />
               )}
@@ -544,7 +544,7 @@ function MenuCard({
               <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{item.description}</p>
             )}
           </div>
-          <p className="font-display shrink-0 text-lg text-ink">
+          <p className="font-display shrink-0 text-lg text-foreground">
             NPR {Number(item.price).toLocaleString()}
           </p>
         </div>
@@ -569,11 +569,11 @@ function MenuCard({
             <div className="flex items-center justify-between rounded-xl bg-mist px-2 py-1.5">
               <button
                 onClick={onRemove}
-                className="grid h-8 w-8 place-items-center rounded-lg bg-white text-ink shadow-sm"
+                className="grid h-8 w-8 place-items-center rounded-lg bg-white text-foreground shadow-sm"
               >
                 <Minus className="h-3.5 w-3.5" />
               </button>
-              <span className="font-display text-lg text-ink">{qty}</span>
+              <span className="font-display text-lg text-foreground">{qty}</span>
               <button
                 onClick={onAdd}
                 className="grid h-8 w-8 place-items-center rounded-lg bg-ink text-primary-foreground shadow-sm"

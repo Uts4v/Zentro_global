@@ -164,6 +164,7 @@ class MerchantPunchCard(models.Model):
     animated_gif_background = models.URLField(blank=True)
     color_scheme = models.CharField(max_length=20, default="#FFFFFF")
     stamp_icon = models.CharField(max_length=255, default="☕")
+    stamp_gif_url = models.URLField(blank=True, default="", null=True, help_text="Optional GIF URL to use instead of emoji stamp")
     logo = models.URLField(blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)

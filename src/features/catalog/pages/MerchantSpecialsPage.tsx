@@ -66,7 +66,7 @@ export function MerchantSpecialsPage() {
       <div className="flex items-end justify-between">
         <div>
           <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Promotions</p>
-          <h1 className="font-display mt-1 text-5xl text-ink">Today's Special</h1>
+          <h1 className="font-display mt-1 text-5xl text-foreground">Today's Special</h1>
           <p className="mt-2 max-w-md text-sm text-muted-foreground">
             A popup banner shown to customers when they first open your store page.
             Only one active special is shown at a time.
@@ -83,7 +83,7 @@ export function MerchantSpecialsPage() {
       {specials.length === 0 ? (
         <div className="glass-strong flex flex-col items-center rounded-3xl py-16 text-center">
           <Sparkles className="h-10 w-10 text-muted-foreground/30" />
-          <p className="mt-4 text-sm font-medium text-ink">No specials yet</p>
+          <p className="mt-4 text-sm font-medium text-foreground">No specials yet</p>
           <p className="mt-1 text-xs text-muted-foreground">
             Create your first banner to surprise customers.
           </p>
@@ -107,7 +107,7 @@ export function MerchantSpecialsPage() {
               <div className="p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="truncate font-medium text-ink">{s.title}</p>
+                    <p className="truncate font-medium text-foreground">{s.title}</p>
                     {s.description && (
                       <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
                         {s.description}
@@ -226,7 +226,7 @@ function SpecialModal({
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
-          <h3 className="font-display text-xl text-ink">
+          <h3 className="font-display text-xl text-foreground">
             {initial ? "Edit special" : "New special"}
           </h3>
           <button
@@ -287,7 +287,7 @@ function SpecialModal({
               <button
                 type="button"
                 onClick={() => inputRef.current?.click()}
-                className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-ink"
+                className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground"
               >
                 <Upload className="h-3 w-3" /> Change image
               </button>
@@ -303,7 +303,7 @@ function SpecialModal({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               placeholder="e.g. Buy one get one free today!"
-              className="mt-1.5 h-11 w-full rounded-2xl bg-mist px-4 text-sm text-ink outline-none focus:ring-2 focus:ring-ember/40"
+              className="mt-1.5 h-11 w-full rounded-2xl bg-mist px-4 text-sm text-foreground outline-none focus:ring-2 focus:ring-ember/40"
             />
           </div>
 
@@ -317,7 +317,7 @@ function SpecialModal({
               onChange={(e) => setDesc(e.target.value)}
               placeholder="Add more details about the offer…"
               rows={3}
-              className="mt-1.5 w-full resize-none rounded-2xl bg-mist px-4 py-3 text-sm text-ink outline-none focus:ring-2 focus:ring-ember/40"
+              className="mt-1.5 w-full resize-none rounded-2xl bg-mist px-4 py-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-ember/40"
             />
           </div>
 
@@ -329,7 +329,7 @@ function SpecialModal({
             <select
               value={linkedItem}
               onChange={(e) => { setLinkedItem(e.target.value); if (e.target.value) setLinkedReward(""); }}
-              className="mt-1.5 h-11 w-full rounded-2xl bg-mist px-4 text-sm text-ink outline-none focus:ring-2 focus:ring-ember/40"
+              className="mt-1.5 h-11 w-full rounded-2xl bg-mist px-4 text-sm text-foreground outline-none focus:ring-2 focus:ring-ember/40"
             >
               <option value="">— None —</option>
               {menuItems.map((m) => (
@@ -346,7 +346,7 @@ function SpecialModal({
             <select
               value={linkedReward}
               onChange={(e) => { setLinkedReward(e.target.value); if (e.target.value) setLinkedItem(""); }}
-              className="mt-1.5 h-11 w-full rounded-2xl bg-mist px-4 text-sm text-ink outline-none focus:ring-2 focus:ring-ember/40"
+              className="mt-1.5 h-11 w-full rounded-2xl bg-mist px-4 text-sm text-foreground outline-none focus:ring-2 focus:ring-ember/40"
             >
               <option value="">— None —</option>
               {rewards.map((r) => (

@@ -1,6 +1,7 @@
 // C:\Users\ACER\Desktop\NTE Loyalty\zentro-glow-loyalty\src\features\customer-management\pages\CustomerProfilePage.tsx 
 import { Link, useNavigate } from "@tanstack/react-router";
 import { MobileShell, TopBar } from "@/components/MobileShell";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/lib/auth";
 import { Settings, Bell, CreditCard, ChevronRight, LogOut, Loader2, ArrowLeftRight } from "lucide-react";
 import { customerApi, orderApi, type Order, type CustomerProfile } from "@/lib/api";
@@ -44,7 +45,7 @@ export function CustomerProfilePage() {
             <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
               {displayTier} tier
             </p>
-            <h1 className="font-display truncate text-3xl text-ink">
+            <h1 className="font-display truncate text-3xl text-foreground">
               {displayName}
             </h1>
             <p className="text-xs text-muted-foreground">Zentro member</p>
@@ -64,7 +65,7 @@ export function CustomerProfilePage() {
             <p className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
               Your transfer code
             </p>
-            <p className="mt-0.5 font-mono text-lg font-bold text-ink tracking-[0.15em]">
+            <p className="mt-0.5 font-mono text-lg font-bold text-foreground tracking-[0.15em]">
               {user?.customer_profile?.transfer_code ?? customerProfile?.transfer_code ?? "—"}
             </p>
           </div>
@@ -104,7 +105,7 @@ export function CustomerProfilePage() {
                   ☕
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-ink">
+                  <p className="truncate text-sm font-medium text-foreground">
                     Order #{o.id}
                   </p>
                   <p className="text-[11px] text-muted-foreground">
@@ -113,7 +114,7 @@ export function CustomerProfilePage() {
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-display text-base text-ink">
+                  <p className="font-display text-base text-foreground">
                     NPR {parseFloat(o.total_amount).toLocaleString()}
                   </p>
                   <p className="text-[10px] text-ember">+{o.points_earned} pts</p>
@@ -131,7 +132,11 @@ export function CustomerProfilePage() {
             <Row icon={Bell} label="Notifications" />
           </Link>
           <Row icon={CreditCard} label="Payment methods" />
-          <Row icon={Settings} label="Account settings" />
+          <div className="flex items-center gap-3 p-4">
+            <Settings className="h-4 w-4 text-muted-foreground" />
+            <span className="flex-1 text-sm text-foreground">Appearance</span>
+            <ThemeToggle />
+          </div>
           <button
             onClick={handleSignOut}
             className="flex w-full items-center gap-3 p-4 text-left"
@@ -149,7 +154,7 @@ export function CustomerProfilePage() {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="glass rounded-2xl p-3 text-center">
-      <p className="font-display text-2xl text-ink">{value}</p>
+      <p className="font-display text-2xl text-foreground">{value}</p>
       <p className="mt-0.5 text-[10px] uppercase tracking-widest text-muted-foreground">
         {label}
       </p>
@@ -161,7 +166,7 @@ function Row({ icon: Icon, label }: { icon: typeof Bell; label: string }) {
   return (
     <button className="flex w-full items-center gap-3 p-4 text-left">
       <Icon className="h-4 w-4 text-muted-foreground" />
-      <span className="flex-1 text-sm text-ink">{label}</span>
+      <span className="flex-1 text-sm text-foreground">{label}</span>
       <ChevronRight className="h-4 w-4 text-muted-foreground" />
     </button>
   );

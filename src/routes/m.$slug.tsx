@@ -72,7 +72,7 @@ function MerchantEntryRedirect() {
         <p className="text-sm text-muted-foreground">{error ?? "Store not found."}</p>
         <Link
           to="/"
-          className="text-sm font-medium text-ink underline-offset-4 hover:underline"
+          className="text-sm font-medium text-foreground underline-offset-4 hover:underline"
         >
           Back to home
         </Link>
@@ -97,22 +97,25 @@ function MerchantEntryRedirect() {
   // ── Guest landing — not logged in ─────────────────────────────────────────
   return (
     <div className="mx-auto flex min-h-dvh max-w-[480px] flex-col px-5 pb-10 pt-10">
-      <Link to="/" className="font-display text-2xl text-ink">
+      <Link to="/" className="font-display text-2xl text-foreground">
         zentro<span className="text-ember">.</span>
       </Link>
 
       <div className="mt-12">
         <div
-          className="grid h-16 w-16 place-items-center rounded-3xl bg-ink text-3xl text-primary-foreground shadow-soft"
-          style={
-            merchant.logo_url
+          className="grid h-16 w-16 place-items-center rounded-3xl text-3xl text-primary-foreground shadow-soft"
+          style={{
+            backgroundColor: merchant.store_theme_color || undefined,
+            ...(merchant.logo_url
               ? {
                   backgroundImage: `url(${merchant.logo_url})`,
                   backgroundSize: "cover",
                   backgroundPosition: "center",
                 }
-              : undefined
-          }
+              : !merchant.store_theme_color
+              ? { backgroundColor: "var(--ink)" }
+              : {}),
+          }}
         >
           {!merchant.logo_url && "☕"}
         </div>
@@ -120,7 +123,7 @@ function MerchantEntryRedirect() {
         <p className="mt-6 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
           {merchant.is_open ? "Now open" : "Currently closed"}
         </p>
-        <h1 className="font-display mt-2 text-5xl leading-[1.05] text-ink">
+        <h1 className="font-display mt-2 text-5xl leading-[1.05] text-foreground">
           {merchant.business_name}
         </h1>
         {merchant.address && (
@@ -134,7 +137,7 @@ function MerchantEntryRedirect() {
       </div>
 
       <div className="mt-10 glass-strong rounded-3xl p-6">
-        <p className="font-display text-2xl text-ink">Join to start earning</p>
+        <p className="font-display text-2xl text-foreground">Join to start earning</p>
         <p className="mt-2 text-sm text-muted-foreground">
           Sign up or sign in to order, collect points, and track your punch card at{" "}
           {merchant.business_name}.
@@ -142,7 +145,8 @@ function MerchantEntryRedirect() {
         <Link
           to="/auth"
           search={{ redirect: dashboardPath }}
-          className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-ink text-sm font-medium text-primary-foreground"
+          className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-sm font-medium text-primary-foreground"
+          style={{ backgroundColor: merchant.store_theme_color || "var(--ink)" }}
         >
           Sign up / Sign in <ArrowRight className="h-4 w-4" />
         </Link>

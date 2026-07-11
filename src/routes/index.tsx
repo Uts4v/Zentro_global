@@ -1,7 +1,7 @@
 // routes/index.tsx 
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useStore, cartTotal, type MenuItem } from "@/lib/store";
-import { merchantApi, menuApi, customerApi, specialApi, type TodaySpecial } from "@/lib/api";
+import { merchantApi, menuApi, customerApi, specialApi, punchCardApi, type TodaySpecial, type CustomerPunchCard } from "@/lib/api";
 import { MobileShell, TopBar } from "@/components/MobileShell";
 import { Plus, ShoppingBag, Flame, Search, X as XIcon, ArrowLeftRight, QrCode, SendHorizontal } from "lucide-react";
 import { requireAuth } from "@/lib/auth-guard";
@@ -9,6 +9,8 @@ import { useState, useEffect, useMemo } from "react";
 import { TodaySpecialPopup } from "@/features/merchant-management/components/TodaySpecialPopup";
 import { TransferForm } from "@/features/transfers/components/TransferForm";
 import { PersonalQR } from "@/features/transfers/components/PersonalQR";
+import { PremiumPunchCard } from "@/components/PremiumPunchCard";
+import { useMerchantTheme, withAlpha } from "@/lib/merchant-theme";
 
 export const Route = createFileRoute("/")({
   beforeLoad: requireAuth,
@@ -50,10 +52,10 @@ function MenuItemCard({
         </div>
       )}
       <div className="flex flex-1 flex-col p-4">
-        <h3 className="text-sm font-semibold text-ink">{item.name}</h3>
+        <h3 className="text-sm font-semibold text-foreground">{item.name}</h3>
         <p className="mt-0.5 line-clamp-2 text-[11px] text-muted-foreground">{item.description}</p>
         <div className="mt-3 flex items-center justify-between">
-          <span className="font-display text-xl text-ink">
+          <span className="font-display text-xl text-foreground">
             NPR {price.toLocaleString()}
           </span>
           <button
@@ -83,6 +85,9 @@ function Index() {
   const [todaySpecial, setTodaySpecial] = useState<TodaySpecial | null>(null);
   const [showTransfer, setShowTransfer] = useState(false);
   const [transferMode, setTransferMode] = useState<"send" | "receive">("send");
+  const [punchCards, setPunchCards] = useState<{ active: CustomerPunchCard[]; completed: CustomerPunchCard[] }>({ active: [], completed: [] });
+  const [punchRedeeming, setPunchRedeeming] = useState<string | null>(null);
+  const [merchantThemeColor, setMerchantThemeColor] = useState("");
 
   useEffect(() => {
     if (!selectedMerchantId) {
@@ -98,6 +103,7 @@ function Index() {
         .then((m) => {
           setMerchantName(m.business_name);
           setMerchantSlug(m.slug ?? null);
+          setMerchantThemeColor(m.store_theme_color || "");
         })
         .catch(() => setSelectedMerchant(null)),
       customerApi.getWallet(selectedMerchantId)
@@ -106,6 +112,9 @@ function Index() {
           setStreak(w?.streak_days ?? 0);
         })
         .catch(() => {}),
+      punchCardApi.customerList(selectedMerchantId)
+        .then((data) => setPunchCards(data))
+        .catch(() => setPunchCards({ active: [], completed: [] })),
     ]).finally(() => setLoading(false));
   }, [selectedMerchantId]);
 
@@ -140,6 +149,44 @@ function Index() {
   const storeItems = menuItems.map((m) => ({ ...m, price: parseFloat(m.price as any) }));
   const total = cartTotal(cart, storeItems);
 
+  async function handleRedeemPunch(cardId: string) {
+    if (!selectedMerchantId) return;
+    setPunchRedeeming(cardId);
+    try {
+      await punchCardApi.customerRedeem(cardId);
+      const data = await punchCardApi.customerList(selectedMerchantId);
+      setPunchCards(data);
+    } catch {}
+    setPunchRedeeming(null);
+  }
+
+  const allPunchCards = [...punchCards.completed, ...punchCards.active];
+
+  // Apply merchant theme color as CSS custom properties for the whole page
+  useEffect(() => {
+    const root = document.documentElement;
+    if (merchantThemeColor && merchantThemeColor.startsWith("#")) {
+      root.style.setProperty("--merchant-color", merchantThemeColor);
+      const alpha = (a: number) => {
+        const r = parseInt(merchantThemeColor.slice(1, 3), 16);
+        const g = parseInt(merchantThemeColor.slice(3, 5), 16);
+        const b = parseInt(merchantThemeColor.slice(5, 7), 16);
+        return `rgba(${r}, ${g}, ${b}, ${a})`;
+      };
+      root.style.setProperty("--merchant-light", alpha(0.1));
+      root.style.setProperty("--merchant-mid", alpha(0.2));
+    } else {
+      root.style.removeProperty("--merchant-color");
+      root.style.removeProperty("--merchant-light");
+      root.style.removeProperty("--merchant-mid");
+    }
+    return () => {
+      root.style.removeProperty("--merchant-color");
+      root.style.removeProperty("--merchant-light");
+      root.style.removeProperty("--merchant-mid");
+    };
+  }, [merchantThemeColor]);
+
   return (
     <MobileShell>
       <TopBar />
@@ -152,17 +199,26 @@ function Index() {
       {/* Merchant hero */}
       <section className="px-5">
         <div className="glass-strong relative overflow-hidden rounded-[28px] p-6">
-          <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full gradient-ember opacity-30 blur-3xl" />
+          <div
+            className="absolute -right-10 -top-10 h-40 w-40 rounded-full opacity-30 blur-3xl transition-colors duration-500"
+            style={{ background: merchantThemeColor || undefined }}
+          />
           <p className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
             {selectedMerchantId ? "Now open" : "Select a store to start"}
           </p>
-          <h1 className="font-display mt-2 text-[44px] leading-[1] text-ink">{merchantName}</h1>
+          <h1 className="font-display mt-2 text-[44px] leading-[1] text-foreground">{merchantName}</h1>
           {selectedMerchantId && (
             <div className="mt-5 flex items-center gap-2">
-              <span className="glass inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs">
-                <Flame className="h-3 w-3 stroke-ember" /> {streak}-day streak
+              <span
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors duration-300"
+                style={merchantThemeColor ? { background: `var(--merchant-light, rgba(255,100,50,0.1))`, color: merchantThemeColor } : { background: "rgba(255,100,50,0.1)", color: "var(--ember)" }}
+              >
+                <Flame className="h-3 w-3" /> {streak}-day streak
               </span>
-              <span className="glass inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs">
+              <span
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors duration-300"
+                style={merchantThemeColor ? { background: `var(--merchant-light, rgba(255,100,50,0.1))`, color: merchantThemeColor } : { background: "rgba(255,100,50,0.1)", color: "var(--ember)" }}
+              >
                 ✦ {points} pts
               </span>
             </div>
@@ -193,7 +249,7 @@ function Index() {
                     🔥 Today's Special
                   </span>
                 </div>
-                <h3 className="font-display mt-2 text-xl text-ink leading-tight truncate">
+                <h3 className="font-display mt-2 text-xl text-foreground leading-tight truncate">
                   {todaySpecial.title}
                 </h3>
                 {todaySpecial.description && (
@@ -221,13 +277,13 @@ function Index() {
               className="glass-strong w-full rounded-[20px] p-4 flex items-center justify-between transition-transform active:scale-[0.98]"
             >
               <div className="flex items-center gap-3">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-100 text-emerald-600">
+                <div className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400">
                   <ArrowLeftRight className="h-5 w-5" />
                 </div>
                 <div className="text-left">
-                  <p className="text-sm font-medium text-ink">Transfer points</p>
+                  <p className="text-sm font-medium text-foreground">Transfer points</p>
                   <p className="text-xs text-muted-foreground">
-                    Send or receive at <span className="font-medium text-ink">{merchantName}</span>
+                    Send or receive at <span className="font-medium text-foreground">{merchantName}</span>
                   </p>
                 </div>
               </div>
@@ -236,10 +292,10 @@ function Index() {
           ) : (
             <div className="glass-strong rounded-[28px] p-5 space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="font-display text-xl text-ink">Transfer points</h3>
+                <h3 className="font-display text-xl text-foreground">Transfer points</h3>
                 <button
                   onClick={() => setShowTransfer(false)}
-                  className="text-xs text-muted-foreground hover:text-ink transition-colors"
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Close
                 </button>
@@ -249,7 +305,7 @@ function Index() {
                   onClick={() => setTransferMode("send")}
                   className={`flex-1 flex items-center justify-center gap-2 rounded-[10px] py-2 text-xs font-medium transition-all ${
                     transferMode === "send"
-                      ? "bg-white text-ink shadow-soft"
+                      ? "bg-background text-foreground shadow-soft"
                       : "text-muted-foreground"
                   }`}
                 >
@@ -259,7 +315,7 @@ function Index() {
                   onClick={() => setTransferMode("receive")}
                   className={`flex-1 flex items-center justify-center gap-2 rounded-[10px] py-2 text-xs font-medium transition-all ${
                     transferMode === "receive"
-                      ? "bg-white text-ink shadow-soft"
+                      ? "bg-background text-foreground shadow-soft"
                       : "text-muted-foreground"
                   }`}
                 >
@@ -286,6 +342,20 @@ function Index() {
         </section>
       )}
 
+      {/* Punch Cards */}
+      {selectedMerchantId && allPunchCards.length > 0 && (
+        <section className="px-5 mt-4">
+          {allPunchCards.map((card) => (
+            <PremiumPunchCard
+              key={card.id}
+              card={card}
+              onRedeem={handleRedeemPunch}
+              redeeming={punchRedeeming === card.id}
+            />
+          ))}
+        </section>
+      )}
+
       {/* Search bar */}
       {selectedMerchantId && menuItems.length > 0 && (
         <div className="mt-4 px-5">
@@ -295,12 +365,12 @@ function Index() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search menu…"
-              className="h-11 w-full rounded-2xl bg-mist pl-10 pr-10 text-sm text-ink placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-ink/20"
+              className="h-11 w-full rounded-2xl bg-mist pl-10 pr-10 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-ink/20"
             />
             {search && (
               <button
                 onClick={() => setSearch("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-ink"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
                 <XIcon className="h-4 w-4" />
               </button>
@@ -312,19 +382,25 @@ function Index() {
       {/* Category filter */}
       {menuItems.length > 0 && !search && (
         <div className="no-scrollbar mt-4 flex gap-2 overflow-x-auto px-5 pb-1">
-          {cats.map((c) => (
-            <button
-              key={c}
-              onClick={() => setCat(c)}
-              className={`shrink-0 rounded-full px-4 py-2 text-xs font-medium transition-all ${
-                cat === c
-                  ? "bg-ink text-primary-foreground shadow-soft"
-                  : "glass text-muted-foreground"
-              }`}
-            >
-              {c}
-            </button>
-          ))}
+          {cats.map((c) => {
+            const isActive = cat === c;
+            return (
+              <button
+                key={c}
+                onClick={() => setCat(c)}
+                className="shrink-0 rounded-full px-4 py-2 text-xs font-medium transition-all"
+                style={
+                  isActive && merchantThemeColor
+                    ? { background: merchantThemeColor, color: "#fff", boxShadow: `0 4px 14px ${merchantThemeColor}40` }
+                    : isActive
+                    ? { background: "var(--ink)", color: "var(--primary-foreground)" }
+                    : { background: "var(--glass-bg)", color: "var(--muted-foreground)", border: "1px solid var(--border)" }
+                }
+              >
+                {c}
+              </button>
+            );
+          })}
         </div>
       )}
 
@@ -367,8 +443,14 @@ function Index() {
       {count > 0 && (
         <Link
           to="/cart"
-          className="fixed inset-x-0 bottom-24 z-40 mx-auto flex max-w-[440px] items-center justify-between rounded-full bg-ink px-5 py-3 text-primary-foreground shadow-ember"
-          style={{ marginLeft: "auto", marginRight: "auto", width: "calc(100% - 32px)" }}
+          className="fixed inset-x-0 bottom-24 z-40 mx-auto flex max-w-[440px] items-center justify-between rounded-full px-5 py-3 text-white shadow-lg transition-colors duration-300"
+          style={{
+            background: merchantThemeColor || "var(--ink)",
+            boxShadow: merchantThemeColor ? `0 8px 24px ${merchantThemeColor}50` : undefined,
+            marginLeft: "auto",
+            marginRight: "auto",
+            width: "calc(100% - 32px)",
+          }}
         >
           <span className="flex items-center gap-2 text-sm font-medium">
             <ShoppingBag className="h-4 w-4" /> {count} {count === 1 ? "item" : "items"}

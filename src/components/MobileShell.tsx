@@ -1,7 +1,8 @@
 // src/components/MobileShell.tsx
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, Map, Trophy, Gift, User, Bell } from "lucide-react";
+import { Home, Map, Trophy, Gift, User, Bell, Sun, Moon } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import { useTheme } from "@/lib/theme";
 import { useQuery } from "@tanstack/react-query";
 import { notificationApi } from "@/lib/api";
 import type { ReactNode } from "react";
@@ -43,7 +44,7 @@ export function MobileShell({ children }: { children: ReactNode }) {
                 key={n.to}
                 to={n.to as any}
                 className={`flex h-11 flex-1 flex-col items-center justify-center gap-0.5 rounded-full text-[10px] font-medium transition-colors ${
-                  active ? "text-ink" : "text-muted-foreground"
+                  active ? "text-foreground" : "text-muted-foreground"
                 }`}
               >
                 <Icon className="h-[18px] w-[18px]" strokeWidth={1.6} />
@@ -84,11 +85,18 @@ export function TopBar({ title, right }: { title?: string; right?: ReactNode }) 
   const firstName = user?.first_name ?? null;
   const initial   = getInitial(user?.first_name);
   const greeting  = getGreeting();
+  const { resolved, setTheme, theme } = useTheme();
+
+  function cycleTheme() {
+    if (theme === "light") setTheme("dark");
+    else if (theme === "dark") setTheme("system");
+    else setTheme("light");
+  }
 
   return (
     <header className="sticky top-0 z-40 px-5 pb-3 pt-5">
-      <div className="flex items-center justify-between">
-        <Link to="/" className="font-display text-2xl tracking-tight text-ink">
+        <div className="flex items-center justify-between">
+        <Link to="/" className="font-display text-2xl tracking-tight text-foreground">
           zentro<span className="text-ember">.</span>
         </Link>
 
@@ -100,10 +108,17 @@ export function TopBar({ title, right }: { title?: string; right?: ReactNode }) 
 
         <div className="flex items-center gap-2">
           {right}
+          <button
+            onClick={cycleTheme}
+            aria-label="Toggle theme"
+            className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border text-muted-foreground hover:bg-muted transition-colors"
+          >
+            {resolved === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+          </button>
           <Link
             to={"/notifications" as any}
             aria-label="Notifications"
-            className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border text-muted-foreground hover:bg-mist"
+            className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border text-muted-foreground hover:bg-muted"
           >
             <Bell className="h-4 w-4" />
             {unreadCount > 0 ? (
@@ -115,7 +130,7 @@ export function TopBar({ title, right }: { title?: string; right?: ReactNode }) 
           <Link
             to={"/profile" as any}
             aria-label="Profile"
-            className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full bg-ink text-xs font-medium text-primary-foreground overflow-hidden"
+            className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary text-xs font-medium text-primary-foreground overflow-hidden"
           >
             {user?.avatar_url ? (
               <img
@@ -133,12 +148,12 @@ export function TopBar({ title, right }: { title?: string; right?: ReactNode }) 
       {!title && (
         <div className="mt-3">
           {loading ? (
-            <div className="h-4 w-32 animate-pulse rounded-full bg-mist" />
+            <div className="h-4 w-32 animate-pulse rounded-full bg-muted" />
           ) : (
-            <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground">
               {greeting}
               {firstName ? (
-                <>, <span className="font-medium text-ink">{firstName}</span></>
+                <>, <span className="font-medium text-foreground">{firstName}</span></>
               ) : null}{" "}
               👋
             </p>

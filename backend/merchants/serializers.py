@@ -27,6 +27,7 @@ class MerchantProfileSerializer(serializers.ModelSerializer):
             "description", "is_approved", "is_open",
             "onboarding_complete",
             "latitude", "longitude", "qr_code",
+            "store_theme_color",
             "menu_items", "created_at", "updated_at",
         ]
         read_only_fields = ["id", "is_approved", "qr_code", "created_at", "updated_at"]
@@ -54,6 +55,7 @@ class MerchantPublicSerializer(serializers.ModelSerializer):
             "address", "phone", "logo_url", "banner_url",
             "description", "is_open",
             "latitude", "longitude",
+            "store_theme_color",
         ]
 
 

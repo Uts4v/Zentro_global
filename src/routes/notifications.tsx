@@ -80,7 +80,7 @@ function NotificationsPage() {
       <div className="mb-6 flex items-start justify-between gap-3">
         <div>
           <p className="text-xs uppercase tracking-[0.24em] text-muted-foreground">Inbox</p>
-          <h1 className="font-display mt-1 text-4xl text-ink">Notifications</h1>
+          <h1 className="font-display mt-1 text-4xl text-foreground">Notifications</h1>
           <p className="mt-1 text-xs text-muted-foreground">Last 7 days</p>
         </div>
         <div className="flex flex-col items-end gap-2 pt-1">
@@ -88,7 +88,7 @@ function NotificationsPage() {
             <button
               onClick={() => markAllRead.mutate()}
               disabled={markAllRead.isPending}
-              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-ink hover:bg-mist disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground hover:bg-mist disabled:opacity-50"
             >
               <CheckCheck className="h-3.5 w-3.5" />
               Mark all read
@@ -98,7 +98,7 @@ function NotificationsPage() {
             <button
               onClick={() => clearAll.mutate()}
               disabled={clearAll.isPending}
-              className="inline-flex items-center gap-1.5 rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-medium text-rose-600 hover:bg-rose-100 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-full border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-950 px-3 py-1.5 text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900 disabled:opacity-50"
             >
               {clearAll.isPending
                 ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -117,14 +117,14 @@ function NotificationsPage() {
           ))}
         </div>
       ) : isError ? (
-        <div className="rounded-3xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
+        <div className="rounded-3xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950 p-6 text-sm text-red-700 dark:text-red-300">
           Unable to load notifications.{" "}
           <button onClick={() => refetch()} className="underline">Retry</button>
         </div>
       ) : !data || data.length === 0 ? (
         <div className="glass rounded-3xl p-12 text-center">
           <Bell className="mx-auto h-8 w-8 text-muted-foreground" strokeWidth={1.5} />
-          <p className="mt-4 text-sm font-medium text-ink">All quiet</p>
+          <p className="mt-4 text-sm font-medium text-foreground">All quiet</p>
           <p className="mt-1 text-xs text-muted-foreground">
             Orders, missions, and rewards will show up here.
           </p>
@@ -151,7 +151,7 @@ function NotificationsPage() {
 
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-start justify-between gap-1">
-                      <p className="text-sm font-semibold text-ink">{n.title}</p>
+                      <p className="text-sm font-semibold text-foreground">{n.title}</p>
                       <span className="text-[10px] text-muted-foreground shrink-0">
                         {formatWhen(n.created_at)}
                       </span>
@@ -178,7 +178,7 @@ function NotificationsPage() {
                         <button
                           onClick={() => markRead.mutate(n.id)}
                           disabled={markRead.isPending}
-                          className="ml-auto rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-ink hover:bg-mist disabled:opacity-50"
+                          className="ml-auto rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-foreground hover:bg-mist disabled:opacity-50"
                         >
                           Mark read
                         </button>

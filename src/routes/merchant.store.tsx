@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   MapPin, Clock, Loader2, Save, Check, X,
-  ImageIcon, Upload, QrCode, ExternalLink, RefreshCw, LocateFixed,
+  ImageIcon, Upload, QrCode, ExternalLink, RefreshCw, LocateFixed, Palette,
 } from "lucide-react";
 import { merchantApi, type MerchantProfile } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -221,7 +221,7 @@ function QRSection({
       <div className="mt-6 flex flex-col items-center gap-6 sm:flex-row sm:items-start">
         <div className="flex shrink-0 flex-col items-center gap-3">
           {profile?.qr_code ? (
-            <div className="rounded-2xl border border-border bg-white p-4 shadow-sm">
+            <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
               <img
                 src={profile.qr_code}
                 alt={`QR code for ${profile.business_name}`}
@@ -289,7 +289,7 @@ function QRSection({
             </p>
           </div>
 
-          <div className="rounded-2xl bg-amber-50 px-4 py-3 text-xs leading-relaxed text-amber-700">
+          <div className="rounded-2xl bg-amber-50 dark:bg-amber-950/30 px-4 py-3 text-xs leading-relaxed text-amber-700 dark:text-amber-400">
             The QR code points to your public customer page. It contains no
             private tokens — safe to print and share anywhere.
           </div>
@@ -321,6 +321,7 @@ function StoreConfig() {
     is_open: true,
     latitude: "" as string,
     longitude: "" as string,
+    store_theme_color: "",
   });
 
   const fetchProfile = useCallback(async () => {
@@ -340,6 +341,7 @@ function StoreConfig() {
         is_open: data.is_open ?? true,
         latitude: data.latitude ?? "",
         longitude: data.longitude ?? "",
+        store_theme_color: data.store_theme_color || "",
       });
     } catch (err) {
       setError("Could not load your store profile.");
@@ -368,6 +370,7 @@ function StoreConfig() {
         is_open: updated.is_open ?? true,
         latitude: updated.latitude ?? "",
         longitude: updated.longitude ?? "",
+        store_theme_color: updated.store_theme_color || "",
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -448,14 +451,14 @@ function StoreConfig() {
         <button
           onClick={() => updateField("is_open", !form.is_open)}
           className={`inline-flex h-9 items-center gap-2 rounded-full px-4 text-xs font-medium transition-all ${
-            form.is_open ? "bg-emerald-100 text-emerald-700" : "bg-red-100 text-red-700"
+            form.is_open ? "bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-400" : "bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-400"
           }`}
         >
           <span className={`h-2 w-2 rounded-full ${form.is_open ? "bg-emerald-500" : "bg-red-500"}`} />
           {form.is_open ? "Open" : "Closed"}
         </button>
         {profile && !profile.is_approved && (
-          <span className="inline-flex h-9 items-center gap-2 rounded-full bg-amber-100 px-4 text-xs font-medium text-amber-700">
+          <span className="inline-flex h-9 items-center gap-2 rounded-full bg-amber-100 dark:bg-amber-900/40 px-4 text-xs font-medium text-amber-700 dark:text-amber-400">
             Pending approval
           </span>
         )}
@@ -505,6 +508,70 @@ function StoreConfig() {
         )}
       </section>
 
+      {/* Theme section */}
+      <section className="glass-strong rounded-3xl p-6">
+        <div className="flex items-center gap-2">
+          <Palette className="h-4 w-4 text-muted-foreground" />
+          <h2 className="font-display text-2xl text-ink">Store Theme</h2>
+        </div>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Choose a brand color for your store. Customers will see this color in the app.
+        </p>
+        <div className="mt-5 space-y-4">
+          <div>
+            <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+              Brand Color
+            </span>
+            <div className="mt-2 flex items-center gap-3">
+              <input
+                type="color"
+                value={form.store_theme_color || "#1e293b"}
+                onChange={(e) => updateField("store_theme_color", e.target.value)}
+                className="h-12 w-12 shrink-0 cursor-pointer rounded-xl border border-border"
+              />
+              <input
+                value={form.store_theme_color}
+                onChange={(e) => updateField("store_theme_color", e.target.value)}
+                placeholder="#1e293b"
+                className="h-12 flex-1 rounded-2xl bg-mist px-4 text-sm text-ink font-mono outline-none transition-all focus:ring-2 focus:ring-ember/40"
+              />
+              {form.store_theme_color && (
+                <button
+                  onClick={() => updateField("store_theme_color", "")}
+                  className="text-xs text-muted-foreground hover:text-ink"
+                >
+                  Reset
+                </button>
+              )}
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {[
+              { label: "Slate", color: "#1e293b" },
+              { label: "Emerald", color: "#059669" },
+              { label: "Amber", color: "#d97706" },
+              { label: "Rose", color: "#e11d48" },
+              { label: "Indigo", color: "#4f46e5" },
+              { label: "Teal", color: "#0d9488" },
+              { label: "Violet", color: "#7c3aed" },
+              { label: "Orange", color: "#ea580c" },
+            ].map((preset) => (
+              <button
+                key={preset.color}
+                onClick={() => updateField("store_theme_color", preset.color)}
+                className="flex items-center gap-2 rounded-full border border-border px-3 py-1.5 text-xs transition-colors hover:border-ink"
+              >
+                <span
+                  className="h-3 w-3 rounded-full"
+                  style={{ backgroundColor: preset.color }}
+                />
+                {preset.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {(form.logo_url || form.banner_url || form.business_name) && (
         <section className="glass-strong overflow-hidden rounded-3xl">
           <p className="px-5 pt-4 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Preview</p>
@@ -519,12 +586,13 @@ function StoreConfig() {
           <div className="relative px-5 pb-5">
             <div className="-mt-8 flex items-end gap-3">
               <div
-                className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl bg-ink text-3xl text-primary-foreground shadow-soft"
-                style={
-                  form.logo_url
-                    ? { backgroundImage: `url(${form.logo_url})`, backgroundSize: "cover", backgroundPosition: "center" }
-                    : undefined
-                }
+                className="grid h-16 w-16 shrink-0 place-items-center rounded-2xl text-3xl text-primary-foreground shadow-soft"
+                style={{
+                  backgroundColor: form.store_theme_color || undefined,
+                  backgroundImage: !form.store_theme_color && form.logo_url ? undefined : undefined,
+                  ...(form.logo_url ? { backgroundImage: `url(${form.logo_url})`, backgroundSize: "cover", backgroundPosition: "center" } : {}),
+                  ...(form.store_theme_color && !form.logo_url ? { backgroundColor: form.store_theme_color } : {}),
+                }}
               >
                 {!form.logo_url && "☕"}
               </div>

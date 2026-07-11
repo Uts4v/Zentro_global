@@ -225,6 +225,7 @@ export interface MerchantProfile {
   latitude?: string | null;
   longitude?: string | null;
   qr_code?: string;
+  store_theme_color?: string;
 }
 export interface MerchantPunchCard {
   id: string;
@@ -237,6 +238,7 @@ export interface MerchantPunchCard {
   animated_gif_background?: string;
   color_scheme?: string;
   stamp_icon?: string;
+  stamp_gif_url?: string;
   logo?: string;
   is_active: boolean;
   created_at: string;
@@ -507,6 +509,25 @@ export const orderApi = {
       headers: authHeaders(),
     });
     return normaliseOrder(data);
+  },
+
+  merchantHistory: async (params?: {
+    search?: string;
+    status?: string;
+    date_from?: string;
+    date_to?: string;
+  }): Promise<Order[]> => {
+    const qs = new URLSearchParams();
+    if (params?.search) qs.set("search", params.search);
+    if (params?.status) qs.set("status", params.status);
+    if (params?.date_from) qs.set("date_from", params.date_from);
+    if (params?.date_to) qs.set("date_to", params.date_to);
+    const query = qs.toString();
+    const data = await djangoFetch<any[]>(
+      apiUrl(`/orders/merchant-history/${query ? `?${query}` : ""}`),
+      { headers: authHeaders() }
+    );
+    return data.map(normaliseOrder);
   },
 };
 

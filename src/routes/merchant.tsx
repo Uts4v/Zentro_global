@@ -90,14 +90,14 @@ function MerchantLayout() {
         <header className="sticky top-0 z-30 flex items-center gap-3 border-b border-border bg-background/80 px-4 py-3 backdrop-blur-xl lg:hidden">
           <button
             onClick={() => setMobileOpen(true)}
-            className="grid h-9 w-9 place-items-center rounded-xl border border-border text-muted-foreground hover:bg-mist"
+            className="grid h-9 w-9 place-items-center rounded-xl border border-border text-muted-foreground hover:bg-muted"
           >
             <Menu className="h-4 w-4" />
           </button>
-          <Link to="/" className="font-display text-xl text-ink">
+          <Link to="/" className="font-display text-xl text-foreground">
             zentro<span className="text-ember">.</span>
           </Link>
-          <div className="ml-auto grid h-8 w-8 place-items-center rounded-full bg-ink text-xs font-medium text-primary-foreground">
+          <div className="ml-auto grid h-8 w-8 place-items-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
             {(merchantProfile?.business_name ?? "M").charAt(0).toUpperCase()}
           </div>
         </header>

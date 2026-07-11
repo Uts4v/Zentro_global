@@ -46,6 +46,7 @@ class MerchantPunchCardSerializer(serializers.ModelSerializer):
             "animated_gif_background",
             "color_scheme",
             "stamp_icon",
+            "stamp_gif_url",
             "logo",
             "is_active",
             "created_at",

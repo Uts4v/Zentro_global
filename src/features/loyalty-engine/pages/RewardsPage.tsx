@@ -49,9 +49,9 @@ export function RewardsPage() {
       <TopBar />
       <div className="px-5">
         <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Redeem</p>
-        <h1 className="font-display mt-1 text-4xl text-ink">Rewards</h1>
+        <h1 className="font-display mt-1 text-4xl text-foreground">Rewards</h1>
         <div className="mt-3 inline-flex items-center gap-2 rounded-full bg-ember-soft px-4 py-2">
-          <span className="text-xs text-ink">Balance</span>
+          <span className="text-xs text-foreground">Balance</span>
           <span className="font-display text-lg text-ember">{points} pts</span>
         </div>
       </div>
@@ -88,10 +88,10 @@ export function RewardsPage() {
               <div className="grid h-24 place-items-center rounded-2xl bg-mist text-5xl">
                 {r.emoji || "🎁"}
               </div>
-              <h3 className="mt-3 text-sm font-semibold text-ink">{r.name}</h3>
+              <h3 className="mt-3 text-sm font-semibold text-foreground">{r.name}</h3>
               <p className="mt-1 text-xs text-muted-foreground">{r.description}</p>
               <div className="mt-3 flex items-center justify-between">
-                <span className="font-display text-xl text-ink">{r.points_cost} pts</span>
+                <span className="font-display text-xl text-foreground">{r.points_cost} pts</span>
                 <button
                   disabled={!affordable || isRedeeming}
                   onClick={() => handleRedeem(r.id)}

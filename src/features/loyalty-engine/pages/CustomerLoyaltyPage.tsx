@@ -4,6 +4,7 @@ import { customerApi, missionApi, merchantApi, punchCardApi, transactionApi, typ
 import { MobileShell, TopBar } from "@/components/MobileShell";
 import { Flame, Sparkles, Gift } from "lucide-react";
 import { TodaySpecialPopup } from "@/features/merchant-management/components/TodaySpecialPopup";
+import { FullBackgroundPunchCard } from "@/components/FullBackgroundPunchCard";
 
 type WalletView = {
   points_balance: number;
@@ -152,7 +153,7 @@ export function CustomerLoyaltyPage() {
 
       {/* Loyalty card */}
       <section className="px-5">
-        <div className="relative overflow-hidden rounded-[32px] bg-ink p-7 text-primary-foreground shadow-ember">
+        <div className="relative overflow-hidden rounded-[32px] bg-slate-900 dark:bg-slate-800 p-7 text-white shadow-ember">
           <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full gradient-ember opacity-50 blur-3xl" />
           <div className="absolute -bottom-20 -left-20 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
 
@@ -161,7 +162,7 @@ export function CustomerLoyaltyPage() {
               <p className="text-[11px] uppercase tracking-[0.24em] text-white/60">Loyalty Card</p>
               <p className="mt-1 font-display text-3xl">Zentro Rewards</p>
             </div>
-            <div className="glass-strong rounded-full px-3 py-1.5 text-[10px] font-medium uppercase tracking-widest text-ink">
+            <div className="glass-strong rounded-full px-3 py-1.5 text-[10px] font-medium uppercase tracking-widest text-foreground">
               {displayTier}
             </div>
           </div>
@@ -244,106 +245,20 @@ export function CustomerLoyaltyPage() {
             <p className="text-xs text-muted-foreground">No active punch cards for this merchant.</p>
           </div>
         ) : (
-          [...punchCards.completed, ...punchCards.active].map((card) => {
-            const config = card.punch_card!;
-            const punchesNeeded = config.stamps_required;
-            const punchCount = card.current_stamps;
-            const freeRewardReady = card.is_completed && !card.is_redeemed;
-
-            return (
-              <div
-                key={card.id}
-                className="glass-strong rounded-3xl p-5 relative overflow-hidden"
-                style={config.color_scheme ? {
-                  backgroundColor: `${config.color_scheme}1A`,
-                  borderColor: `${config.color_scheme}33`
-                } : undefined}
-              >
-                {(config.background_image || config.animated_gif_background) && (
-                  <div className="absolute inset-0 z-0 opacity-20 pointer-events-none">
-                    <img
-                      src={config.animated_gif_background || config.background_image}
-                      alt=""
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-
-                <div className="relative z-10">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="text-[11px] uppercase tracking-[0.2em]"
-                        style={{ color: config.color_scheme || 'inherit', opacity: 0.8 }}>
-                        {config.mode === 'per_streak' ? 'Streak Card' : 'Punch Card'}
-                      </p>
-                      <h3 className="font-display mt-1 text-2xl text-ink">
-                        {config.name}
-                      </h3>
-                      {freeRewardReady ? (
-                        <p className="text-xs font-medium text-emerald-600">Reward ready! 🎉</p>
-                      ) : (
-                        <p className="text-xs text-muted-foreground">
-                          {config.reward_text}
-                        </p>
-                      )}
-                    </div>
-                    <span className="font-display text-3xl" style={{ color: config.color_scheme || '#FF5A36' }}>
-                      {punchCount}/{punchesNeeded}
-                    </span>
-                  </div>
-
-                  <div
-                    className="mt-4 grid gap-2"
-                    style={{ gridTemplateColumns: `repeat(${punchesNeeded}, 1fr)` }}
-                  >
-                    {Array.from({ length: punchesNeeded }).map((_, i) => {
-                      const filled = i < punchCount || freeRewardReady;
-                      const isFreeSlot = i === punchesNeeded - 1;
-                      return (
-                        <div
-                          key={i}
-                          className={`grid aspect-square place-items-center rounded-2xl text-lg transition-all duration-300 ${filled
-                              ? freeRewardReady && isFreeSlot
-                                ? "shadow-md"
-                                : "bg-ink/90"
-                              : "border-2 border-dashed border-border bg-mist"
-                            }`}
-                          style={filled && freeRewardReady && isFreeSlot && config.color_scheme ? { backgroundColor: config.color_scheme } : {}}
-                        >
-                          {filled ? (
-                            isFreeSlot && freeRewardReady ? (
-                              <Gift className="h-4 w-4 text-white" />
-                            ) : (
-                              <span className="text-sm">{config.stamp_icon || "✨"}</span>
-                            )
-                          ) : (
-                            <span className="text-xs text-muted-foreground/30">{i + 1}</span>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-
-                  {freeRewardReady && (
-                    <button
-                      onClick={() => handleUseFreeReward(card.id)}
-                      disabled={usingFreeReward === card.id}
-                      className="mt-4 w-full rounded-2xl bg-ink py-3 text-sm font-medium text-primary-foreground shadow-sm transition-opacity disabled:opacity-50"
-                      style={config.color_scheme ? { backgroundColor: config.color_scheme } : undefined}
-                    >
-                      {usingFreeReward === card.id ? "Redeeming..." : "Redeem Free Reward"}
-                    </button>
-                  )}
-                </div>
-              </div>
-            );
-          })
+          [...punchCards.completed, ...punchCards.active].map((card) => (
+            <FullBackgroundPunchCard
+              key={card.id}
+              card={card}
+              onRedeem={handleUseFreeReward}
+              redeeming={usingFreeReward === card.id}
+            />
+          ))
         )}
       </section>
 
       {/* Missions */}
       <section className="mt-6 px-5">
-        <h2 className="font-display mb-3 text-2xl text-ink">Missions</h2>
+        <h2 className="font-display mb-3 text-2xl text-foreground">Missions</h2>
         {missionsLoading ? (
           <div className="glass rounded-3xl p-6 text-center">
             <p className="text-sm text-muted-foreground">Loading missions…</p>
@@ -361,7 +276,7 @@ export function CustomerLoyaltyPage() {
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-3">
-                        <p className="truncate font-medium text-ink">{m.title}</p>
+                        <p className="truncate font-medium text-foreground">{m.title}</p>
                         <span className="font-display shrink-0 text-sm text-ember">
                           {m.current_count}/{m.target_count}
                         </span>
@@ -375,10 +290,10 @@ export function CustomerLoyaltyPage() {
                       </div>
                       <div className="mt-2 flex items-center justify-between">
                         <p className="text-xs text-muted-foreground">
-                          Reward · <span className="text-ink">+{m.reward_points} pts</span>
+                          Reward · <span className="text-foreground">+{m.reward_points} pts</span>
                         </p>
                         {done && (
-                          <span className="rounded-full bg-ink px-2.5 py-1 text-[10px] uppercase tracking-widest text-primary-foreground">
+                          <span className="rounded-full bg-slate-900 dark:bg-white px-2.5 py-1 text-[10px] uppercase tracking-widest text-white dark:text-slate-900">
                             Completed ✓
                           </span>
                         )}
@@ -392,7 +307,7 @@ export function CustomerLoyaltyPage() {
         ) : (
           <div className="glass rounded-3xl p-6 text-center">
             <p className="text-4xl">🎯</p>
-            <p className="mt-3 text-sm font-medium text-ink">No missions yet</p>
+            <p className="mt-3 text-sm font-medium text-foreground">No missions yet</p>
             <p className="mt-1 text-xs text-muted-foreground">
               Your merchant hasn't created any missions yet.
             </p>
@@ -404,7 +319,7 @@ export function CustomerLoyaltyPage() {
       <section className="mt-4 px-5 pb-8">
         <div className="glass rounded-3xl p-5">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-ink">Progress to Platinum</p>
+            <p className="text-sm font-medium text-foreground">Progress to Platinum</p>
             <p className="text-xs text-muted-foreground">{displayPoints}/5000 pts</p>
           </div>
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-mist">
@@ -423,7 +338,7 @@ export function CustomerLoyaltyPage() {
 
       {/* Point Transactions */}
       <section className="mt-4 px-5 pb-8">
-        <h3 className="font-display mb-3 px-2 text-xl text-ink">Recent Transactions</h3>
+        <h3 className="font-display mb-3 px-2 text-xl text-foreground">Recent Transactions</h3>
         {transactionsLoading ? (
           <div className="glass rounded-3xl p-6 text-center">
             <p className="text-xs text-muted-foreground animate-pulse">Loading...</p>
@@ -437,7 +352,7 @@ export function CustomerLoyaltyPage() {
             {transactions.slice(0, 5).map((tx) => (
               <div key={tx.id} className="glass rounded-2xl p-4 flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-ink capitalize">{tx.transaction_type.toLowerCase().replace("_", " ")}</p>
+                  <p className="text-sm font-medium text-foreground capitalize">{tx.transaction_type.toLowerCase().replace("_", " ")}</p>
                   <p className="text-[10px] text-muted-foreground">{new Date(tx.created_at).toLocaleDateString()}</p>
                 </div>
                 <div className="text-right">

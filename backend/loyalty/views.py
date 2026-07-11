@@ -439,8 +439,8 @@ def customer_punch_cards(request):
                     is_completed=False
                 )
 
-    cards = CustomerPunchCard.objects.filter(customer=customer, merchant_id=merchant_id, is_completed=False)
-    completed = CustomerPunchCard.objects.filter(customer=customer, merchant_id=merchant_id, is_completed=True, is_redeemed=False)
+    cards = CustomerPunchCard.objects.filter(customer=customer, merchant_id=merchant_id, is_completed=False, punch_card__is_active=True)
+    completed = CustomerPunchCard.objects.filter(customer=customer, merchant_id=merchant_id, is_completed=True, is_redeemed=False, punch_card__is_active=True)
 
     return Response({
         "active": CustomerPunchCardSerializer(cards, many=True).data,
@@ -789,10 +789,9 @@ def confirm_punch_proof(request):
 def redeem_reward(request, pk):
     """
     POST /api/loyalty/rewards/<id>/redeem/
-    Customer redeems a reward using their loyalty points. Creates a real
-    Order (order_type=reward_redemption) so the merchant sees it in their
-    normal order queue and history, plus a Redemption record for the
-    points ledger — mirrors the punch-card redemption flow exactly.
+    Customer redeems a reward using their loyalty points. Points are held
+    (validated but NOT deducted) until the merchant completes the order.
+    If the merchant cancels, the customer keeps their points.
     """
     try:
         customer = get_customer_profile(request.user)
@@ -808,16 +807,14 @@ def redeem_reward(request, pk):
         return Response({"error": "This reward is out of stock."}, status=status.HTTP_400_BAD_REQUEST)
 
     wallet = get_or_create_wallet(customer, reward.merchant)
-    try:
-        deduct_wallet_points(
-            wallet,
-            reward.points_cost,
-            transaction_type="REDEEMED",
-            description=f"Redeemed reward: {reward.name}",
-            reward=reward
+
+    # Validate the customer has enough points but do NOT deduct yet.
+    # Points will be deducted when the merchant marks the order as completed.
+    if wallet.points_balance < reward.points_cost:
+        return Response(
+            {"error": f"Insufficient points: have {wallet.points_balance}, need {reward.points_cost}"},
+            status=status.HTTP_400_BAD_REQUEST,
         )
-    except ValueError as e:
-        return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     if reward.stock > 0:
         reward.stock -= 1
@@ -856,9 +853,7 @@ def redeem_reward(request, pk):
         subtotal=0,
     )
 
-    # Notify the merchant that a customer redeemed a reward — deferred with
-    # on_commit so it never risks the redemption transaction, same pattern
-    # used for order notifications.
+    # Notify the merchant that a customer redeemed a reward
     merchant = reward.merchant
     customer_name = customer.full_name or request.user.email
     transaction.on_commit(lambda: _notify_safe(

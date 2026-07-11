@@ -179,7 +179,7 @@ export function MerchantLoyaltyPage() {
     <div className="space-y-6">
       <div>
         <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Engine</p>
-        <h1 className="font-display mt-1 text-5xl text-ink">Loyalty</h1>
+        <h1 className="font-display mt-1 text-5xl text-foreground">Loyalty</h1>
       </div>
 
       {/* Tabs — redeem removed, punch_cards kept */}
@@ -189,7 +189,7 @@ export function MerchantLoyaltyPage() {
             key={t}
             onClick={() => setTab(t)}
             className={`flex-1 min-w-[90px] rounded-xl py-2 text-xs font-medium capitalize transition-colors ${
-              tab === t ? "bg-white text-ink shadow-sm" : "text-muted-foreground hover:text-ink"
+              tab === t ? "bg-white text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
             }`}
           >
             {t === "punch_cards" ? "Punch Cards" : t.replace("_", " ")}
@@ -202,7 +202,7 @@ export function MerchantLoyaltyPage() {
         <section>
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <h2 className="font-display text-2xl text-ink">Missions</h2>
+              <h2 className="font-display text-2xl text-foreground">Missions</h2>
               <p className="text-xs text-muted-foreground">Challenges customers can complete for points.</p>
             </div>
             <button
@@ -225,7 +225,7 @@ export function MerchantLoyaltyPage() {
                 <div key={m.id} className={`glass rounded-3xl p-5 transition-opacity ${m.is_active ? "" : "opacity-60"}`}>
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
-                      <p className="truncate font-medium text-ink">{m.title}</p>
+                      <p className="truncate font-medium text-foreground">{m.title}</p>
                       <p className="mt-0.5 text-xs text-muted-foreground">{m.description}</p>
                     </div>
                     <div className="flex shrink-0 gap-1">
@@ -256,7 +256,7 @@ export function MerchantLoyaltyPage() {
         <section>
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <h2 className="font-display text-2xl text-ink">Rewards</h2>
+              <h2 className="font-display text-2xl text-foreground">Rewards</h2>
               <p className="text-xs text-muted-foreground">Items customers can redeem with points.</p>
             </div>
             <button
@@ -283,7 +283,7 @@ export function MerchantLoyaltyPage() {
                         {r.emoji || <Gift className="h-5 w-5 text-ember" />}
                       </div>
                       <div className="min-w-0">
-                        <p className="truncate font-medium text-ink">{r.name}</p>
+                        <p className="truncate font-medium text-foreground">{r.name}</p>
                         <p className="text-xs text-muted-foreground line-clamp-1">{r.description}</p>
                       </div>
                     </div>
@@ -321,7 +321,7 @@ export function MerchantLoyaltyPage() {
           <div>
             <div className="mb-4 flex items-center justify-between">
               <div>
-                <h2 className="font-display text-2xl text-ink">Card templates</h2>
+                <h2 className="font-display text-2xl text-foreground">Card templates</h2>
                 <p className="text-xs text-muted-foreground">
                   Digital loyalty cards customers earn stamps on per order or streak.
                 </p>
@@ -351,7 +351,7 @@ export function MerchantLoyaltyPage() {
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="truncate font-medium text-ink">{pc.name}</p>
+                        <p className="truncate font-medium text-foreground">{pc.name}</p>
                         <p className="mt-0.5 text-xs text-muted-foreground">{pc.reward_text}</p>
                       </div>
                       <div className="flex shrink-0 gap-1">
@@ -379,7 +379,7 @@ export function MerchantLoyaltyPage() {
       {tab === "transactions" && (
         <section>
           <div className="mb-4">
-            <h2 className="font-display text-2xl text-ink">Point Transactions</h2>
+            <h2 className="font-display text-2xl text-foreground">Point Transactions</h2>
             <p className="text-xs text-muted-foreground">
               Log of all points awarded or redeemed across your store.
             </p>
@@ -492,7 +492,7 @@ function ConfirmPunchCardSection() {
 
   return (
     <div className="glass-strong rounded-3xl p-6">
-      <h2 className="font-display text-2xl text-ink">Confirm punch card reward</h2>
+      <h2 className="font-display text-2xl text-foreground">Confirm punch card reward</h2>
       <p className="mt-1 text-xs text-muted-foreground">
         Enter the 6-character code the customer shows you to confirm their free reward.
       </p>
@@ -504,7 +504,7 @@ function ConfirmPunchCardSection() {
           onKeyDown={(e) => e.key === "Enter" && handleConfirm()}
           placeholder="ABC123"
           maxLength={6}
-          className="flex-1 rounded-xl border border-border bg-background px-4 py-2.5 font-mono text-xl uppercase tracking-[0.3em] text-ink placeholder:normal-case placeholder:tracking-normal placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ink/20"
+          className="flex-1 rounded-xl border border-border bg-background px-4 py-2.5 font-mono text-xl uppercase tracking-[0.3em] text-foreground placeholder:normal-case placeholder:tracking-normal placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ink/20"
         />
         <button
           onClick={handleConfirm}

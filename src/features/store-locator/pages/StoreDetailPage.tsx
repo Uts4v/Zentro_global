@@ -174,7 +174,7 @@ export function StoreDetailPage() {
 
       {/* Menu */}
       <div className="mt-6 px-5 pb-32">
-        <h2 className="font-display text-xl text-ink">Menu</h2>
+        <h2 className="font-display text-xl text-foreground">Menu</h2>
 
         {items.length === 0 ? (
           <div className="glass mt-4 rounded-3xl py-16 text-center">
@@ -199,12 +199,12 @@ export function StoreDetailPage() {
                         {item.emoji || "🍽️"}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-semibold text-ink">{item.name}</p>
+                        <p className="truncate text-sm font-semibold text-foreground">{item.name}</p>
                         {item.description && (
                           <p className="line-clamp-1 text-xs text-muted-foreground">{item.description}</p>
                         )}
                         <div className="mt-1 flex items-center gap-2">
-                          <span className="font-display text-base text-ink">
+                          <span className="font-display text-base text-foreground">
                             NPR {Number(item.price).toLocaleString()}
                           </span>
                           {item.points_per_item > 0 && (

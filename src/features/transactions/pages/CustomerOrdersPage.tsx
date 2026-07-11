@@ -74,7 +74,7 @@ export function CustomerOrdersPage() {
     <div className="space-y-8">
       <div>
         <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">History</p>
-        <h1 className="font-display mt-1 text-5xl text-ink">My Orders</h1>
+        <h1 className="font-display mt-1 text-5xl text-foreground">My Orders</h1>
       </div>
 
       {error && (
@@ -93,7 +93,7 @@ export function CustomerOrdersPage() {
           {/* Active orders */}
           {active.length > 0 && (
             <section className="space-y-3">
-              <h2 className="font-display text-2xl text-ink">Active</h2>
+              <h2 className="font-display text-2xl text-foreground">Active</h2>
               {active.map((order) => (
                 <OrderRow
                   key={order.id}
@@ -110,7 +110,7 @@ export function CustomerOrdersPage() {
           {/* Past orders */}
           {past.length > 0 && (
             <section className="space-y-3">
-              <h2 className="font-display text-2xl text-ink">Past</h2>
+              <h2 className="font-display text-2xl text-foreground">Past</h2>
               {past.map((order) => (
                 <OrderRow
                   key={order.id}
@@ -169,11 +169,11 @@ function OrderRow({
               </span>
             )}
           </div>
-          <p className="font-display mt-1 text-lg text-ink">{order.merchant_name}</p>
+          <p className="font-display mt-1 text-lg text-foreground">{order.merchant_name}</p>
           <p className="text-xs text-muted-foreground">{date}</p>
         </div>
         <div className="text-right">
-          <p className="font-display text-xl text-ink">NPR {Number(order.total_amount).toLocaleString()}</p>
+          <p className="font-display text-xl text-foreground">NPR {Number(order.total_amount).toLocaleString()}</p>
           <p className="mt-1 text-xs text-muted-foreground">{(order.items ?? []).length} item{(order.items ?? []).length !== 1 ? "s" : ""}</p>
         </div>
         {expanded ? (
@@ -214,7 +214,7 @@ function OrderRow({
           <ul className="space-y-1.5">
             {(order.items ?? []).map((item) => (
               <li key={item.id} className="flex justify-between text-sm">
-                <span className="text-ink">{item.quantity}× {item.name}</span>
+                <span className="text-foreground">{item.quantity}× {item.name}</span>
                 <span className="text-muted-foreground">NPR {Number(item.subtotal).toLocaleString()}</span>
               </li>
             ))}
@@ -227,7 +227,7 @@ function OrderRow({
           )}
 
           <div className="flex items-center justify-between border-t border-border pt-3">
-            <span className="font-medium text-sm text-ink">
+            <span className="font-medium text-sm text-foreground">
               Total: NPR {Number(order.total_amount).toLocaleString()}
             </span>
             {order.status === "pending" && onCancel && (

@@ -77,7 +77,7 @@ function MapPage() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search cafés, restaurants…"
-              className="h-11 w-full rounded-2xl bg-mist pl-9 pr-4 text-sm text-ink placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-ink/20"
+              className="h-11 w-full rounded-2xl bg-mist pl-9 pr-4 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none focus:ring-2 focus:ring-ink/20"
             />
           </div>
           <button
@@ -115,7 +115,7 @@ function MapPage() {
       {/* Merchant list */}
       <section className="px-5">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="font-display text-2xl text-ink">
+          <h2 className="font-display text-2xl text-foreground">
             {userPos ? "Nearby stores" : "All stores"}
           </h2>
           <span className="text-xs text-muted-foreground">{filtered.length} found</span>
@@ -127,7 +127,7 @@ function MapPage() {
           </div>
         ) : filtered.length === 0 ? (
           <div className="glass rounded-3xl p-8 text-center">
-            <p className="text-sm font-medium text-ink">No stores found</p>
+            <p className="text-sm font-medium text-foreground">No stores found</p>
             <p className="mt-1 text-xs text-muted-foreground">Try a different search term</p>
           </div>
         ) : (
@@ -143,7 +143,7 @@ function MapPage() {
                     {m.logo_url ? (
                       <img src={m.logo_url} alt={m.business_name} className="h-full w-full object-cover" />
                     ) : (
-                      <span className="font-display text-xl text-ink">
+                      <span className="font-display text-xl text-foreground">
                         {m.business_name.charAt(0)}
                       </span>
                     )}
@@ -151,7 +151,7 @@ function MapPage() {
 
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="font-medium text-ink truncate">{m.business_name}</p>
+                      <p className="font-medium text-foreground truncate">{m.business_name}</p>
                       <span
                         className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
                           m.is_open

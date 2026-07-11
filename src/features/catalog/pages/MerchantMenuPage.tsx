@@ -35,7 +35,7 @@ const CAT_COLOURS: Record<string, string> = {
 };
 
 function catClass(cat: string) {
-  return CAT_COLOURS[cat] ?? "bg-mist text-ink";
+  return CAT_COLOURS[cat] ?? "bg-mist text-foreground";
 }
 
 export function MerchantMenuPage() {
@@ -215,7 +215,7 @@ export function MerchantMenuPage() {
       <div className="flex items-end justify-between">
         <div>
           <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Manage</p>
-          <h1 className="font-display mt-1 text-5xl text-ink">Menu</h1>
+          <h1 className="font-display mt-1 text-5xl text-foreground">Menu</h1>
         </div>
         <button
           onClick={openCreate}
@@ -238,7 +238,7 @@ export function MerchantMenuPage() {
             <button
               key={cat}
               onClick={() => setFilterCat(cat)}
-              className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${filterCat === cat ? "bg-ink text-primary-foreground" : "bg-mist text-ink hover:bg-ink/10"
+              className={`shrink-0 rounded-full px-4 py-1.5 text-xs font-medium transition-colors ${filterCat === cat ? "bg-ink text-primary-foreground" : "bg-mist text-foreground hover:bg-ink/10"
                 }`}
             >
               {cat}
@@ -254,7 +254,7 @@ export function MerchantMenuPage() {
           { label: "Featured", value: items.filter((i) => i.is_featured).length },
         ].map(({ label, value }) => (
           <div key={label} className="glass rounded-2xl p-4 text-center">
-            <p className="font-display text-3xl text-ink">{value}</p>
+            <p className="font-display text-3xl text-foreground">{value}</p>
             <p className="mt-1 text-[11px] uppercase tracking-widest text-muted-foreground">{label}</p>
           </div>
         ))}
@@ -299,12 +299,12 @@ export function MerchantMenuPage() {
             className="glass-strong w-full max-w-lg rounded-t-3xl p-6 sm:rounded-3xl"
           >
             <div className="mb-6 flex items-center justify-between">
-              <h2 className="font-display text-2xl text-ink">
+              <h2 className="font-display text-2xl text-foreground">
                 {editing ? "Edit item" : "New item"}
               </h2>
               <button
                 onClick={closeForm}
-                className="grid h-8 w-8 place-items-center rounded-full bg-mist text-muted-foreground hover:text-ink"
+                className="grid h-8 w-8 place-items-center rounded-full bg-mist text-muted-foreground hover:text-foreground"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -389,7 +389,7 @@ export function MerchantMenuPage() {
                     <button
                       type="button"
                       onClick={() => imgInputRef.current?.click()}
-                      className="ml-auto inline-flex items-center gap-1 rounded-full border border-border px-3 py-1 text-[11px] text-muted-foreground hover:border-ink hover:text-ink"
+                      className="ml-auto inline-flex items-center gap-1 rounded-full border border-border px-3 py-1 text-[11px] text-muted-foreground hover:border-ink hover:text-foreground"
                     >
                       <Upload className="h-3 w-3" /> Change
                     </button>
@@ -414,7 +414,7 @@ export function MerchantMenuPage() {
                     value={form.name}
                     onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                     placeholder="Flat white"
-                    className="h-11 w-full rounded-xl border border-border bg-white/50 px-3 text-sm text-ink placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ink/20"
+                    className="h-11 w-full rounded-xl border border-border bg-white/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ink/20"
                   />
                 </div>
               </div>
@@ -427,7 +427,7 @@ export function MerchantMenuPage() {
                   onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
                   placeholder="A short description…"
                   rows={2}
-                  className="w-full resize-none rounded-xl border border-border bg-white/50 px-3 py-2.5 text-sm text-ink placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ink/20"
+                  className="w-full resize-none rounded-xl border border-border bg-white/50 px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ink/20"
                 />
               </div>
 
@@ -440,7 +440,7 @@ export function MerchantMenuPage() {
                     value={form.price}
                     onChange={(e) => setForm((f) => ({ ...f, price: e.target.value }))}
                     placeholder="350.00"
-                    className="h-11 w-full rounded-xl border border-border bg-white/50 px-3 text-sm text-ink placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ink/20"
+                    className="h-11 w-full rounded-xl border border-border bg-white/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ink/20"
                   />
                 </div>
                 <div>
@@ -450,7 +450,7 @@ export function MerchantMenuPage() {
                     onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}
                     placeholder="Coffee, Tea, Food…"
                     list="cats"
-                    className="h-11 w-full rounded-xl border border-border bg-white/50 px-3 text-sm text-ink placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ink/20"
+                    className="h-11 w-full rounded-xl border border-border bg-white/50 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ink/20"
                   />
                   <datalist id="cats">
                     {["Coffee", "Tea", "Food", "Snacks", "Drinks"].map((c) => <option key={c} value={c} />)}
@@ -465,7 +465,7 @@ export function MerchantMenuPage() {
                   type="number" min="0"
                   value={form.points_per_item}
                   onChange={(e) => setForm((f) => ({ ...f, points_per_item: Number(e.target.value) }))}
-                  className="h-11 w-40 rounded-xl border border-border bg-white/50 px-3 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-ink/20"
+                  className="h-11 w-40 rounded-xl border border-border bg-white/50 px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ink/20"
                 />
               </div>
 
@@ -494,7 +494,7 @@ export function MerchantMenuPage() {
 
             {/* Actions */}
             <div className="mt-6 flex gap-3">
-              <button onClick={closeForm} className="h-11 flex-1 rounded-2xl border border-border text-sm text-muted-foreground hover:text-ink">
+              <button onClick={closeForm} className="h-11 flex-1 rounded-2xl border border-border text-sm text-muted-foreground hover:text-foreground">
                 Cancel
               </button>
               <button
@@ -539,7 +539,7 @@ function ItemCard({
             {item.image_url && <span className="text-xl">{item.emoji}</span>}
             <div>
               <div className="flex items-center gap-1.5">
-                <h3 className="font-display text-lg leading-tight text-ink">{item.name}</h3>
+                <h3 className="font-display text-lg leading-tight text-foreground">{item.name}</h3>
                 {item.is_featured && <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />}
               </div>
               {item.category && (
@@ -549,7 +549,7 @@ function ItemCard({
               )}
             </div>
           </div>
-          <p className="font-display shrink-0 text-xl text-ink">NPR {Number(item.price).toLocaleString()}</p>
+          <p className="font-display shrink-0 text-xl text-foreground">NPR {Number(item.price).toLocaleString()}</p>
         </div>
         {item.description && (
           <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-muted-foreground">{item.description}</p>
@@ -559,10 +559,10 @@ function ItemCard({
             {item.loyalty_reward ? `+${item.points_per_item} pts` : "No points"}
           </span>
           <span className="ml-auto" />
-          <button onClick={onToggle} disabled={toggling} title={item.is_available ? "Mark unavailable" : "Mark available"} className="grid h-8 w-8 place-items-center rounded-xl bg-mist text-muted-foreground transition-colors hover:text-ink disabled:opacity-50">
+          <button onClick={onToggle} disabled={toggling} title={item.is_available ? "Mark unavailable" : "Mark available"} className="grid h-8 w-8 place-items-center rounded-xl bg-mist text-muted-foreground transition-colors hover:text-foreground disabled:opacity-50">
             {toggling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : item.is_available ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
           </button>
-          <button onClick={onEdit} className="grid h-8 w-8 place-items-center rounded-xl bg-mist text-muted-foreground transition-colors hover:text-ink">
+          <button onClick={onEdit} className="grid h-8 w-8 place-items-center rounded-xl bg-mist text-muted-foreground transition-colors hover:text-foreground">
             <Pencil className="h-3.5 w-3.5" />
           </button>
           <button onClick={onDelete} disabled={deleting} className="grid h-8 w-8 place-items-center rounded-xl bg-rose-50 text-rose-400 transition-colors hover:bg-rose-100 hover:text-rose-600 disabled:opacity-50">

@@ -34,6 +34,8 @@ class MerchantProfile(models.Model):
     )
     qr_code = models.TextField(blank=True)  # stores the public URL or SVG string
 
+    store_theme_color = models.CharField(max_length=7, blank=True, default="", help_text="Hex color for customer store view, e.g. #1e293b")
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
