@@ -25,10 +25,11 @@ ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "*").split(",")
 # Render terminates SSL at the proxy; tell Django the original request was HTTPS
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
-CSRF_TRUSTED_ORIGINS = [
-    "https://zentro-global.onrender.com",
-    "https://zentro-global.onrender.com",
-]
+_raw_csrf = os.getenv(
+    "CSRF_TRUSTED_ORIGINS",
+    "http://localhost:3000,http://localhost:5173,http://localhost:8080,http://localhost:8082,https://zentro-frontend.onrender.com,https://zentro-global.onrender.com",
+)
+CSRF_TRUSTED_ORIGINS = [o.strip() for o in _raw_csrf.split(",") if o.strip()]
 
 # ── Custom user model ─────────────────────────────────────────────────────────
 AUTH_USER_MODEL = "accounts.User"

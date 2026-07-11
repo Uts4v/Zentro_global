@@ -22,6 +22,7 @@ import base64
 from datetime import timedelta
 
 import qrcode
+from django.conf import settings
 from django.db.models import Avg, Count, Sum
 from django.utils import timezone
 from django.utils.text import slugify
@@ -50,7 +51,8 @@ def _get_merchant(user) -> MerchantProfile:
 
 def _generate_qr(slug: str, request) -> str:
     """Generate a base64 QR code PNG pointing to the public merchant page."""
-    customer_url = f"{request.scheme}://{request.get_host()}/m/{slug}"
+    base = settings.FRONTEND_URL.rstrip("/")
+    customer_url = f"{base}/m/{slug}"
     qr_img = qrcode.make(customer_url)
     buf = io.BytesIO()
     qr_img.save(buf, format="PNG")
