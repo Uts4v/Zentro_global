@@ -18,6 +18,7 @@ import {
   Gift,
   Trophy,
   ArrowLeftRight,
+  Utensils,
 } from "lucide-react";
 import {
   merchantApi,
@@ -41,7 +42,7 @@ function CustomerMerchantDashboard() {
   const { slug } = Route.useParams();
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
-  const { setSelectedMerchant } = useStore();
+  const { setSelectedMerchant, activeTable, setActiveTable } = useStore();
   const { setThemeColor } = useMerchantTheme();
 
   const [merchant, setMerchant] = useState<MerchantProfile | null>(null);
@@ -188,6 +189,29 @@ function CustomerMerchantDashboard() {
             </p>
           )}
         </div>
+
+        {/* Table context banner */}
+        {activeTable && activeTable.merchantSlug === slug && (
+          <div className="mt-4 flex items-center gap-3 rounded-2xl bg-blue-50 border border-blue-100 p-4">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100">
+              <Utensils className="h-5 w-5 text-blue-600" />
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-blue-800">
+                Dine-in · {activeTable.tableName}
+              </p>
+              <p className="text-xs text-blue-500">
+                Your order will be placed at this table
+              </p>
+            </div>
+            <button
+              onClick={() => setActiveTable(null)}
+              className="text-xs text-blue-600 underline"
+            >
+              Clear
+            </button>
+          </div>
+        )}
 
         {/* Merchant-scoped loyalty card */}
         <div className="glass-strong relative mt-8 overflow-hidden rounded-[28px] p-6">

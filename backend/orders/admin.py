@@ -14,9 +14,9 @@ class OrderItemInline(admin.TabularInline):
 
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
-    list_display   = ["id", "customer", "merchant", "status", "order_type", "total_amount", "points_earned", "created_at"]
-    list_filter    = ["status", "order_type"]
-    search_fields  = ["customer__full_name", "merchant__business_name"]
+    list_display   = ["id", "customer", "merchant", "status", "order_type", "fulfillment_type", "table_name_snapshot", "total_amount", "points_earned", "created_at"]
+    list_filter    = ["status", "order_type", "fulfillment_type"]
+    search_fields  = ["customer__full_name", "merchant__business_name", "table_name_snapshot"]
     readonly_fields = ["created_at", "updated_at"]
     inlines        = [OrderItemInline]
     date_hierarchy = "created_at"

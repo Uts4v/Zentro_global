@@ -1,12 +1,12 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useStore, cartTotal, cartPoints, type MenuItem } from "@/lib/store";
 import { TopBar, MobileShell } from "@/components/MobileShell";
-import { Minus, Plus, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
+import { Minus, Plus, ArrowLeft, Loader2, AlertCircle, Utensils, ShoppingBag, Truck, Scan } from "lucide-react";
 import { menuApi } from "@/lib/api";
 import { useState, useEffect } from "react";
 
 export function CartPage() {
-  const { cart, add, remove, placeOrder, selectedMerchantId } = useStore();
+  const { cart, add, remove, placeOrder, selectedMerchantId, activeTable, fulfillmentType, setFulfillmentType } = useStore();
   const nav = useNavigate();
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,6 +50,10 @@ export function CartPage() {
 
   async function handlePlaceOrder() {
     if (placing) return;
+    if (fulfillmentType === "dine_in" && !activeTable) {
+      setError("Scan a table QR code to place a dine-in order.");
+      return;
+    }
     setPlacing(true);
     setError("");
     try {
@@ -80,6 +84,74 @@ export function CartPage() {
                 cart.reduce((s, c) => s + c.qty, 0) !== 1 ? "s" : ""
               } ready to brew.`}
         </p>
+      </div>
+
+      {/* Fulfillment type selector */}
+      <div className="mt-4 px-5">
+        <div className="glass-strong rounded-2xl p-4">
+          <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground mb-3">
+            Order type
+          </p>
+          <div className="flex gap-2">
+            {([
+              { key: "dine_in" as const, label: "Dine-in", icon: Utensils, needsTable: true },
+              { key: "pickup" as const, label: "Pickup", icon: ShoppingBag, needsTable: false },
+              { key: "delivery" as const, label: "Delivery", icon: Truck, needsTable: false },
+            ]).map((opt) => {
+              const isActive = fulfillmentType === opt.key;
+              return (
+                <button
+                  key={opt.key}
+                  onClick={() => setFulfillmentType(opt.key)}
+                  className={`flex-1 flex items-center justify-center gap-1.5 rounded-xl px-3 py-2.5 text-xs font-medium transition-colors ${
+                    isActive
+                      ? "bg-foreground text-background"
+                      : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  <opt.icon className="h-3.5 w-3.5" />
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Table context */}
+          {fulfillmentType === "dine_in" && (
+            <div className="mt-3">
+              {activeTable ? (
+                <div className="flex items-center gap-3 rounded-xl bg-blue-50 border border-blue-100 p-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-100">
+                    <Utensils className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-blue-800">{activeTable.tableName}</p>
+                    <p className="text-xs text-blue-500">Scanned · Table order</p>
+                  </div>
+                  <button
+                    onClick={() => setFulfillmentType("pickup")}
+                    className="text-xs text-blue-600 underline"
+                  >
+                    Change
+                  </button>
+                </div>
+              ) : (
+                <Link
+                  to="/"
+                  className="flex items-center gap-3 rounded-xl border border-dashed border-blue-200 bg-blue-50/50 p-3"
+                >
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-100">
+                    <Scan className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-blue-800">Scan your table QR</p>
+                    <p className="text-xs text-blue-500">Required for dine-in orders</p>
+                  </div>
+                </Link>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="mt-6 space-y-3 px-5">
@@ -124,6 +196,25 @@ export function CartPage() {
       {cart.length > 0 && (
         <div className="mt-8 px-5">
           <div className="glass-strong rounded-3xl p-5">
+            {/* Order summary with fulfillment info */}
+            <div className="flex items-center gap-2 mb-3">
+              {fulfillmentType === "dine_in" && activeTable && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-1 text-[10px] font-medium text-blue-700">
+                  <Utensils className="h-3 w-3" /> {activeTable.tableName}
+                </span>
+              )}
+              {fulfillmentType === "pickup" && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-[10px] font-medium text-green-700">
+                  <ShoppingBag className="h-3 w-3" /> Pickup
+                </span>
+              )}
+              {fulfillmentType === "delivery" && (
+                <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2.5 py-1 text-[10px] font-medium text-orange-700">
+                  <Truck className="h-3 w-3" /> Delivery
+                </span>
+              )}
+            </div>
+
             <Row label="Subtotal" value={`NPR ${total.toLocaleString()}`} />
             <Row label="Service" value="—" />
             <div className="my-3 border-t border-border" />

@@ -25,6 +25,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as MerchantIndexRouteImport } from './routes/merchant.index'
 import { Route as StoresIdRouteImport } from './routes/stores_.$id'
 import { Route as OrdersIdRouteImport } from './routes/orders.$id'
+import { Route as MerchantTablesRouteImport } from './routes/merchant.tables'
 import { Route as MerchantStoreRouteImport } from './routes/merchant.store'
 import { Route as MerchantSpecialsRouteImport } from './routes/merchant.specials'
 import { Route as MerchantOrdersRouteImport } from './routes/merchant.orders'
@@ -44,6 +45,7 @@ import { Route as AuthForgotPasswordRouteImport } from './routes/auth.forgot-pas
 import { Route as CustomerMerchantSlugRouteImport } from './routes/customer.merchant.$slug'
 import { Route as AuthMerchantSignupRouteImport } from './routes/auth.merchant.signup'
 import { Route as AuthMerchantLoginRouteImport } from './routes/auth.merchant.login'
+import { Route as MSlugTableTokenRouteImport } from './routes/m.$slug.table.$token'
 
 const TransfersRoute = TransfersRouteImport.update({
   id: '/transfers',
@@ -124,6 +126,11 @@ const OrdersIdRoute = OrdersIdRouteImport.update({
   id: '/orders/$id',
   path: '/orders/$id',
   getParentRoute: () => rootRouteImport,
+} as any)
+const MerchantTablesRoute = MerchantTablesRouteImport.update({
+  id: '/tables',
+  path: '/tables',
+  getParentRoute: () => MerchantRoute,
 } as any)
 const MerchantStoreRoute = MerchantStoreRouteImport.update({
   id: '/store',
@@ -220,6 +227,11 @@ const AuthMerchantLoginRoute = AuthMerchantLoginRouteImport.update({
   path: '/login',
   getParentRoute: () => AuthMerchantRoute,
 } as any)
+const MSlugTableTokenRoute = MSlugTableTokenRouteImport.update({
+  id: '/table/$token',
+  path: '/table/$token',
+  getParentRoute: () => MSlugRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -243,7 +255,7 @@ export interface FileRoutesByFullPath {
   '/customer/merchants': typeof CustomerMerchantsRoute
   '/customer/order': typeof CustomerOrderRoute
   '/customer/orders': typeof CustomerOrdersRoute
-  '/m/$slug': typeof MSlugRoute
+  '/m/$slug': typeof MSlugRouteWithChildren
   '/merchant/analytics': typeof MerchantAnalyticsRoute
   '/merchant/loyalty': typeof MerchantLoyaltyRoute
   '/merchant/menu': typeof MerchantMenuRoute
@@ -251,12 +263,14 @@ export interface FileRoutesByFullPath {
   '/merchant/orders': typeof MerchantOrdersRoute
   '/merchant/specials': typeof MerchantSpecialsRoute
   '/merchant/store': typeof MerchantStoreRoute
+  '/merchant/tables': typeof MerchantTablesRoute
   '/orders/$id': typeof OrdersIdRoute
   '/stores/$id': typeof StoresIdRoute
   '/merchant/': typeof MerchantIndexRoute
   '/auth/merchant/login': typeof AuthMerchantLoginRoute
   '/auth/merchant/signup': typeof AuthMerchantSignupRoute
   '/customer/merchant/$slug': typeof CustomerMerchantSlugRoute
+  '/m/$slug/table/$token': typeof MSlugTableTokenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -279,7 +293,7 @@ export interface FileRoutesByTo {
   '/customer/merchants': typeof CustomerMerchantsRoute
   '/customer/order': typeof CustomerOrderRoute
   '/customer/orders': typeof CustomerOrdersRoute
-  '/m/$slug': typeof MSlugRoute
+  '/m/$slug': typeof MSlugRouteWithChildren
   '/merchant/analytics': typeof MerchantAnalyticsRoute
   '/merchant/loyalty': typeof MerchantLoyaltyRoute
   '/merchant/menu': typeof MerchantMenuRoute
@@ -287,12 +301,14 @@ export interface FileRoutesByTo {
   '/merchant/orders': typeof MerchantOrdersRoute
   '/merchant/specials': typeof MerchantSpecialsRoute
   '/merchant/store': typeof MerchantStoreRoute
+  '/merchant/tables': typeof MerchantTablesRoute
   '/orders/$id': typeof OrdersIdRoute
   '/stores/$id': typeof StoresIdRoute
   '/merchant': typeof MerchantIndexRoute
   '/auth/merchant/login': typeof AuthMerchantLoginRoute
   '/auth/merchant/signup': typeof AuthMerchantSignupRoute
   '/customer/merchant/$slug': typeof CustomerMerchantSlugRoute
+  '/m/$slug/table/$token': typeof MSlugTableTokenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -317,7 +333,7 @@ export interface FileRoutesById {
   '/customer/merchants': typeof CustomerMerchantsRoute
   '/customer/order': typeof CustomerOrderRoute
   '/customer/orders': typeof CustomerOrdersRoute
-  '/m/$slug': typeof MSlugRoute
+  '/m/$slug': typeof MSlugRouteWithChildren
   '/merchant/analytics': typeof MerchantAnalyticsRoute
   '/merchant/loyalty': typeof MerchantLoyaltyRoute
   '/merchant/menu': typeof MerchantMenuRoute
@@ -325,12 +341,14 @@ export interface FileRoutesById {
   '/merchant/orders': typeof MerchantOrdersRoute
   '/merchant/specials': typeof MerchantSpecialsRoute
   '/merchant/store': typeof MerchantStoreRoute
+  '/merchant/tables': typeof MerchantTablesRoute
   '/orders/$id': typeof OrdersIdRoute
   '/stores_/$id': typeof StoresIdRoute
   '/merchant/': typeof MerchantIndexRoute
   '/auth/merchant/login': typeof AuthMerchantLoginRoute
   '/auth/merchant/signup': typeof AuthMerchantSignupRoute
   '/customer/merchant/$slug': typeof CustomerMerchantSlugRoute
+  '/m/$slug/table/$token': typeof MSlugTableTokenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -364,12 +382,14 @@ export interface FileRouteTypes {
     | '/merchant/orders'
     | '/merchant/specials'
     | '/merchant/store'
+    | '/merchant/tables'
     | '/orders/$id'
     | '/stores/$id'
     | '/merchant/'
     | '/auth/merchant/login'
     | '/auth/merchant/signup'
     | '/customer/merchant/$slug'
+    | '/m/$slug/table/$token'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -400,12 +420,14 @@ export interface FileRouteTypes {
     | '/merchant/orders'
     | '/merchant/specials'
     | '/merchant/store'
+    | '/merchant/tables'
     | '/orders/$id'
     | '/stores/$id'
     | '/merchant'
     | '/auth/merchant/login'
     | '/auth/merchant/signup'
     | '/customer/merchant/$slug'
+    | '/m/$slug/table/$token'
   id:
     | '__root__'
     | '/'
@@ -437,12 +459,14 @@ export interface FileRouteTypes {
     | '/merchant/orders'
     | '/merchant/specials'
     | '/merchant/store'
+    | '/merchant/tables'
     | '/orders/$id'
     | '/stores_/$id'
     | '/merchant/'
     | '/auth/merchant/login'
     | '/auth/merchant/signup'
     | '/customer/merchant/$slug'
+    | '/m/$slug/table/$token'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -462,7 +486,7 @@ export interface RootRouteChildren {
   CustomerMerchantsRoute: typeof CustomerMerchantsRoute
   CustomerOrderRoute: typeof CustomerOrderRoute
   CustomerOrdersRoute: typeof CustomerOrdersRoute
-  MSlugRoute: typeof MSlugRoute
+  MSlugRoute: typeof MSlugRouteWithChildren
   OrdersIdRoute: typeof OrdersIdRoute
   StoresIdRoute: typeof StoresIdRoute
   CustomerMerchantSlugRoute: typeof CustomerMerchantSlugRoute
@@ -581,6 +605,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/orders/$id'
       preLoaderRoute: typeof OrdersIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/merchant/tables': {
+      id: '/merchant/tables'
+      path: '/tables'
+      fullPath: '/merchant/tables'
+      preLoaderRoute: typeof MerchantTablesRouteImport
+      parentRoute: typeof MerchantRoute
     }
     '/merchant/store': {
       id: '/merchant/store'
@@ -715,6 +746,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthMerchantLoginRouteImport
       parentRoute: typeof AuthMerchantRoute
     }
+    '/m/$slug/table/$token': {
+      id: '/m/$slug/table/$token'
+      path: '/table/$token'
+      fullPath: '/m/$slug/table/$token'
+      preLoaderRoute: typeof MSlugTableTokenRouteImport
+      parentRoute: typeof MSlugRoute
+    }
   }
 }
 
@@ -758,6 +796,7 @@ interface MerchantRouteChildren {
   MerchantOrdersRoute: typeof MerchantOrdersRoute
   MerchantSpecialsRoute: typeof MerchantSpecialsRoute
   MerchantStoreRoute: typeof MerchantStoreRoute
+  MerchantTablesRoute: typeof MerchantTablesRoute
   MerchantIndexRoute: typeof MerchantIndexRoute
 }
 
@@ -769,12 +808,23 @@ const MerchantRouteChildren: MerchantRouteChildren = {
   MerchantOrdersRoute: MerchantOrdersRoute,
   MerchantSpecialsRoute: MerchantSpecialsRoute,
   MerchantStoreRoute: MerchantStoreRoute,
+  MerchantTablesRoute: MerchantTablesRoute,
   MerchantIndexRoute: MerchantIndexRoute,
 }
 
 const MerchantRouteWithChildren = MerchantRoute._addFileChildren(
   MerchantRouteChildren,
 )
+
+interface MSlugRouteChildren {
+  MSlugTableTokenRoute: typeof MSlugTableTokenRoute
+}
+
+const MSlugRouteChildren: MSlugRouteChildren = {
+  MSlugTableTokenRoute: MSlugTableTokenRoute,
+}
+
+const MSlugRouteWithChildren = MSlugRoute._addFileChildren(MSlugRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -793,7 +843,7 @@ const rootRouteChildren: RootRouteChildren = {
   CustomerMerchantsRoute: CustomerMerchantsRoute,
   CustomerOrderRoute: CustomerOrderRoute,
   CustomerOrdersRoute: CustomerOrdersRoute,
-  MSlugRoute: MSlugRoute,
+  MSlugRoute: MSlugRouteWithChildren,
   OrdersIdRoute: OrdersIdRoute,
   StoresIdRoute: StoresIdRoute,
   CustomerMerchantSlugRoute: CustomerMerchantSlugRoute,

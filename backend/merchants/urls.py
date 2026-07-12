@@ -30,6 +30,16 @@ urlpatterns = [
         name="toggle-availability",
     ),
 
+    # ── Table management ──────────────────────────────────────────────────────
+    path("tables/",                          views.merchant_tables,            name="merchant-tables"),
+    path("tables/generate/",                 views.merchant_tables_generate,   name="merchant-tables-generate"),
+    path("tables/<int:pk>/",                 views.merchant_table_detail,      name="merchant-table-detail"),
+    path("tables/<int:pk>/delete/",          views.merchant_table_delete,      name="merchant-table-delete"),
+    path("tables/<int:pk>/regenerate-qr/",   views.merchant_table_regenerate_qr, name="merchant-table-regenerate-qr"),
+
+    # ── Public table resolution ───────────────────────────────────────────────
+    path("public/<slug:slug>/tables/<str:public_token>/", views.public_resolve_table, name="public-resolve-table"),
+
     # ── Public merchant pages ─────────────────────────────────────────────────
     path("",                     views.merchant_list,           name="merchant-list"),
     path("slug/<slug:slug>/",    views.merchant_by_slug,        name="merchant-by-slug"),

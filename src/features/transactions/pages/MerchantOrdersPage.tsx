@@ -1,7 +1,7 @@
 // transactions/pages/merchant.orders.tsx
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Check, RefreshCw, Loader2, Clock, Bell, X } from "lucide-react";
-import { orderApi, type Order, type OrderStatus } from "@/lib/api";
+import { Check, RefreshCw, Loader2, Clock, Bell, X, Utensils, ShoppingBag, Truck, Filter } from "lucide-react";
+import { orderApi, type Order, type OrderStatus, type FulfillmentType } from "@/lib/api";
 import { toast } from "sonner";
 
 const NEXT_STATUS: Record<OrderStatus, OrderStatus | null> = {
@@ -53,6 +53,7 @@ export function MerchantOrdersPage() {
 
   const [cancelModal, setCancelModal] = useState<Order | null>(null);
   const [cancelling, setCancelling] = useState<string | null>(null);
+  const [fulfillmentFilter, setFulfillmentFilter] = useState<FulfillmentType | "all">("all");
 
   function playNotification() {
     try {
@@ -152,12 +153,16 @@ export function MerchantOrdersPage() {
 
   const todayOrders = orders.filter((o) => isToday(o.created_at));
 
+  const filteredOrders = fulfillmentFilter === "all"
+    ? todayOrders
+    : todayOrders.filter((o) => o.fulfillment_type === fulfillmentFilter);
+
   const grouped = {
-    incoming: todayOrders.filter((o) => o.status === "pending"),
-    active: todayOrders.filter((o) =>
+    incoming: filteredOrders.filter((o) => o.status === "pending"),
+    active: filteredOrders.filter((o) =>
       ["confirmed", "preparing", "ready"].includes(o.status)
     ),
-    done: todayOrders.filter((o) => ["completed", "cancelled"].includes(o.status)),
+    done: filteredOrders.filter((o) => ["completed", "cancelled"].includes(o.status)),
   };
 
   if (loading) {
@@ -198,6 +203,30 @@ export function MerchantOrdersPage() {
           {error}
         </div>
       )}
+
+      {/* Fulfillment type filters */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1">
+        <Filter className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+        {([
+          { key: "all", label: "All", icon: null },
+          { key: "dine_in", label: "Dine-in", icon: Utensils },
+          { key: "pickup", label: "Pickup", icon: ShoppingBag },
+          { key: "delivery", label: "Delivery", icon: Truck },
+        ] as const).map((f) => (
+          <button
+            key={f.key}
+            onClick={() => setFulfillmentFilter(f.key)}
+            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors ${
+              fulfillmentFilter === f.key
+                ? "bg-foreground text-background"
+                : "bg-mist text-muted-foreground hover:bg-mist/80"
+            }`}
+          >
+            {f.icon && <f.icon className="h-3 w-3" />}
+            {f.label}
+          </button>
+        ))}
+      </div>
 
       <Column title="Incoming" count={grouped.incoming.length} accent>
         {grouped.incoming.map((o) => (
@@ -350,6 +379,17 @@ function OrderCard({
   const customerName = order.profiles?.full_name ?? "Customer";
   const isPunchCard = (order as any).order_type === "punch_card_redemption";
   const isReward = (order as any).order_type === "reward_redemption";
+  const isDineIn = order.fulfillment_type === "dine_in";
+  const isPickup = order.fulfillment_type === "pickup";
+  const isDelivery = order.fulfillment_type === "delivery";
+  const tableNum = order.table_number_snapshot;
+  const tableName = order.table_name_snapshot;
+
+  const fulfillmentBadge = isDineIn
+    ? { label: "Dine-in", icon: "🍽️", color: "bg-blue-100 text-blue-700" }
+    : isDelivery
+    ? { label: "Delivery", icon: "🚗", color: "bg-orange-100 text-orange-700" }
+    : { label: "Pickup", icon: "🛍️", color: "bg-green-100 text-green-700" };
 
   return (
     <article className={`glass-strong rounded-3xl p-5 transition-all ${
@@ -372,9 +412,28 @@ function OrderCard({
               🎁 Reward Redemption
             </div>
           )}
-          <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
-            #{String(order.id).slice(0, 8)}
-          </p>
+
+          {/* Table number - prominently displayed for dine-in */}
+          {isDineIn && tableName && (
+            <div className="mb-2 inline-flex items-center gap-2 rounded-xl bg-blue-50 border border-blue-100 px-3 py-1.5">
+              <Utensils className="h-4 w-4 text-blue-600" />
+              <span className="font-display text-sm font-bold text-blue-800">
+                {tableName}
+              </span>
+              {tableNum && (
+                <span className="text-xs text-blue-500">#{tableNum}</span>
+              )}
+            </div>
+          )}
+
+          <div className="flex items-center gap-2">
+            <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+              #{String(order.id).slice(0, 8)}
+            </p>
+            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${fulfillmentBadge.color}`}>
+              {fulfillmentBadge.icon} {fulfillmentBadge.label}
+            </span>
+          </div>
           <h3 className="font-display mt-1 text-xl text-foreground">{customerName}</h3>
         </div>
         <span className={`rounded-full px-3 py-1 text-[10px] uppercase tracking-widest font-medium ${STATUS_COLOR[order.status]}`}>

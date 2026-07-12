@@ -18,6 +18,7 @@ import {
   Store,
   Menu,
   Sparkles,
+  QrCode,
 } from "lucide-react";
 import { MerchantNav } from "@/components/merchant-nav";
 
@@ -41,6 +42,7 @@ const navItems = [
   { to: "/merchant/", label: "Overview", icon: LayoutDashboard },
   { to: "/merchant/orders", label: "Orders", icon: ShoppingBag },
   { to: "/merchant/menu", label: "Menu", icon: UtensilsCrossed },
+  { to: "/merchant/tables", label: "Tables & QR", icon: QrCode },
   { to: "/merchant/loyalty", label: "Loyalty", icon: Trophy },
   { to: "/merchant/specials", label: "Today's Special", icon: Sparkles },
   { to: "/merchant/analytics", label: "Analytics", icon: BarChart3 },

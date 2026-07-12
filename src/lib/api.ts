@@ -178,6 +178,7 @@ export interface JoinedMerchant {
 export interface Order {
   id: string;
   order_type?: "regular" | "punch_card_redemption" | "reward_redemption";
+  fulfillment_type?: FulfillmentType;
   cancellation_reason?: string;
   cancelled_by?: string;
   customer_id: string;
@@ -186,6 +187,9 @@ export interface Order {
   total_amount: string;
   points_earned: number;
   notes: string;
+  table_id?: number | null;
+  table_name_snapshot?: string;
+  table_number_snapshot?: number | null;
   created_at: string;
   updated_at: string;
   order_items: OrderItem[];
@@ -207,6 +211,8 @@ export interface CreateOrderPayload {
     points_per_item: number;
   }[];
   notes?: string;
+  fulfillment_type?: FulfillmentType;
+  table_token?: string;
 }
 export interface MerchantProfile {
   id: string;
@@ -226,7 +232,38 @@ export interface MerchantProfile {
   longitude?: string | null;
   qr_code?: string;
   store_theme_color?: string;
+  table_ordering_enabled?: boolean;
+  allow_pickup?: boolean;
+  allow_delivery?: boolean;
+  allow_dine_in?: boolean;
 }
+
+export interface MerchantTable {
+  id: number;
+  name: string;
+  table_number: number;
+  public_token: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface TableResolution {
+  merchant: {
+    id: number;
+    name: string;
+    slug: string;
+    logo: string | null;
+  };
+  table: {
+    id: number;
+    name: string;
+    table_number: number;
+    public_token: string;
+  };
+}
+
+export type FulfillmentType = "dine_in" | "pickup" | "delivery";
 export interface MerchantPunchCard {
   id: string;
   merchant_id: string;
@@ -392,6 +429,10 @@ function normaliseOrder(o: any): Order {
     id: String(o.id),
     customer_id: String(o.customer_id ?? o.customer ?? ""),
     merchant_id: String(o.merchant_id ?? o.merchant ?? ""),
+    fulfillment_type: o.fulfillment_type ?? "pickup",
+    table_id: o.table_id ?? o.table ?? null,
+    table_name_snapshot: o.table_name_snapshot ?? "",
+    table_number_snapshot: o.table_number_snapshot ?? null,
     order_items: items,
     profiles: { full_name: o.customer_name ?? null },
     merchant_profiles: { business_name: o.merchant_name ?? "" },
@@ -477,6 +518,8 @@ export const orderApi = {
         quantity: i.quantity,
       })),
       notes: payload.notes ?? "",
+      fulfillment_type: payload.fulfillment_type ?? "pickup",
+      table_token: payload.table_token ?? "",
     };
     const data = await djangoFetch<any>(apiUrl("/orders/create/"), {
       method: "POST",
@@ -900,6 +943,60 @@ confirmProof: async (proofCode: string): Promise<{
       method: "POST",
       headers: authHeaders(),
     });
+  },
+};
+
+// ── Tables ────────────────────────────────────────────────────────────────────
+
+export const tableApi = {
+  list: async (): Promise<MerchantTable[]> => {
+    return djangoFetch<MerchantTable[]>(apiUrl("/merchants/tables/"), {
+      headers: authHeaders(),
+    });
+  },
+
+  create: async (data: { name: string; table_number: number }): Promise<MerchantTable> => {
+    return djangoFetch<MerchantTable>(apiUrl("/merchants/tables/"), {
+      method: "POST",
+      headers: authHeaders(true),
+      body: JSON.stringify(data),
+    });
+  },
+
+  update: async (id: number, data: Partial<MerchantTable>): Promise<MerchantTable> => {
+    return djangoFetch<MerchantTable>(apiUrl(`/merchants/tables/${id}/`), {
+      method: "PATCH",
+      headers: authHeaders(true),
+      body: JSON.stringify(data),
+    });
+  },
+
+  delete: async (id: number): Promise<void> => {
+    await djangoFetch(apiUrl(`/merchants/tables/${id}/delete/`), {
+      method: "DELETE",
+      headers: authHeaders(),
+    });
+  },
+
+  generate: async (count: number, namePrefix?: string): Promise<MerchantTable[]> => {
+    return djangoFetch<MerchantTable[]>(apiUrl("/merchants/tables/generate/"), {
+      method: "POST",
+      headers: authHeaders(true),
+      body: JSON.stringify({ count, name_prefix: namePrefix ?? "Table" }),
+    });
+  },
+
+  regenerateQR: async (id: number): Promise<MerchantTable> => {
+    return djangoFetch<MerchantTable>(apiUrl(`/merchants/tables/${id}/regenerate-qr/`), {
+      method: "POST",
+      headers: authHeaders(true),
+    });
+  },
+
+  resolve: async (slug: string, token: string): Promise<TableResolution> => {
+    return djangoFetch<TableResolution>(
+      apiUrl(`/merchants/public/${encodeURIComponent(slug)}/tables/${encodeURIComponent(token)}/`)
+    );
   },
 };
 

@@ -233,6 +233,50 @@ def create_order(request):
             status=status.HTTP_403_FORBIDDEN,
         )
 
+    # Validate fulfillment type against merchant settings
+    fulfillment_type = data.get("fulfillment_type", Order.FULFILLMENT_PICKUP)
+    table_token = data.get("table_token", "").strip()
+
+    if fulfillment_type == Order.FULFILLMENT_DINE_IN:
+        if not merchant.table_ordering_enabled:
+            return Response(
+                {"error": "This merchant does not support table ordering."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not table_token:
+            return Response(
+                {"error": "Table token is required for dine-in orders."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+    # Resolve table if dine-in
+    table_instance = None
+    table_name_snap = ""
+    table_number_snap = None
+
+    if fulfillment_type == Order.FULFILLMENT_DINE_IN and table_token:
+        from merchants.models import MerchantTable
+        try:
+            table_instance = MerchantTable.objects.get(
+                public_token=table_token,
+                merchant=merchant,
+                is_active=True,
+            )
+        except MerchantTable.DoesNotExist:
+            return Response(
+                {"error": "Invalid or inactive table. Please scan a valid table QR code."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        table_name_snap = table_instance.name
+        table_number_snap = table_instance.table_number
+
+    elif fulfillment_type in (Order.FULFILLMENT_PICKUP, Order.FULFILLMENT_DELIVERY):
+        if table_token:
+            return Response(
+                {"error": "Table token should not be provided for pickup or delivery orders."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
     total_amount   = 0
     points_earned  = 0
     order_items_data = []
@@ -273,6 +317,10 @@ def create_order(request):
         notes=data.get("notes", ""),
         status=Order.STATUS_PENDING,
         order_type=Order.ORDER_TYPE_REGULAR,
+        fulfillment_type=fulfillment_type,
+        table=table_instance,
+        table_name_snapshot=table_name_snap,
+        table_number_snapshot=table_number_snap,
     )
 
     for item in order_items_data:

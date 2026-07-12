@@ -24,16 +24,21 @@ class OrderSerializer(serializers.ModelSerializer):
         source="punch_card_redemption.punch_card.name", read_only=True, default=None
     )
 
+    table_id = serializers.PrimaryKeyRelatedField(
+        source="table", read_only=True, default=None
+    )
+
     class Meta:
         model = Order
         fields = [
             "id", "customer", "customer_name",
             "merchant", "merchant_id", "merchant_name",
-            "status", "order_type",
+            "status", "order_type", "fulfillment_type",
             "total_amount", "points_earned",
             "notes", "items",
             "cancellation_reason", "cancelled_by",
             "reward_name", "punch_card_name",
+            "table_id", "table_name_snapshot", "table_number_snapshot",
             "created_at", "updated_at",
         ]
         read_only_fields = ["id", "created_at", "updated_at"]
@@ -48,6 +53,15 @@ class CreateOrderSerializer(serializers.Serializer):
     merchant_id = serializers.IntegerField()
     items       = CreateOrderItemSerializer(many=True)
     notes       = serializers.CharField(required=False, allow_blank=True, default="")
+    fulfillment_type = serializers.ChoiceField(
+        choices=["dine_in", "pickup", "delivery"],
+        default="pickup",
+        required=False,
+    )
+    table_token = serializers.CharField(
+        required=False, allow_blank=True, default="",
+        help_text="Public token of the scanned table (required for dine-in)",
+    )
 
     def validate_items(self, value):
         if not value:

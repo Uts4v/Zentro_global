@@ -1,6 +1,11 @@
 # merchants/models.py
+import secrets
 from django.db import models
 from django.conf import settings
+
+
+def _generate_table_token():
+    return f"TBL-{secrets.token_urlsafe(8)}".upper()
 
 
 class MerchantProfile(models.Model):
@@ -35,6 +40,15 @@ class MerchantProfile(models.Model):
     qr_code = models.TextField(blank=True)  # stores the public URL or SVG string
 
     store_theme_color = models.CharField(max_length=7, blank=True, default="", help_text="Hex color for customer store view, e.g. #1e293b")
+
+    # Table ordering settings
+    table_ordering_enabled = models.BooleanField(
+        default=False,
+        help_text="Enable table-based ordering for dine-in customers",
+    )
+    allow_pickup = models.BooleanField(default=True)
+    allow_delivery = models.BooleanField(default=False)
+    allow_dine_in = models.BooleanField(default=False)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -72,3 +86,44 @@ class MenuItem(models.Model):
     def __str__(self):
         # updated to use new field name
         return f"{self.name} - {self.merchant.business_name}"
+
+
+class MerchantTable(models.Model):
+    merchant = models.ForeignKey(
+        MerchantProfile,
+        on_delete=models.CASCADE,
+        related_name="tables",
+    )
+    name = models.CharField(
+        max_length=100,
+        help_text="User-facing label, e.g. 'Table 4', 'Patio A', 'VIP Lounge'",
+    )
+    table_number = models.PositiveIntegerField(
+        help_text="Numeric ordering label for sorting",
+    )
+    public_token = models.CharField(
+        max_length=64,
+        unique=True,
+        editable=False,
+        default=_generate_table_token,
+    )
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "merchant_tables"
+        constraints = [
+            models.UniqueConstraint(
+                fields=["merchant", "table_number"],
+                name="unique_table_number_per_merchant",
+            ),
+        ]
+        ordering = ["table_number"]
+
+    def __str__(self):
+        return f"{self.name} ({self.merchant.business_name})"
+
+    def regenerate_token(self):
+        self.public_token = _generate_table_token()
+        self.save(update_fields=["public_token", "updated_at"])

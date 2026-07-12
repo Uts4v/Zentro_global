@@ -29,6 +29,17 @@ class Order(models.Model):
         (ORDER_TYPE_REWARD_REDEMPTION, "Reward Redemption"),
     ]
 
+    # Fulfillment type
+    FULFILLMENT_DINE_IN  = "dine_in"
+    FULFILLMENT_PICKUP   = "pickup"
+    FULFILLMENT_DELIVERY = "delivery"
+
+    FULFILLMENT_CHOICES = [
+        (FULFILLMENT_DINE_IN,  "Dine In"),
+        (FULFILLMENT_PICKUP,   "Pickup"),
+        (FULFILLMENT_DELIVERY, "Delivery"),
+    ]
+
     CANCEL_REASON_CUSTOMER_REQUEST = "customer_request"
     CANCEL_REASON_OUT_OF_STOCK     = "out_of_stock"
     CANCEL_REASON_STORE_CLOSING    = "store_closing"
@@ -63,10 +74,31 @@ class Order(models.Model):
         default=ORDER_TYPE_REGULAR,
         db_index=True,
     )
+    fulfillment_type = models.CharField(
+        max_length=20, choices=FULFILLMENT_CHOICES,
+        default=FULFILLMENT_PICKUP,
+        db_index=True,
+    )
     total_amount    = models.DecimalField(max_digits=10, decimal_places=2)
     points_earned   = models.IntegerField(default=0)
     loyalty_awarded = models.BooleanField(default=False)
     notes           = models.TextField(blank=True)
+
+    # Table association (only for dine-in orders)
+    table = models.ForeignKey(
+        "merchants.MerchantTable",
+        on_delete=models.SET_NULL,
+        null=True, blank=True,
+        related_name="orders",
+    )
+    table_name_snapshot = models.CharField(
+        max_length=100, blank=True, default="",
+        help_text="Preserved table name for historical reference",
+    )
+    table_number_snapshot = models.PositiveIntegerField(
+        null=True, blank=True,
+        help_text="Preserved table number for historical reference",
+    )
 
     # Cancellation
     cancellation_reason = models.CharField(

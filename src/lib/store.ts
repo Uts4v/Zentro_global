@@ -24,6 +24,16 @@ export type OrderStatus =
   | "completed"
   | "cancelled";
 
+export type FulfillmentType = "dine_in" | "pickup" | "delivery";
+
+export type TableOrderContext = {
+  merchantSlug: string;
+  tableToken: string;
+  tableId: number;
+  tableName: string;
+  scannedAt: number;
+};
+
 export type Order = {
   id: string;
   items: CartItem[];
@@ -44,10 +54,15 @@ type State = {
   streak: number;
   customerName: string;
   selectedMerchantId: string | null;
+  activeTable: TableOrderContext | null;
+  fulfillmentType: FulfillmentType;
   setSelectedMerchant: (id: string | null) => void;
+  setActiveTable: (ctx: TableOrderContext | null) => void;
+  setFulfillmentType: (ft: FulfillmentType) => void;
   add: (id: string) => void;
   remove: (id: string) => void;
   clearCart: () => void;
+  clearTable: () => void;
   placeOrder: (menuItems: MenuItem[], notes?: string) => Promise<string>;
   updateOrderStatus: (id: string, s: OrderStatus) => void;
   setOrders: (orders: Order[]) => void;
@@ -65,8 +80,18 @@ export const useStore = create<State>()(
       streak: 0,
       customerName: "",
       selectedMerchantId: null,
+      activeTable: null,
+      fulfillmentType: "pickup" as FulfillmentType,
 
       setSelectedMerchant: (id) => set({ selectedMerchantId: id }),
+
+      setActiveTable: (ctx) =>
+        set({
+          activeTable: ctx,
+          fulfillmentType: ctx ? "dine_in" : get().fulfillmentType,
+        }),
+
+      setFulfillmentType: (ft) => set({ fulfillmentType: ft }),
 
       add: (id) =>
         set((s) => {
@@ -83,11 +108,12 @@ export const useStore = create<State>()(
             .filter((c) => c.qty > 0),
         })),
 
-      // FIX: only clear cart, NOT selectedMerchantId — loyalty page needs it
       clearCart: () => set({ cart: [] }),
 
+      clearTable: () => set({ activeTable: null, fulfillmentType: "pickup" }),
+
       placeOrder: async (menuItems: MenuItem[], notes = "") => {
-        const { cart, selectedMerchantId } = get();
+        const { cart, selectedMerchantId, activeTable, fulfillmentType } = get();
         if (!selectedMerchantId) throw new Error("No merchant selected");
         if (cart.length === 0) throw new Error("Cart is empty");
 
@@ -99,7 +125,7 @@ export const useStore = create<State>()(
     quantity: c.qty,
     name: item.name,
     price: item.price,
-    points_per_item: item.points_per_item ?? 0, // ← add this
+    points_per_item: item.points_per_item ?? 0,
   };
 });
 
@@ -107,6 +133,8 @@ export const useStore = create<State>()(
           merchant_id: selectedMerchantId,
           items,
           notes,
+          fulfillment_type: fulfillmentType,
+          table_token: activeTable?.tableToken ?? "",
         });
 
         const order: Order = {
@@ -125,8 +153,6 @@ export const useStore = create<State>()(
         set((s) => ({
           orders: [order, ...s.orders],
           cart: [],
-          // FIX: removed selectedMerchantId: null — keep merchant selected
-          // so the loyalty page can immediately load the punch card
         }));
 
         return order.id;
@@ -147,6 +173,8 @@ export const useStore = create<State>()(
       partialize: (state) => ({
         cart: state.cart,
         selectedMerchantId: state.selectedMerchantId,
+        activeTable: state.activeTable,
+        fulfillmentType: state.fulfillmentType,
         points: state.points,
         streak: state.streak,
         customerName: state.customerName,
