@@ -5,6 +5,7 @@ import { MobileShell, TopBar } from "@/components/MobileShell";
 import { Flame, Sparkles, Gift } from "lucide-react";
 import { TodaySpecialPopup } from "@/features/merchant-management/components/TodaySpecialPopup";
 import { FullBackgroundPunchCard } from "@/components/FullBackgroundPunchCard";
+import { PunchCardProofModal } from "@/components/PunchCardProofModal";
 
 type WalletView = {
   points_balance: number;
@@ -32,7 +33,7 @@ export function CustomerLoyaltyPage() {
   const [missionsLoading, setMissionsLoading] = useState(true);
   const [punchCards, setPunchCards] = useState<{ active: CustomerPunchCard[]; completed: CustomerPunchCard[] }>({ active: [], completed: [] });
   const [punchLoading, setPunchLoading] = useState(false);
-  const [usingFreeReward, setUsingFreeReward] = useState<string | null>(null);
+  const [proofCard, setProofCard] = useState<CustomerPunchCard | null>(null);
   const [punchError, setPunchError] = useState<string | null>(null);
 
   const [transactions, setTransactions] = useState<PointTransaction[]>([]);
@@ -126,18 +127,9 @@ export function CustomerLoyaltyPage() {
     loadPunchCard();
   }, [loadPunchCard]);
 
-  async function handleUseFreeReward(id: string) {
-    if (!selectedMerchantId) return;
-    setUsingFreeReward(id);
-    setPunchError(null);
-    try {
-      await punchCardApi.customerRedeem(id);
-      await loadPunchCard();
-    } catch (e: any) {
-      setPunchError(e.message || "Failed to use free reward. Try again.");
-    } finally {
-      setUsingFreeReward(null);
-    }
+  function handleUseFreeReward(id: string) {
+    const card = [...punchCards.completed, ...punchCards.active].find(c => c.id === id);
+    if (card) setProofCard(card);
   }
 
   // Derived display values
@@ -250,7 +242,6 @@ export function CustomerLoyaltyPage() {
               key={card.id}
               card={card}
               onRedeem={handleUseFreeReward}
-              redeeming={usingFreeReward === card.id}
             />
           ))
         )}
@@ -376,6 +367,16 @@ export function CustomerLoyaltyPage() {
             // scroll to top for now. Swap for navigation to /m/$slug
             // or /customer/order if you want a real "go order" action.
             window.scrollTo({ top: 0, behavior: "smooth" });
+          }}
+        />
+      )}
+      {proofCard && (
+        <PunchCardProofModal
+          card={proofCard}
+          onClose={() => setProofCard(null)}
+          onRedeemed={() => {
+            setProofCard(null);
+            loadPunchCard();
           }}
         />
       )}

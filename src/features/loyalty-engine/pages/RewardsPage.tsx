@@ -11,6 +11,7 @@ export function RewardsPage() {
   const [loading, setLoading] = useState(true);
   const [redeeming, setRedeeming] = useState<string | null>(null);
   const [successId, setSuccessId] = useState<string | null>(null);
+  const [redemptionCode, setRedemptionCode] = useState<{ code: string; rewardName: string; rewardEmoji: string } | null>(null);
 
   useEffect(() => {
     if (!selectedMerchantId) {
@@ -30,13 +31,17 @@ export function RewardsPage() {
   const handleRedeem = async (rewardId: string) => {
     setRedeeming(rewardId);
     try {
-      await rewardApi.redeem(rewardId);
+      const result = await rewardApi.redeem(rewardId);
       if (selectedMerchantId) {
         const wallet = await customerApi.getWallet(selectedMerchantId);
         setPoints(wallet?.points_balance ?? 0);
       }
-      setSuccessId(rewardId);
-      setTimeout(() => setSuccessId(null), 2000);
+      const reward = rewards.find(r => r.id === rewardId);
+      setRedemptionCode({
+        code: result.code || "",
+        rewardName: reward?.name || "Reward",
+        rewardEmoji: reward?.emoji || "🎁",
+      });
     } catch (e: any) {
       alert(e.message || "Failed to redeem. Do you have enough points?");
     } finally {
@@ -110,6 +115,48 @@ export function RewardsPage() {
           );
         })}
       </div>
+
+      {redemptionCode && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 backdrop-blur-sm sm:items-center"
+          onClick={() => setRedemptionCode(null)}
+        >
+          <div
+            className="w-full max-w-sm overflow-hidden rounded-t-[2rem] bg-background pb-8 shadow-2xl sm:rounded-[2rem]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="relative bg-ink px-6 pb-8 pt-6 text-center text-primary-foreground">
+              <p className="text-[11px] uppercase tracking-[0.2em] text-white/60">
+                Show this to your merchant
+              </p>
+              <p className="font-display mt-2 text-3xl">Reward Redeemed!</p>
+            </div>
+            <div className="-mt-6 mx-6 rounded-2xl bg-background p-6 shadow-lg text-center">
+              <p className="text-4xl">{redemptionCode.rewardEmoji}</p>
+              <p className="mt-3 font-medium text-foreground">{redemptionCode.rewardName}</p>
+              {redemptionCode.code && (
+                <>
+                  <div className="mt-4 rounded-xl bg-mist p-4">
+                    <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground mb-1">Redemption Code</p>
+                    <p className="font-mono text-4xl font-bold tracking-[0.3em] text-ink">
+                      {redemptionCode.code}
+                    </p>
+                  </div>
+                  <p className="mt-4 text-xs text-muted-foreground">
+                    Show this code to the merchant to confirm your reward
+                  </p>
+                </>
+              )}
+              <button
+                onClick={() => setRedemptionCode(null)}
+                className="mt-6 w-full rounded-2xl bg-ink py-3 text-sm font-medium text-primary-foreground"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </MobileShell>
   );
 }

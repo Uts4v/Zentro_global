@@ -1074,7 +1074,32 @@ export interface MembershipCardDesign {
   show_lifetime_points: boolean;
   show_joined_date: boolean;
   show_qr_shortcut: boolean;
+  is_published: boolean;
 }
+
+export const merchantCardDesignApi = {
+  get: async (): Promise<MembershipCardDesign> => {
+    return djangoFetch<MembershipCardDesign>(apiUrl("/loyalty/merchant/card-design/"), {
+      headers: authHeaders(),
+    });
+  },
+
+  update: async (data: Partial<MembershipCardDesign>): Promise<MembershipCardDesign> => {
+    return djangoFetch<MembershipCardDesign>(apiUrl("/loyalty/merchant/card-design/"), {
+      method: "PATCH",
+      headers: authHeaders(true),
+      body: JSON.stringify(data),
+    });
+  },
+
+  publish: async (): Promise<MembershipCardDesign> => {
+    return djangoFetch<MembershipCardDesign>(apiUrl("/loyalty/merchant/card-design/publish/"), {
+      method: "POST",
+      headers: authHeaders(true),
+      body: JSON.stringify({}),
+    });
+  },
+};
 
 export interface MembershipCard {
   merchant: {

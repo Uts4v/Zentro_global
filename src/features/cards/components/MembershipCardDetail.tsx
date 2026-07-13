@@ -12,6 +12,7 @@ import {
   type CustomerPunchCard,
 } from "@/lib/api";
 import { MobileShell } from "@/components/MobileShell";
+import { PunchCardProofModal } from "@/components/PunchCardProofModal";
 import { ArrowLeft, QrCode, ArrowRightLeft, Flame, Sparkles, Gift, ChevronRight } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
@@ -72,6 +73,7 @@ export function MembershipCardDetail({ merchantSlug }: { merchantSlug: string })
 
   const [punchCards, setPunchCards] = useState<{ active: CustomerPunchCard[]; completed: CustomerPunchCard[] }>({ active: [], completed: [] });
   const [punchLoading, setPunchLoading] = useState(true);
+  const [proofCard, setProofCard] = useState<CustomerPunchCard | null>(null);
 
   const fetchQr = useCallback(async () => {
     setQrLoading(true);
@@ -355,9 +357,12 @@ export function MembershipCardDetail({ merchantSlug }: { merchantSlug: string })
                       <p className="text-xs text-muted-foreground">{pc.current_stamps}/{pc.punch_card?.stamps_required ?? 10} stamps</p>
                     </div>
                     {pc.is_completed && (
-                      <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300">
+                      <button
+                        onClick={() => setProofCard(pc)}
+                        className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-900 dark:text-emerald-300"
+                      >
                         Ready to redeem
-                      </span>
+                      </button>
                     )}
                   </div>
                   <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-mist">
@@ -501,6 +506,19 @@ export function MembershipCardDetail({ merchantSlug }: { merchantSlug: string })
           <ChevronRight className="h-4 w-4 text-muted-foreground" />
         </Link>
       </div>
+
+      {proofCard && (
+        <PunchCardProofModal
+          card={proofCard}
+          onClose={() => setProofCard(null)}
+          onRedeemed={() => {
+            setProofCard(null);
+            punchCardApi.customerList(merchantSlug)
+              .then((data) => setPunchCards(data))
+              .catch(() => {});
+          }}
+        />
+      )}
     </MobileShell>
   );
 }

@@ -1,7 +1,7 @@
 // routes/index.tsx 
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useStore, cartTotal, type MenuItem } from "@/lib/store";
-import { merchantApi, menuApi, customerApi, specialApi, punchCardApi, type TodaySpecial, type CustomerPunchCard } from "@/lib/api";
+import { merchantApi, menuApi, customerApi, specialApi, punchCardApi, missionApi, type TodaySpecial, type CustomerPunchCard, type MissionView } from "@/lib/api";
 import { MobileShell, TopBar } from "@/components/MobileShell";
 import { Plus, ShoppingBag, Flame, Search, X as XIcon, ArrowLeftRight, QrCode, SendHorizontal, UserPlus, Loader2 } from "lucide-react";
 import { requireAuth } from "@/lib/auth-guard";
@@ -10,6 +10,7 @@ import { TodaySpecialPopup } from "@/features/merchant-management/components/Tod
 import { TransferForm } from "@/features/transfers/components/TransferForm";
 import { PersonalQR } from "@/features/transfers/components/PersonalQR";
 import { PremiumPunchCard } from "@/components/PremiumPunchCard";
+import { PunchCardProofModal } from "@/components/PunchCardProofModal";
 import { useMerchantTheme, withAlpha } from "@/lib/merchant-theme";
 
 export const Route = createFileRoute("/")({
@@ -87,18 +88,22 @@ function Index() {
   const [transferMode, setTransferMode] = useState<"send" | "receive">("send");
   const [punchCards, setPunchCards] = useState<{ active: CustomerPunchCard[]; completed: CustomerPunchCard[] }>({ active: [], completed: [] });
   const [punchRedeeming, setPunchRedeeming] = useState<string | null>(null);
+  const [proofCard, setProofCard] = useState<CustomerPunchCard | null>(null);
   const [merchantThemeColor, setMerchantThemeColor] = useState("");
   const [joined, setJoined] = useState(false);
   const [joining, setJoining] = useState(false);
+  const [missions, setMissions] = useState<MissionView[]>([]);
 
   useEffect(() => {
     if (!selectedMerchantId) {
       setLoading(false);
       setJoined(false);
+      setMissions([]);
       return;
     }
     setLoading(true);
     setJoined(false);
+    setMissions([]);
     Promise.all([
       menuApi.forMerchant(selectedMerchantId)
         .then((items) => setMenuItems(items.map((i) => ({ ...i, price: parseFloat(i.price as any) }))))
@@ -120,6 +125,9 @@ function Index() {
       punchCardApi.customerList(selectedMerchantId)
         .then((data) => setPunchCards(data))
         .catch(() => setPunchCards({ active: [], completed: [] })),
+      missionApi.myMissions(selectedMerchantId)
+        .then((m) => setMissions(m))
+        .catch(() => setMissions([])),
     ]).finally(() => setLoading(false));
   }, [selectedMerchantId]);
 
@@ -154,15 +162,9 @@ function Index() {
   const storeItems = menuItems.map((m) => ({ ...m, price: parseFloat(m.price as any) }));
   const total = cartTotal(cart, storeItems);
 
-  async function handleRedeemPunch(cardId: string) {
-    if (!selectedMerchantId) return;
-    setPunchRedeeming(cardId);
-    try {
-      await punchCardApi.customerRedeem(cardId);
-      const data = await punchCardApi.customerList(selectedMerchantId);
-      setPunchCards(data);
-    } catch {}
-    setPunchRedeeming(null);
+  function handleRedeemPunch(cardId: string) {
+    const card = punchCards.active.find(c => c.id === cardId) || punchCards.completed.find(c => c.id === cardId);
+    if (card) setProofCard(card);
   }
 
   async function handleJoin() {
@@ -405,6 +407,52 @@ function Index() {
         </section>
       )}
 
+      {/* Missions */}
+      {selectedMerchantId && joined && missions.length > 0 && (
+        <section className="px-5 mt-4">
+          <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground mb-3">Missions</p>
+          <div className="space-y-3">
+            {missions.map((m) => (
+              <div key={m.id} className="glass-strong rounded-2xl p-4">
+                <div className="flex items-start gap-3">
+                  <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-ember-soft text-lg">
+                    {m.icon}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-sm font-medium text-foreground truncate">{m.title}</p>
+                      {m.is_completed ? (
+                        <span className="shrink-0 text-[10px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">Done ✓</span>
+                      ) : (
+                        <span className="shrink-0 text-[10px] font-medium text-ember bg-ember-soft px-2 py-0.5 rounded-full">+{m.reward_points} pts</span>
+                      )}
+                    </div>
+                    {m.description && (
+                      <p className="mt-0.5 text-[11px] text-muted-foreground line-clamp-1">{m.description}</p>
+                    )}
+                    <div className="mt-2">
+                      <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1">
+                        <span>{m.current_count} / {m.target_count}</span>
+                        <span>{m.mission_type.replace(/_/g, " ")}</span>
+                      </div>
+                      <div className="h-1.5 w-full rounded-full bg-mist overflow-hidden">
+                        <div
+                          className="h-full rounded-full transition-all duration-500"
+                          style={{
+                            width: `${Math.min(100, (m.current_count / m.target_count) * 100)}%`,
+                            background: m.is_completed ? "var(--ink)" : "var(--ember)",
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* Search bar */}
       {selectedMerchantId && menuItems.length > 0 && (
         <div className="mt-4 px-5">
@@ -506,6 +554,21 @@ function Index() {
           </span>
           <span className="font-display text-lg">NPR {total.toLocaleString()} →</span>
         </Link>
+      )}
+
+      {proofCard && (
+        <PunchCardProofModal
+          card={proofCard}
+          onClose={() => setProofCard(null)}
+          onRedeemed={() => {
+            setProofCard(null);
+            if (selectedMerchantId) {
+              punchCardApi.customerList(selectedMerchantId)
+                .then((data) => setPunchCards(data))
+                .catch(() => {});
+            }
+          }}
+        />
       )}
     </MobileShell>
   );
