@@ -82,6 +82,7 @@ class Order(models.Model):
     total_amount    = models.DecimalField(max_digits=10, decimal_places=2)
     points_earned   = models.IntegerField(default=0)
     loyalty_awarded = models.BooleanField(default=False)
+    is_reward_order = models.BooleanField(default=False)
     notes           = models.TextField(blank=True)
 
     # Table association (only for dine-in orders)
