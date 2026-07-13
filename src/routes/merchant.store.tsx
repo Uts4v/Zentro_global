@@ -367,7 +367,9 @@ function StoreConfig() {
   useEffect(() => { fetchProfile(); }, [fetchProfile]);
 
   useEffect(() => {
-    merchantCardDesignApi.get().then(setCardDesign).catch(() => {});
+    merchantCardDesignApi.get().then((d) => {
+      setCardDesign({ ...d, background_pattern: REVERSE_PATTERN_MAP[d.background_pattern || ""] || d.background_pattern || "none" });
+    }).catch(() => {});
   }, []);
 
   const handleSave = async () => {
@@ -402,17 +404,31 @@ function StoreConfig() {
   const updateField = (field: string, value: string | boolean) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
+  const PATTERN_MAP: Record<string, string> = {
+    "none": "",
+    "dots": "zentro_dots",
+    "geometric": "geometric",
+    "diamonds": "diamonds",
+  };
+  const REVERSE_PATTERN_MAP: Record<string, string> = {
+    "": "none",
+    "zentro_dots": "dots",
+    "geometric": "geometric",
+    "diamonds": "diamonds",
+  };
+
   async function handleSaveCardDesign(publish = false) {
     setCardDesignSaving(true);
     try {
-      const updated = await merchantCardDesignApi.update(cardDesign);
+      const payload = { ...cardDesign, background_pattern: PATTERN_MAP[cardDesign.background_pattern || ""] || cardDesign.background_pattern };
+      const updated = await merchantCardDesignApi.update(payload);
       if (publish) {
         await merchantCardDesignApi.publish();
         toast.success("Card design published!");
       } else {
         toast.success("Card design saved!");
       }
-      setCardDesign(updated);
+      setCardDesign({ ...updated, background_pattern: REVERSE_PATTERN_MAP[updated.background_pattern || ""] || updated.background_pattern || "none" });
     } catch {
       toast.error("Failed to save card design");
     }
