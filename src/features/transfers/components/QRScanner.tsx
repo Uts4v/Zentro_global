@@ -36,7 +36,7 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
           onScan(code.toUpperCase());
           onClose();
         },
-        () => {}
+        () => {},
       )
       .then(() => {
         startedRef.current = true;
@@ -56,7 +56,7 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
   }, [onScan, onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 p-4">
       <div className="relative w-full max-w-sm rounded-2xl bg-white p-4">
         <button
           onClick={onClose}
