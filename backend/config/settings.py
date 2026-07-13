@@ -61,7 +61,6 @@ if _redis_url:
         },
     }
 else:
-    # Dev fallback — works for a single process, not suitable for production
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels.layers.InMemoryChannelLayer",
