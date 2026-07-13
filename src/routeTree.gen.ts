@@ -44,6 +44,7 @@ import { Route as AuthResetPasswordRouteImport } from './routes/auth.reset-passw
 import { Route as AuthMerchantRouteImport } from './routes/auth.merchant'
 import { Route as AuthLoginRouteImport } from './routes/auth.login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth.forgot-password'
+import { Route as LoyaltyQrTokenRouteImport } from './routes/loyalty.qr.$token'
 import { Route as CustomerMerchantSlugRouteImport } from './routes/customer.merchant.$slug'
 import { Route as AuthMerchantSignupRouteImport } from './routes/auth.merchant.signup'
 import { Route as AuthMerchantLoginRouteImport } from './routes/auth.merchant.login'
@@ -224,6 +225,11 @@ const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
   path: '/forgot-password',
   getParentRoute: () => AuthRoute,
 } as any)
+const LoyaltyQrTokenRoute = LoyaltyQrTokenRouteImport.update({
+  id: '/qr/$token',
+  path: '/qr/$token',
+  getParentRoute: () => LoyaltyRoute,
+} as any)
 const CustomerMerchantSlugRoute = CustomerMerchantSlugRouteImport.update({
   id: '/customer/merchant/$slug',
   path: '/customer/merchant/$slug',
@@ -251,7 +257,7 @@ export interface FileRoutesByFullPath {
   '/cards': typeof CardsRouteWithChildren
   '/cart': typeof CartRoute
   '/leaderboard': typeof LeaderboardRoute
-  '/loyalty': typeof LoyaltyRoute
+  '/loyalty': typeof LoyaltyRouteWithChildren
   '/map': typeof MapRoute
   '/merchant': typeof MerchantRouteWithChildren
   '/missions': typeof MissionsRoute
@@ -284,6 +290,7 @@ export interface FileRoutesByFullPath {
   '/auth/merchant/login': typeof AuthMerchantLoginRoute
   '/auth/merchant/signup': typeof AuthMerchantSignupRoute
   '/customer/merchant/$slug': typeof CustomerMerchantSlugRoute
+  '/loyalty/qr/$token': typeof LoyaltyQrTokenRoute
   '/m/$slug/table/$token': typeof MSlugTableTokenRoute
 }
 export interface FileRoutesByTo {
@@ -292,7 +299,7 @@ export interface FileRoutesByTo {
   '/cards': typeof CardsRouteWithChildren
   '/cart': typeof CartRoute
   '/leaderboard': typeof LeaderboardRoute
-  '/loyalty': typeof LoyaltyRoute
+  '/loyalty': typeof LoyaltyRouteWithChildren
   '/map': typeof MapRoute
   '/missions': typeof MissionsRoute
   '/notifications': typeof NotificationsRoute
@@ -324,6 +331,7 @@ export interface FileRoutesByTo {
   '/auth/merchant/login': typeof AuthMerchantLoginRoute
   '/auth/merchant/signup': typeof AuthMerchantSignupRoute
   '/customer/merchant/$slug': typeof CustomerMerchantSlugRoute
+  '/loyalty/qr/$token': typeof LoyaltyQrTokenRoute
   '/m/$slug/table/$token': typeof MSlugTableTokenRoute
 }
 export interface FileRoutesById {
@@ -333,7 +341,7 @@ export interface FileRoutesById {
   '/cards': typeof CardsRouteWithChildren
   '/cart': typeof CartRoute
   '/leaderboard': typeof LeaderboardRoute
-  '/loyalty': typeof LoyaltyRoute
+  '/loyalty': typeof LoyaltyRouteWithChildren
   '/map': typeof MapRoute
   '/merchant': typeof MerchantRouteWithChildren
   '/missions': typeof MissionsRoute
@@ -366,6 +374,7 @@ export interface FileRoutesById {
   '/auth/merchant/login': typeof AuthMerchantLoginRoute
   '/auth/merchant/signup': typeof AuthMerchantSignupRoute
   '/customer/merchant/$slug': typeof CustomerMerchantSlugRoute
+  '/loyalty/qr/$token': typeof LoyaltyQrTokenRoute
   '/m/$slug/table/$token': typeof MSlugTableTokenRoute
 }
 export interface FileRouteTypes {
@@ -409,6 +418,7 @@ export interface FileRouteTypes {
     | '/auth/merchant/login'
     | '/auth/merchant/signup'
     | '/customer/merchant/$slug'
+    | '/loyalty/qr/$token'
     | '/m/$slug/table/$token'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -449,6 +459,7 @@ export interface FileRouteTypes {
     | '/auth/merchant/login'
     | '/auth/merchant/signup'
     | '/customer/merchant/$slug'
+    | '/loyalty/qr/$token'
     | '/m/$slug/table/$token'
   id:
     | '__root__'
@@ -490,6 +501,7 @@ export interface FileRouteTypes {
     | '/auth/merchant/login'
     | '/auth/merchant/signup'
     | '/customer/merchant/$slug'
+    | '/loyalty/qr/$token'
     | '/m/$slug/table/$token'
   fileRoutesById: FileRoutesById
 }
@@ -499,7 +511,7 @@ export interface RootRouteChildren {
   CardsRoute: typeof CardsRouteWithChildren
   CartRoute: typeof CartRoute
   LeaderboardRoute: typeof LeaderboardRoute
-  LoyaltyRoute: typeof LoyaltyRoute
+  LoyaltyRoute: typeof LoyaltyRouteWithChildren
   MapRoute: typeof MapRoute
   MerchantRoute: typeof MerchantRouteWithChildren
   MissionsRoute: typeof MissionsRoute
@@ -764,6 +776,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthForgotPasswordRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/loyalty/qr/$token': {
+      id: '/loyalty/qr/$token'
+      path: '/qr/$token'
+      fullPath: '/loyalty/qr/$token'
+      preLoaderRoute: typeof LoyaltyQrTokenRouteImport
+      parentRoute: typeof LoyaltyRoute
+    }
     '/customer/merchant/$slug': {
       id: '/customer/merchant/$slug'
       path: '/customer/merchant/$slug'
@@ -837,6 +856,17 @@ const CardsRouteChildren: CardsRouteChildren = {
 
 const CardsRouteWithChildren = CardsRoute._addFileChildren(CardsRouteChildren)
 
+interface LoyaltyRouteChildren {
+  LoyaltyQrTokenRoute: typeof LoyaltyQrTokenRoute
+}
+
+const LoyaltyRouteChildren: LoyaltyRouteChildren = {
+  LoyaltyQrTokenRoute: LoyaltyQrTokenRoute,
+}
+
+const LoyaltyRouteWithChildren =
+  LoyaltyRoute._addFileChildren(LoyaltyRouteChildren)
+
 interface MerchantRouteChildren {
   MerchantAnalyticsRoute: typeof MerchantAnalyticsRoute
   MerchantLoyaltyRoute: typeof MerchantLoyaltyRoute
@@ -881,7 +911,7 @@ const rootRouteChildren: RootRouteChildren = {
   CardsRoute: CardsRouteWithChildren,
   CartRoute: CartRoute,
   LeaderboardRoute: LeaderboardRoute,
-  LoyaltyRoute: LoyaltyRoute,
+  LoyaltyRoute: LoyaltyRouteWithChildren,
   MapRoute: MapRoute,
   MerchantRoute: MerchantRouteWithChildren,
   MissionsRoute: MissionsRoute,
@@ -901,13 +931,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

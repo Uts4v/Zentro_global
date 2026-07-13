@@ -40,9 +40,7 @@ export interface MerchantDiscoveryItem {
 export const specialApi = {
   // Customer — public, no auth needed
   forSlug: async (slug: string): Promise<TodaySpecial | null> => {
-    const data = await djangoFetch<TodaySpecial | null>(
-      apiUrl(`/loyalty/specials/${slug}/`)
-    );
+    const data = await djangoFetch<TodaySpecial | null>(apiUrl(`/loyalty/specials/${slug}/`));
     return data ?? null;
   },
 
@@ -361,7 +359,14 @@ export interface Mission {
   icon: string;
   target_count: number;
   reward_points: number;
-  mission_type: "order_count" | "spend_amount" | "visit_streak" | "purchase" | "visit" | "referral" | "special";
+  mission_type:
+    | "order_count"
+    | "spend_amount"
+    | "visit_streak"
+    | "purchase"
+    | "visit"
+    | "referral"
+    | "special";
   is_active: boolean;
   created_at: string;
 }
@@ -487,13 +492,13 @@ export const menuApi = {
 
 export const orderApi = {
   cancelByMerchant: async (id: string, reason: string): Promise<Order> => {
-  const data = await djangoFetch<any>(apiUrl(`/orders/${id}/cancel/`), {
-    method: "PATCH",
-    headers: authHeaders(true),
-    body: JSON.stringify({ reason }),
-  });
-  return normaliseOrder(data);
-},
+    const data = await djangoFetch<any>(apiUrl(`/orders/${id}/cancel/`), {
+      method: "PATCH",
+      headers: authHeaders(true),
+      body: JSON.stringify({ reason }),
+    });
+    return normaliseOrder(data);
+  },
   myOrders: async (): Promise<Order[]> => {
     const data = await djangoFetch<any[]>(apiUrl("/orders/my-orders/"), {
       headers: authHeaders(),
@@ -568,7 +573,7 @@ export const orderApi = {
     const query = qs.toString();
     const data = await djangoFetch<any[]>(
       apiUrl(`/orders/merchant-history/${query ? `?${query}` : ""}`),
-      { headers: authHeaders() }
+      { headers: authHeaders() },
     );
     return data.map(normaliseOrder);
   },
@@ -594,9 +599,7 @@ export const merchantApi = {
       params.set("lng", String(lng));
     }
     const qs = params.toString();
-    return djangoFetch<MerchantDiscoveryItem[]>(
-      apiUrl(`/merchants/nearby/${qs ? `?${qs}` : ""}`)
-    );
+    return djangoFetch<MerchantDiscoveryItem[]>(apiUrl(`/merchants/nearby/${qs ? `?${qs}` : ""}`));
   },
 
   get: async (id: string): Promise<MerchantProfile> => {
@@ -647,10 +650,9 @@ export const customerApi = {
   /** Merchant-scoped wallet — source of truth for points at a store. */
   getWallet: async (merchantId: string): Promise<CustomerMerchantWallet | null> => {
     try {
-      const data = await djangoFetch<any>(
-        apiUrl(`/loyalty/wallets/mine/?merchant=${merchantId}`),
-        { headers: authHeaders() }
-      );
+      const data = await djangoFetch<any>(apiUrl(`/loyalty/wallets/mine/?merchant=${merchantId}`), {
+        headers: authHeaders(),
+      });
       if (!data) return null;
       return {
         id: String(data.id ?? ""),
@@ -695,7 +697,9 @@ export const customerApi = {
     }));
   },
 
-  joinMerchant: async (merchantSlug: string): Promise<{
+  joinMerchant: async (
+    merchantSlug: string,
+  ): Promise<{
     profile: CustomerMerchantProfile;
     wallet: CustomerMerchantWallet;
     created: boolean;
@@ -812,7 +816,14 @@ export const loyaltyApi = {
   },
 
   saveRules: async (
-    input: Pick<LoyaltyRules, "points_per_npr" | "streak_multiplier" | "welcome_bonus" | "birthday_bonus" | "streak_min_amount">
+    input: Pick<
+      LoyaltyRules,
+      | "points_per_npr"
+      | "streak_multiplier"
+      | "welcome_bonus"
+      | "birthday_bonus"
+      | "streak_min_amount"
+    >,
   ): Promise<LoyaltyRules> => {
     return djangoFetch<LoyaltyRules>(apiUrl("/loyalty/rules/"), {
       method: "PATCH",
@@ -827,7 +838,9 @@ export const loyaltyApi = {
     });
   },
 
-  createReward: async (input: Omit<Reward, "id" | "merchant_id" | "created_at">): Promise<Reward> => {
+  createReward: async (
+    input: Omit<Reward, "id" | "merchant_id" | "created_at">,
+  ): Promise<Reward> => {
     return djangoFetch<Reward>(apiUrl("/loyalty/rewards/create/"), {
       method: "POST",
       headers: authHeaders(true),
@@ -850,7 +863,9 @@ export const loyaltyApi = {
     });
   },
 
-  confirmRedemption: async (code: string): Promise<{ customer_name: string; points_deducted: number }> => {
+  confirmRedemption: async (
+    code: string,
+  ): Promise<{ customer_name: string; points_deducted: number }> => {
     const data = await djangoFetch<any>(apiUrl("/loyalty/redemptions/confirm/"), {
       method: "POST",
       headers: authHeaders(true),
@@ -873,9 +888,12 @@ export const loyaltyApi = {
 
 export const transactionApi = {
   customerList: async (merchantId: string): Promise<PointTransaction[]> => {
-    return djangoFetch<PointTransaction[]>(apiUrl(`/loyalty/transactions/?merchant=${merchantId}`), {
-      headers: authHeaders(),
-    });
+    return djangoFetch<PointTransaction[]>(
+      apiUrl(`/loyalty/transactions/?merchant=${merchantId}`),
+      {
+        headers: authHeaders(),
+      },
+    );
   },
 
   merchantList: async (): Promise<PointTransaction[]> => {
@@ -888,39 +906,41 @@ export const transactionApi = {
 // ── Punch Cards ───────────────────────────────────────────────────────────────
 
 export const punchCardApi = {
-  generateProof: async (id: string): Promise<{
-  proof_code: string;
-  expires_at: string;
-  reward_text: string;
-  store_name: string;
-  customer_name: string;
-}> => {
-  return djangoFetch(apiUrl(`/loyalty/punch-cards/${id}/generate-proof/`), {
-    method: "POST",
-    headers: authHeaders(true),
-    body: JSON.stringify({}),
-  });
-},
+  generateProof: async (
+    id: string,
+  ): Promise<{
+    proof_code: string;
+    expires_at: string;
+    reward_text: string;
+    store_name: string;
+    customer_name: string;
+  }> => {
+    return djangoFetch(apiUrl(`/loyalty/punch-cards/${id}/generate-proof/`), {
+      method: "POST",
+      headers: authHeaders(true),
+      body: JSON.stringify({}),
+    });
+  },
 
-confirmProof: async (proofCode: string): Promise<{
-  success: boolean;
-  customer_name: string;
-  reward_text: string;
-  order_id: string;
-  new_card_started: boolean;
-}> => {
-  return djangoFetch(apiUrl("/loyalty/punch-cards/confirm-proof/"), {
-    method: "POST",
-    headers: authHeaders(true),
-    body: JSON.stringify({ proof_code: proofCode }),
-  });
-},
+  confirmProof: async (
+    proofCode: string,
+  ): Promise<{
+    success: boolean;
+    customer_name: string;
+    reward_text: string;
+    order_id: string;
+    new_card_started: boolean;
+  }> => {
+    return djangoFetch(apiUrl("/loyalty/punch-cards/confirm-proof/"), {
+      method: "POST",
+      headers: authHeaders(true),
+      body: JSON.stringify({ proof_code: proofCode }),
+    });
+  },
   merchantList: async (): Promise<MerchantPunchCard[]> => {
     return djangoFetch<MerchantPunchCard[]>(apiUrl("/loyalty/merchant/punch-cards/"), {
       headers: authHeaders(),
     });
-    
-    
   },
 
   merchantCreate: async (data: Partial<MerchantPunchCard>): Promise<MerchantPunchCard> => {
@@ -931,7 +951,10 @@ confirmProof: async (proofCode: string): Promise<{
     });
   },
 
-  merchantUpdate: async (id: string, data: Partial<MerchantPunchCard>): Promise<MerchantPunchCard> => {
+  merchantUpdate: async (
+    id: string,
+    data: Partial<MerchantPunchCard>,
+  ): Promise<MerchantPunchCard> => {
     return djangoFetch<MerchantPunchCard>(apiUrl(`/loyalty/merchant/punch-cards/${id}/`), {
       method: "PATCH",
       headers: authHeaders(true),
@@ -939,10 +962,15 @@ confirmProof: async (proofCode: string): Promise<{
     });
   },
 
-  customerList: async (merchantId: string): Promise<{ active: CustomerPunchCard[]; completed: CustomerPunchCard[] }> => {
-    return djangoFetch<{ active: CustomerPunchCard[]; completed: CustomerPunchCard[] }>(apiUrl(`/loyalty/punch-cards/?merchant=${merchantId}`), {
-      headers: authHeaders(),
-    });
+  customerList: async (
+    merchantId: string,
+  ): Promise<{ active: CustomerPunchCard[]; completed: CustomerPunchCard[] }> => {
+    return djangoFetch<{ active: CustomerPunchCard[]; completed: CustomerPunchCard[] }>(
+      apiUrl(`/loyalty/punch-cards/?merchant=${merchantId}`),
+      {
+        headers: authHeaders(),
+      },
+    );
   },
 
   customerRedeem: async (id: string): Promise<CustomerPunchCard> => {
@@ -1002,7 +1030,7 @@ export const tableApi = {
 
   resolve: async (slug: string, token: string): Promise<TableResolution> => {
     return djangoFetch<TableResolution>(
-      apiUrl(`/merchants/public/${encodeURIComponent(slug)}/tables/${encodeURIComponent(token)}/`)
+      apiUrl(`/merchants/public/${encodeURIComponent(slug)}/tables/${encodeURIComponent(token)}/`),
     );
   },
 };
@@ -1140,7 +1168,7 @@ export const membershipCardApi = {
   getQr: async (merchantSlug: string): Promise<MembershipQrToken> => {
     return djangoFetch<MembershipQrToken>(
       apiUrl(`/customer/memberships/${encodeURIComponent(merchantSlug)}/qr/`),
-      { headers: authHeaders() }
+      { headers: authHeaders() },
     );
   },
 
@@ -1151,15 +1179,27 @@ export const membershipCardApi = {
         method: "POST",
         headers: authHeaders(true),
         body: JSON.stringify({}),
-      }
+      },
     );
   },
 
   getMembershipDetail: async (merchantSlug: string) => {
-    return djangoFetch<any>(
-      apiUrl(`/customer/memberships/${encodeURIComponent(merchantSlug)}/`),
-      { headers: authHeaders() }
-    );
+    return djangoFetch<any>(apiUrl(`/customer/memberships/${encodeURIComponent(merchantSlug)}/`), {
+      headers: authHeaders(),
+    });
+  },
+};
+
+export interface MembershipQrResolve {
+  merchant: { name: string; slug: string; logo: string | null };
+  customer_name: string;
+  membership_number: string;
+  status: string;
+}
+
+export const publicQrApi = {
+  resolve: async (token: string): Promise<MembershipQrResolve> => {
+    return djangoFetch<MembershipQrResolve>(apiUrl(`/loyalty/qr/${encodeURIComponent(token)}/`));
   },
 };
 
