@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Fix inconsistent migration history by recording missing migrations."""
+"""Fix inconsistent migration history by recording ALL missing migrations."""
 import os
+import re
 import sys
 from datetime import datetime, timezone
 
@@ -32,23 +33,49 @@ else:
 
 import psycopg
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+MIGRATION_RE = re.compile(r"^(\d{4})_.*\.py$")
+
+APP_DIRS = ["loyalty", "accounts", "orders", "merchants", "notifications"]
+
+def discover_migrations():
+    found = []
+    for app in APP_DIRS:
+        mig_dir = os.path.join(BASE_DIR, app, "migrations")
+        if not os.path.isdir(mig_dir):
+            continue
+        for fname in os.listdir(mig_dir):
+            m = MIGRATION_RE.match(fname)
+            if m:
+                name = fname[:-3]
+                found.append((app, name))
+    found.sort(key=lambda x: (x[0], x[1]))
+    return found
+
+all_migrations = discover_migrations()
+print(f"Discovered {len(all_migrations)} migration files on disk")
+
 conn = psycopg.connect(**db_params)
 conn.autocommit = True
-
-migrations = [
-    ("loyalty", "0011_remove_merchantpunchcard_linked_menu_item_and_more"),
-    ("loyalty", "0012_pointtransaction_transfer_group"),
-]
 
 now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S.%f%z")
 
 with conn.cursor() as cur:
-    for app, name in migrations:
-        cur.execute(
-            "INSERT INTO django_migrations (app, name, applied) SELECT %s, %s, %s WHERE NOT EXISTS (SELECT 1 FROM django_migrations WHERE app = %s AND name = %s)",
-            (app, name, now, app, name)
-        )
-        print(f"Ensured {app}.{name} is recorded")
+    cur.execute("SELECT app, name FROM django_migrations")
+    applied = {(row[0], row[1]) for row in cur.fetchall()}
+    print(f"Found {len(applied)} migrations already recorded in database")
+
+    inserted = 0
+    for app, name in all_migrations:
+        if (app, name) not in applied:
+            cur.execute(
+                "INSERT INTO django_migrations (app, name, applied) VALUES (%s, %s, %s)",
+                (app, name, now)
+            )
+            print(f"Inserted {app}.{name}")
+            inserted += 1
+
+    print(f"Inserted {inserted} missing migrations total")
 
 conn.close()
 print("Migration fix complete")
