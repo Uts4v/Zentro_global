@@ -41,18 +41,15 @@ else:
 
 import psycopg
 
-CUSTOM_APPS = ["loyalty", "accounts", "orders", "merchants", "notifications"]
-
 conn = psycopg.connect(**db_params)
 conn.autocommit = True
 
 with conn.cursor() as cur:
-    for app in CUSTOM_APPS:
-        cur.execute("DELETE FROM django_migrations WHERE app = %s", (app,))
-        print(f"Cleared migration records for {app}")
+    cur.execute("DELETE FROM django_migrations")
+    print("Cleared ALL migration records from django_migrations")
 
 conn.close()
-print("Database cleaned. Running migrate --fake-initial ...")
+print("All records cleared. Running migrate --fake-initial ...")
 
 result = subprocess.run(
     [sys.executable, os.path.join(BASE_DIR, "manage.py"), "migrate", "--fake-initial", "--no-input"],
