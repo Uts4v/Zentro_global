@@ -187,11 +187,7 @@ function QRSection({
   const storeUrl = `${window.location.origin}/customer/merchant/${profile?.slug ?? ""}`;
 
   const generateQR = useMutation({
-    mutationFn: () =>
-      merchantApi.update({
-        business_name: profile?.business_name,
-        slug: profile?.slug,
-      }),
+    mutationFn: () => merchantApi.regenerateQR(),
     onSuccess: async () => {
       await refreshMerchantProfile();
       onRegenerate();

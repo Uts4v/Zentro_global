@@ -13,6 +13,7 @@ urlpatterns = [
     # ── Authenticated merchant ────────────────────────────────────────────────
     path("me/",                  views.merchant_me,             name="merchant-me"),
     path("me/update/",           views.merchant_update,         name="merchant-update"),
+    path("me/regenerate-qr/",    views.merchant_regenerate_qr,  name="merchant-regenerate-qr"),
     path("analytics/",           views.merchant_analytics,      name="merchant-analytics"),
 # ── Public merchant pages ─────────────────────────────────────────────────
     path("",                     views.merchant_list,           name="merchant-list"),

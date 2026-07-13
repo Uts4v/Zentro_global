@@ -194,6 +194,23 @@ def merchant_update(request):
     return Response(MerchantProfileSerializer(instance).data)
 
 
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def merchant_regenerate_qr(request):
+    """POST /api/merchants/me/regenerate-qr/ — force-regenerate the merchant QR code."""
+    try:
+        merchant = _get_merchant(request.user)
+    except PermissionError as e:
+        return Response({"error": str(e)}, status=status.HTTP_403_FORBIDDEN)
+
+    if not merchant.slug:
+        return Response({"error": "Merchant slug not set."}, status=status.HTTP_400_BAD_REQUEST)
+
+    merchant.qr_code = _generate_qr(merchant.slug, request)
+    merchant.save(update_fields=["qr_code"])
+    return Response({"qr_code": merchant.qr_code})
+
+
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def merchant_menu(request, pk):

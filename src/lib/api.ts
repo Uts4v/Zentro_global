@@ -614,6 +614,13 @@ export const merchantApi = {
       body: JSON.stringify(input),
     });
   },
+
+  regenerateQR: async (): Promise<{ qr_code: string }> => {
+    return djangoFetch<{ qr_code: string }>(apiUrl("/merchants/me/regenerate-qr/"), {
+      method: "POST",
+      headers: authHeaders(true),
+    });
+  },
 };
 
 // ── Customer ──────────────────────────────────────────────────────────────────
