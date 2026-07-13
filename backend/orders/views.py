@@ -20,6 +20,7 @@ from loyalty.models import (
 )
 from loyalty.services import (
     get_or_create_wallet, award_wallet_points, deduct_wallet_points, update_wallet_streak,
+    join_merchant,
 )
 from notifications.services import send_notification
 from notifications.models import Notification
@@ -224,14 +225,7 @@ def create_order(request):
     if not merchant.is_open:
         return Response({"error": "This store is currently closed."}, status=status.HTTP_400_BAD_REQUEST)
 
-    if not CustomerMerchantProfile.objects.filter(
-        customer=customer, merchant=merchant,
-        status=CustomerMerchantProfile.STATUS_ACTIVE,
-    ).exists():
-        return Response(
-            {"error": "Join this merchant before placing an order."},
-            status=status.HTTP_403_FORBIDDEN,
-        )
+    membership, _, _ = join_merchant(customer, merchant)
 
     # Validate fulfillment type against merchant settings
     fulfillment_type = data.get("fulfillment_type", Order.FULFILLMENT_PICKUP)

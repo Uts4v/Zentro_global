@@ -24,6 +24,7 @@ import math
 from datetime import timedelta
 
 import qrcode
+from django.conf import settings
 from django.db.models import Avg, Count, Sum
 from django.db.models.functions import TruncDate
 from django.utils import timezone
@@ -54,7 +55,8 @@ def _get_merchant(user) -> MerchantProfile:
 
 def _generate_qr(slug: str, request) -> str:
     """Generate a base64 QR code PNG pointing to the public merchant page."""
-    customer_url = f"{request.scheme}://{request.get_host()}/m/{slug}"
+    frontend_url = getattr(settings, "FRONTEND_URL", f"{request.scheme}://{request.get_host()}")
+    customer_url = f"{frontend_url.rstrip('/')}/m/{slug}"
     qr_img = qrcode.make(customer_url)
     buf = io.BytesIO()
     qr_img.save(buf, format="PNG")
