@@ -51,21 +51,11 @@ ASGI_APPLICATION = "config.asgi.application"
 # Channel layer — use InMemoryChannelLayer for dev (no Redis needed),
 # swap for RedisChannelLayer in production.
 _redis_url = os.getenv("REDIS_URL", "")
-if _redis_url:
-    CHANNEL_LAYERS = {
-        "default": {
-            "BACKEND": "channels_redis.core.RedisChannelLayer",
-            "CONFIG": {
-                "hosts": [_redis_url],
-            },
-        },
-    }
-else:
-    CHANNEL_LAYERS = {
-        "default": {
-            "BACKEND": "channels.layers.InMemoryChannelLayer",
-        },
-    }
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+    },
+}
 
 # ── Middleware ────────────────────────────────────────────────────────────────
 MIDDLEWARE = [
