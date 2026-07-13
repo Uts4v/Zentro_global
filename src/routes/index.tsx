@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useStore, cartTotal, type MenuItem } from "@/lib/store";
 import { merchantApi, menuApi, customerApi, specialApi, punchCardApi, type TodaySpecial, type CustomerPunchCard } from "@/lib/api";
 import { MobileShell, TopBar } from "@/components/MobileShell";
-import { Plus, ShoppingBag, Flame, Search, X as XIcon, ArrowLeftRight, QrCode, SendHorizontal } from "lucide-react";
+import { Plus, ShoppingBag, Flame, Search, X as XIcon, ArrowLeftRight, QrCode, SendHorizontal, UserPlus, Loader2 } from "lucide-react";
 import { requireAuth } from "@/lib/auth-guard";
 import { useState, useEffect, useMemo } from "react";
 import { TodaySpecialPopup } from "@/features/merchant-management/components/TodaySpecialPopup";
@@ -88,13 +88,17 @@ function Index() {
   const [punchCards, setPunchCards] = useState<{ active: CustomerPunchCard[]; completed: CustomerPunchCard[] }>({ active: [], completed: [] });
   const [punchRedeeming, setPunchRedeeming] = useState<string | null>(null);
   const [merchantThemeColor, setMerchantThemeColor] = useState("");
+  const [joined, setJoined] = useState(false);
+  const [joining, setJoining] = useState(false);
 
   useEffect(() => {
     if (!selectedMerchantId) {
       setLoading(false);
+      setJoined(false);
       return;
     }
     setLoading(true);
+    setJoined(false);
     Promise.all([
       menuApi.forMerchant(selectedMerchantId)
         .then((items) => setMenuItems(items.map((i) => ({ ...i, price: parseFloat(i.price as any) }))))
@@ -110,8 +114,9 @@ function Index() {
         .then((w) => {
           setPoints(w?.points_balance ?? 0);
           setStreak(w?.streak_days ?? 0);
+          setJoined(true);
         })
-        .catch(() => {}),
+        .catch(() => setJoined(false)),
       punchCardApi.customerList(selectedMerchantId)
         .then((data) => setPunchCards(data))
         .catch(() => setPunchCards({ active: [], completed: [] })),
@@ -158,6 +163,18 @@ function Index() {
       setPunchCards(data);
     } catch {}
     setPunchRedeeming(null);
+  }
+
+  async function handleJoin() {
+    if (!merchantSlug || joining) return;
+    setJoining(true);
+    try {
+      const { wallet: w } = await customerApi.joinMerchant(merchantSlug);
+      setJoined(true);
+      setPoints(w?.points_balance ?? 0);
+      setStreak(w?.streak_days ?? 0);
+    } catch {}
+    setJoining(false);
   }
 
   const allPunchCards = [...punchCards.completed, ...punchCards.active];
@@ -230,6 +247,38 @@ function Index() {
           )}
         </div>
       </section>
+
+      {/* Join merchant banner */}
+      {selectedMerchantId && merchantSlug && !joined && !loading && (
+        <section className="px-5 mt-4">
+          <div className="glass-strong relative overflow-hidden rounded-[28px] border border-dashed p-6 text-center" style={{ borderColor: merchantThemeColor || "var(--ember)" }}>
+            <div
+              className="absolute -right-8 -top-8 h-24 w-24 rounded-full opacity-20 blur-3xl"
+              style={{ background: merchantThemeColor || "var(--ember)" }}
+            />
+            <p className="font-display text-lg text-foreground">Join {merchantName}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Join this store to earn points, track orders, and redeem rewards.
+            </p>
+            <button
+              onClick={handleJoin}
+              disabled={joining}
+              className="mt-4 inline-flex items-center gap-2 rounded-full px-6 py-2.5 text-sm font-medium text-white transition-all active:scale-95 disabled:opacity-60"
+              style={{
+                background: merchantThemeColor || "var(--ink)",
+                boxShadow: merchantThemeColor ? `0 4px 14px ${merchantThemeColor}50` : undefined,
+              }}
+            >
+              {joining ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <UserPlus className="h-4 w-4" />
+              )}
+              {joining ? "Joining…" : "Join & Start Earning"}
+            </button>
+          </div>
+        </section>
+      )}
 
       {/* Today's Special Banner */}
       {selectedMerchantId && todaySpecial && (
