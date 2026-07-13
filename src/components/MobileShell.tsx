@@ -1,6 +1,6 @@
 // src/components/MobileShell.tsx
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, Map, Trophy, Gift, User, Bell, Sun, Moon } from "lucide-react";
+import { Home, Map, Trophy, Gift, User, Bell, Sun, Moon, Wallet } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import { useQuery } from "@tanstack/react-query";
@@ -9,11 +9,11 @@ import type { ReactNode } from "react";
 
 type NavItem = { to: string; label: string; icon: typeof Home; center?: boolean };
 const nav: NavItem[] = [
-  { to: "/",            label: "Shop",     icon: Home },
-  { to: "/map",         label: "Discover", icon: Map },
-  { to: "/loyalty",     label: "Card",     icon: User, center: true },
-  { to: "/rewards",     label: "Rewards",  icon: Gift },
-  { to: "/leaderboard", label: "Ranks",    icon: Trophy },
+  { to: "/",            label: "Home",      icon: Home },
+  { to: "/map",         label: "Discover",  icon: Map },
+  { to: "/cards",       label: "My Cards",  icon: Wallet, center: true },
+  { to: "/rewards",     label: "Rewards",   icon: Gift },
+  { to: "/profile",     label: "Profile",   icon: User },
 ];
 
 export function MobileShell({ children }: { children: ReactNode }) {
@@ -25,7 +25,7 @@ export function MobileShell({ children }: { children: ReactNode }) {
       <nav className="fixed inset-x-0 bottom-3 z-50 mx-auto flex max-w-[440px] items-center justify-between px-4">
         <div className="glass-strong flex w-full items-center justify-between rounded-full px-2 py-2">
           {nav.map((n) => {
-            const active = path === n.to;
+            const active = n.to === "/" ? path === n.to : path.startsWith(n.to);
             const Icon = n.icon;
             if (n.center) {
               return (

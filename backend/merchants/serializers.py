@@ -29,6 +29,7 @@ class MerchantProfileSerializer(serializers.ModelSerializer):
             "latitude", "longitude", "qr_code",
             "store_theme_color",
             "table_ordering_enabled", "allow_pickup", "allow_delivery", "allow_dine_in",
+            "allow_point_transfer",
             "menu_items", "created_at", "updated_at",
         ]
         read_only_fields = ["id", "is_approved", "qr_code", "created_at", "updated_at"]

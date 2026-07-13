@@ -1,10 +1,34 @@
 """
 loyalty/models.py
 """
+import secrets
+import string
 import uuid
 from django.db import models
 from django.utils import timezone
 from datetime import timedelta
+
+
+# Characters that exclude visually ambiguous pairs (0/O, 1/I/L)
+_SAFE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
+
+
+def _generate_membership_number(slug: str) -> str:
+    """Generate a non-sequential, merchant-prefixed membership number.
+
+    Format: ``PREFIX-XXXXXX`` where PREFIX is derived from the merchant slug
+    and XXXXXX is a random token from a safe 32-character alphabet.
+
+    Examples: ``CAF-A91K22``, ``RES-X82M11``
+    """
+    prefix_chars = [c for c in slug if c.isalpha()]
+    prefix = "".join(prefix_chars[:3]).upper()
+    prefix = prefix.ljust(3, "X")
+
+    random_part = "".join(
+        secrets.choice(_SAFE_ALPHABET) for _ in range(6)
+    )
+    return f"{prefix}-{random_part}"
 
 class TodaySpecial(models.Model):
     merchant = models.ForeignKey(
@@ -57,7 +81,17 @@ class CustomerMerchantProfile(models.Model):
         on_delete=models.CASCADE,
         related_name="customer_profiles",
     )
+    membership_number = models.CharField(
+        max_length=20,
+        unique=True,
+        blank=True,
+        null=True,
+        db_index=True,
+        help_text="Unique merchant-specific membership ID, e.g. CAF-A91K22",
+    )
     joined_at = models.DateTimeField(auto_now_add=True)
+    last_active_at = models.DateTimeField(null=True, blank=True)
+    is_active = models.BooleanField(default=True, db_index=True)
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
@@ -73,6 +107,13 @@ class CustomerMerchantProfile(models.Model):
 
     def __str__(self):
         return f"{self.customer} @ {self.merchant}"
+
+    def save(self, *args, **kwargs):
+        if not self.membership_number:
+            self.membership_number = _generate_membership_number(
+                self.merchant.slug
+            )
+        super().save(*args, **kwargs)
 
 
 class CustomerMerchantWallet(models.Model):
@@ -97,8 +138,16 @@ class CustomerMerchantWallet(models.Model):
         on_delete=models.CASCADE,
         related_name="customer_wallets",
     )
+    membership = models.ForeignKey(
+        "CustomerMerchantProfile",
+        on_delete=models.CASCADE,
+        related_name="wallets",
+        null=True,
+        blank=True,
+    )
     points_balance = models.IntegerField(default=0)
     lifetime_points = models.IntegerField(default=0)
+    redeemed_points = models.IntegerField(default=0)
     expired_points = models.IntegerField(default=0)
     order_count = models.IntegerField(default=0)
     streak_days = models.IntegerField(default=0)
@@ -274,6 +323,13 @@ class PointTransaction(models.Model):
         on_delete=models.CASCADE,
         related_name="point_transactions",
     )
+    membership = models.ForeignKey(
+        "CustomerMerchantProfile",
+        on_delete=models.CASCADE,
+        related_name="point_transactions",
+        null=True,
+        blank=True,
+    )
     wallet = models.ForeignKey(
         CustomerMerchantWallet,
         on_delete=models.CASCADE,
@@ -445,3 +501,132 @@ class Redemption(models.Model):
 
     def __str__(self):
         return f"{self.customer} — {self.reward.name} [{self.code}]"
+
+
+class MembershipQrToken(models.Model):
+    """Unique QR token for one customer membership at one merchant."""
+
+    membership = models.ForeignKey(
+        "CustomerMerchantProfile",
+        on_delete=models.CASCADE,
+        related_name="qr_tokens",
+    )
+    public_token = models.CharField(
+        max_length=64,
+        unique=True,
+        db_index=True,
+        editable=False,
+    )
+    token_version = models.PositiveIntegerField(default=1)
+    is_active = models.BooleanField(default=True, db_index=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    rotated_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        db_table = "membership_qr_tokens"
+
+    def __str__(self):
+        return f"QR {self.public_token} → {self.membership}"
+
+    def save(self, *args, **kwargs):
+        if not self.public_token:
+            self.public_token = f"MQR_{secrets.token_urlsafe(12)}"
+        super().save(*args, **kwargs)
+
+    def rotate(self):
+        """Invalidate the current token and issue a new one."""
+        self.is_active = False
+        self.rotated_at = timezone.now()
+        self.save(update_fields=["is_active", "rotated_at"])
+        new = MembershipQrToken.objects.create(
+            membership=self.membership,
+            token_version=self.token_version + 1,
+        )
+        return new
+
+
+class MerchantMembershipCardDesign(models.Model):
+    """One card design per merchant — controls how membership cards look."""
+
+    BACKGROUND_SOLID = "solid"
+    BACKGROUND_IMAGE = "image"
+    BACKGROUND_PATTERN = "pattern"
+    BACKGROUND_CHOICES = [
+        (BACKGROUND_SOLID, "Solid Color"),
+        (BACKGROUND_IMAGE, "Image"),
+        (BACKGROUND_PATTERN, "Pattern"),
+    ]
+
+    TEXT_LIGHT = "light"
+    TEXT_DARK = "dark"
+    TEXT_MODE_CHOICES = [
+        (TEXT_LIGHT, "Light Text"),
+        (TEXT_DARK, "Dark Text"),
+    ]
+
+    PATTERN_NONE = ""
+    PATTERN_ZENTRO_DOTS = "zentro_dots"
+    PATTERN_GEOMETRIC = "geometric"
+    PATTERN_DIAMONDS = "diamonds"
+    PATTERN_CHOICES = [
+        (PATTERN_NONE, "None"),
+        (PATTERN_ZENTRO_DOTS, "Zentro Dots"),
+        (PATTERN_GEOMETRIC, "Geometric"),
+        (PATTERN_DIAMONDS, "Diamonds"),
+    ]
+
+    TIER_STYLE_DEFAULT = "default"
+    TIER_STYLE_MINIMAL = "minimal"
+    TIER_STYLE_BADGE = "badge"
+    TIER_STYLE_CHOICES = [
+        (TIER_STYLE_DEFAULT, "Default"),
+        (TIER_STYLE_MINIMAL, "Minimal"),
+        (TIER_STYLE_BADGE, "Badge"),
+    ]
+
+    merchant = models.OneToOneField(
+        "merchants.MerchantProfile",
+        on_delete=models.CASCADE,
+        related_name="card_design",
+    )
+    card_title = models.CharField(max_length=100, default="Membership")
+    card_subtitle = models.CharField(max_length=200, blank=True, default="")
+    background_type = models.CharField(
+        max_length=20,
+        choices=BACKGROUND_CHOICES,
+        default=BACKGROUND_SOLID,
+    )
+    primary_color = models.CharField(max_length=7, default="#171717")
+    secondary_color = models.CharField(max_length=7, default="#382418")
+    accent_color = models.CharField(max_length=7, default="#D97941")
+    text_mode = models.CharField(
+        max_length=10,
+        choices=TEXT_MODE_CHOICES,
+        default=TEXT_LIGHT,
+    )
+    background_image = models.URLField(blank=True, default="")
+    background_pattern = models.CharField(
+        max_length=30,
+        choices=PATTERN_CHOICES,
+        default=PATTERN_ZENTRO_DOTS,
+    )
+    logo = models.URLField(blank=True, default="")
+    tier_style = models.CharField(
+        max_length=20,
+        choices=TIER_STYLE_CHOICES,
+        default=TIER_STYLE_DEFAULT,
+    )
+    points_label = models.CharField(max_length=50, default="POINTS")
+    membership_label = models.CharField(max_length=50, default="MEMBERSHIP")
+    show_lifetime_points = models.BooleanField(default=True)
+    show_joined_date = models.BooleanField(default=True)
+    show_qr_shortcut = models.BooleanField(default=True)
+    is_published = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = "merchant_card_designs"
+
+    def __str__(self):
+        return f"Card design for {self.merchant.business_name}"

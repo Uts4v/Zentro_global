@@ -60,4 +60,18 @@ path("merchant/specials/<int:pk>/",    views.merchant_special_detail,    name="m
     path("transfers/create/", views.transfer_create, name="transfer-create"),
     path("transfers/", views.customer_transfers, name="customer-transfers"),
     path("merchant/transfers/", views.merchant_transfer_history, name="merchant-transfers"),
+
+    # Membership Card Stack
+    path("membership-cards/", views.membership_cards_list, name="membership-cards-list"),
+
+    # Membership QR
+    path("qr/<str:public_token>/", views.membership_qr_resolve, name="membership-qr-resolve"),
+
+    # Merchant Card Design
+    path("merchant/card-design/", views.merchant_card_design, name="merchant-card-design"),
+    path("merchant/card-design/publish/", views.merchant_card_design_publish, name="merchant-card-design-publish"),
+
+    # Merchant Customer Management
+    path("merchant/customers/", views.merchant_customer_list, name="merchant-customer-list"),
+    path("merchant/customers/<int:membership_id>/", views.merchant_customer_detail, name="merchant-customer-detail"),
 ]

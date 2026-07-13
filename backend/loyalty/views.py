@@ -44,10 +44,14 @@ from .serializers import (
     MerchantPunchCardSerializer,
     CustomerPunchCardSerializer,
     PointTransactionSerializer,
+    MembershipSerializer,
+    MembershipCardSerializer,
+    MembershipQrTokenSerializer,
+    MerchantCardDesignSerializer,
 )
 from .services import join_merchant, get_or_create_wallet, deduct_wallet_points, transfer_points
 
-from .models import TodaySpecial
+from .models import TodaySpecial, MembershipQrToken, MerchantMembershipCardDesign
 from .serializers import TodaySpecialSerializer
 
 logger = logging.getLogger(__name__)
@@ -1150,3 +1154,374 @@ def merchant_transfer_history(request):
     ).select_related("customer__user").order_by("-created_at")
 
     return Response(PointTransactionSerializer(qs, many=True).data)
+
+
+# ── Customer Memberships ────────────────────────────────────────────────────
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def membership_list(request):
+    """
+    GET /api/customer/memberships/
+
+    Returns all memberships for the authenticated customer.
+    Merchant A must never see Merchant B memberships — this endpoint
+    only returns data owned by the requesting customer.
+    """
+    try:
+        customer = get_customer_profile(request.user)
+    except PermissionError as e:
+        return _customer_error(str(e))
+
+    memberships = CustomerMerchantProfile.objects.filter(
+        customer=customer,
+    ).select_related("merchant").order_by("-joined_at")
+
+    return Response(MembershipSerializer(memberships, many=True).data)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+@transaction.atomic
+def membership_join(request):
+    """
+    POST /api/customer/memberships/join/
+
+    Join a merchant by slug.  Idempotent — repeated calls return the
+    existing membership instead of creating duplicates.
+
+    Body:
+        merchant_slug (str, required)
+
+    The customer is resolved from the authenticated user — do NOT
+    accept customer_id from the frontend.
+    """
+    try:
+        customer = get_customer_profile(request.user)
+    except PermissionError as e:
+        return _customer_error(str(e))
+
+    merchant_slug = (request.data.get("merchant_slug") or "").strip()
+    if not merchant_slug:
+        return Response(
+            {"error": "merchant_slug is required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        merchant = MerchantProfile.objects.get(slug=merchant_slug)
+    except MerchantProfile.DoesNotExist:
+        return Response(
+            {"error": "Merchant not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    profile, wallet, created = join_merchant(customer, merchant)
+    return Response(
+        MembershipSerializer(profile).data,
+        status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+    )
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def membership_detail_by_slug(request, merchant_slug):
+    """
+    GET /api/customer/memberships/<merchant_slug>/
+
+    Returns the authenticated customer's membership for a specific merchant.
+    Returns 404 if no membership exists for this merchant.
+    """
+    try:
+        customer = get_customer_profile(request.user)
+    except PermissionError as e:
+        return _customer_error(str(e))
+
+    try:
+        merchant = MerchantProfile.objects.get(slug=merchant_slug)
+    except MerchantProfile.DoesNotExist:
+        return Response(
+            {"error": "Merchant not found."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    try:
+        profile = CustomerMerchantProfile.objects.select_related("merchant").get(
+            customer=customer,
+            merchant=merchant,
+        )
+    except CustomerMerchantProfile.DoesNotExist:
+        return Response(
+            {"error": "You have not joined this merchant yet."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    return Response(MembershipSerializer(profile).data)
+
+
+# ── Membership Card Stack API ────────────────────────────────────────────────
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def membership_cards_list(request):
+    """
+    GET /api/customer/membership-cards/
+
+    Returns all memberships for the authenticated customer, with wallet,
+    card design, and transfer settings. Used by the card-stack UI.
+    """
+    try:
+        customer = get_customer_profile(request.user)
+    except PermissionError as e:
+        return _customer_error(str(e))
+
+    profiles = (
+        CustomerMerchantProfile.objects
+        .filter(customer=customer)
+        .select_related("merchant")
+        .prefetch_related("wallets")
+        .order_by("-joined_at")
+    )
+
+    return Response(MembershipCardSerializer(profiles, many=True).data)
+
+
+# ── Membership QR Tokens ─────────────────────────────────────────────────────
+
+
+@api_view(["GET", "POST"])
+@permission_classes([IsAuthenticated])
+def membership_qr(request, merchant_slug):
+    """
+    GET  /api/customer/memberships/<slug>/qr/  — get current active QR
+    POST /api/customer/memberships/<slug>/qr/  — rotate QR (invalidate old, issue new)
+    """
+    try:
+        customer = get_customer_profile(request.user)
+    except PermissionError as e:
+        return _customer_error(str(e))
+
+    try:
+        merchant = MerchantProfile.objects.get(slug=merchant_slug)
+    except MerchantProfile.DoesNotExist:
+        return Response({"error": "Merchant not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    try:
+        membership = CustomerMerchantProfile.objects.get(
+            customer=customer, merchant=merchant,
+        )
+    except CustomerMerchantProfile.DoesNotExist:
+        return Response(
+            {"error": "You have not joined this merchant yet."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    if request.method == "GET":
+        qr = (
+            MembershipQrToken.objects
+            .filter(membership=membership, is_active=True)
+            .order_by("-created_at")
+            .first()
+        )
+        if not qr:
+            qr = MembershipQrToken.objects.create(membership=membership)
+        return Response(MembershipQrTokenSerializer(qr).data)
+
+    # POST — rotate
+    qr = (
+        MembershipQrToken.objects
+        .filter(membership=membership, is_active=True)
+        .order_by("-created_at")
+        .first()
+    )
+    if qr:
+        new_qr = qr.rotate()
+    else:
+        new_qr = MembershipQrToken.objects.create(membership=membership)
+    return Response(MembershipQrTokenSerializer(new_qr).data)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def membership_qr_resolve(request, public_token):
+    """
+    GET /api/loyalty/qr/<public_token>/
+
+    Public endpoint — resolves a QR token to membership info.
+    No sensitive data is exposed.
+    """
+    try:
+        qr = MembershipQrToken.objects.select_related(
+            "membership__customer__user",
+            "membership__merchant",
+        ).get(public_token=public_token, is_active=True)
+    except MembershipQrToken.DoesNotExist:
+        return Response(
+            {"error": "Invalid or expired QR code."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    m = qr.membership
+    return Response({
+        "merchant": {
+            "name": m.merchant.business_name,
+            "slug": m.merchant.slug,
+            "logo": m.merchant.logo_url,
+        },
+        "customer_name": m.customer.full_name or m.customer.user.email,
+        "membership_number": m.membership_number,
+        "status": m.status,
+    })
+
+
+# ── Merchant Card Design ─────────────────────────────────────────────────────
+
+
+@api_view(["GET", "PATCH"])
+@permission_classes([IsAuthenticated])
+def merchant_card_design(request):
+    """
+    GET  /api/merchant/card-design/  — get card design
+    PATCH /api/merchant/card-design/ — update card design
+    """
+    try:
+        merchant = get_merchant_profile(request.user)
+    except PermissionError as e:
+        return _merchant_error(str(e))
+
+    design, _ = MerchantMembershipCardDesign.objects.get_or_create(
+        merchant=merchant,
+        defaults={
+            "card_title": "Membership",
+            "primary_color": "#171717",
+            "secondary_color": "#382418",
+            "accent_color": "#D97941",
+        },
+    )
+
+    if request.method == "GET":
+        return Response(MerchantCardDesignSerializer(design).data)
+
+    serializer = MerchantCardDesignSerializer(design, data=request.data, partial=True)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    serializer.save()
+    return Response(serializer.data)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def merchant_card_design_publish(request):
+    """
+    POST /api/merchant/card-design/publish/
+    """
+    try:
+        merchant = get_merchant_profile(request.user)
+    except PermissionError as e:
+        return _merchant_error(str(e))
+
+    design, _ = MerchantMembershipCardDesign.objects.get_or_create(merchant=merchant)
+    design.is_published = True
+    design.save(update_fields=["is_published", "updated_at"])
+    return Response(MerchantCardDesignSerializer(design).data)
+
+
+# ── Merchant Customer List ────────────────────────────────────────────────────
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def merchant_customer_list(request):
+    """
+    GET /api/loyalty/merchant/customers/
+
+    Merchant sees only members of their own business.
+    """
+    try:
+        merchant = get_merchant_profile(request.user)
+    except PermissionError as e:
+        return _merchant_error(str(e))
+
+    memberships = (
+        CustomerMerchantProfile.objects
+        .filter(merchant=merchant)
+        .select_related("customer__user", "merchant")
+        .order_by("-joined_at")
+    )
+
+    result = []
+    for m in memberships:
+        wallet = CustomerMerchantWallet.objects.filter(
+            customer=m.customer, merchant=merchant,
+        ).first()
+        result.append({
+            "membership_id": m.id,
+            "membership_number": m.membership_number,
+            "customer_name": m.customer.full_name or m.customer.user.email,
+            "customer_email": m.customer.user.email,
+            "points_balance": wallet.points_balance if wallet else 0,
+            "lifetime_points": wallet.lifetime_points if wallet else 0,
+            "tier": wallet.tier_level if wallet else "bronze",
+            "joined_at": m.joined_at,
+            "status": m.status,
+            "last_active_at": m.last_active_at,
+        })
+
+    return Response(result)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def merchant_customer_detail(request, membership_id):
+    """
+    GET /api/loyalty/merchant/customers/<membership_id>/
+
+    Merchant can only view members of their own business.
+    Never resolve by membership ID alone.
+    """
+    try:
+        merchant = get_merchant_profile(request.user)
+    except PermissionError as e:
+        return _merchant_error(str(e))
+
+    try:
+        membership = CustomerMerchantProfile.objects.select_related(
+            "customer__user", "merchant",
+        ).get(
+            id=membership_id,
+            merchant=merchant,
+        )
+    except CustomerMerchantProfile.DoesNotExist:
+        return Response(
+            {"error": "Customer not found in your business."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    wallet = CustomerMerchantWallet.objects.filter(
+        customer=membership.customer, merchant=merchant,
+    ).first()
+
+    transactions = PointTransaction.objects.filter(
+        customer=membership.customer,
+        merchant=merchant,
+    ).select_related("wallet").order_by("-created_at")[:50]
+
+    return Response({
+        "membership_id": membership.id,
+        "membership_number": membership.membership_number,
+        "customer_name": membership.customer.full_name or membership.customer.user.email,
+        "customer_email": membership.customer.user.email,
+        "joined_at": membership.joined_at,
+        "status": membership.status,
+        "wallet": {
+            "points_balance": wallet.points_balance if wallet else 0,
+            "lifetime_points": wallet.lifetime_points if wallet else 0,
+            "redeemed_points": wallet.redeemed_points if wallet else 0,
+            "tier": wallet.tier_level if wallet else "bronze",
+            "order_count": wallet.order_count if wallet else 0,
+            "streak_days": wallet.streak_days if wallet else 0,
+        },
+        "recent_transactions": PointTransactionSerializer(transactions, many=True).data,
+    })

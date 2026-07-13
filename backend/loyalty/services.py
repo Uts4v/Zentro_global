@@ -5,17 +5,24 @@ Merchant-scoped loyalty helpers — wallets, onboarding, point operations.
 """
 
 import uuid
+from django.db import transaction
 from django.utils import timezone
 
 from .models import CustomerMerchantProfile, CustomerMerchantWallet, PointTransaction
 
 
-def get_or_create_wallet(customer, merchant) -> CustomerMerchantWallet:
+def get_or_create_wallet(customer, merchant, membership=None) -> CustomerMerchantWallet:
     wallet, _ = CustomerMerchantWallet.objects.get_or_create(
         customer=customer,
         merchant=merchant,
-        defaults={"tier_level": CustomerMerchantWallet.TIER_BRONZE},
+        defaults={
+            "tier_level": CustomerMerchantWallet.TIER_BRONZE,
+            "membership": membership,
+        },
     )
+    if not wallet.membership and membership:
+        wallet.membership = membership
+        wallet.save(update_fields=["membership", "updated_at"])
     return wallet
 
 
@@ -33,7 +40,7 @@ def join_merchant(customer, merchant):
         profile.status = CustomerMerchantProfile.STATUS_ACTIVE
         profile.save(update_fields=["status", "updated_at"])
 
-    wallet = get_or_create_wallet(customer, merchant)
+    wallet = get_or_create_wallet(customer, merchant, membership=profile)
     return profile, wallet, profile_created
 
 
@@ -74,6 +81,7 @@ def award_wallet_points(wallet: CustomerMerchantWallet, pts: int, transaction_ty
     PointTransaction.objects.create(
         merchant=wallet.merchant,
         customer=wallet.customer,
+        membership=wallet.membership,
         wallet=wallet,
         transaction_type=transaction_type,
         points=pts,
@@ -100,6 +108,7 @@ def deduct_wallet_points(wallet: CustomerMerchantWallet, pts: int, transaction_t
     PointTransaction.objects.create(
         merchant=wallet.merchant,
         customer=wallet.customer,
+        membership=wallet.membership,
         wallet=wallet,
         transaction_type=transaction_type,
         points=-pts,
@@ -194,6 +203,7 @@ def transfer_points(sender_wallet: CustomerMerchantWallet, receiver_wallet: Cust
     sent_txn = PointTransaction.objects.create(
         merchant=merchant,
         customer=sender_customer,
+        membership=sender_wallet.membership,
         wallet=sender_wallet,
         transaction_type="TRANSFER_SENT",
         points=-points,
@@ -211,6 +221,7 @@ def transfer_points(sender_wallet: CustomerMerchantWallet, receiver_wallet: Cust
     received_txn = PointTransaction.objects.create(
         merchant=merchant,
         customer=receiver_customer,
+        membership=receiver_wallet.membership,
         wallet=receiver_wallet,
         transaction_type="TRANSFER_RECEIVED",
         points=points,

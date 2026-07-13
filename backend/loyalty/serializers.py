@@ -15,6 +15,8 @@ from .models import (
     CustomerPunchCard,
     PointTransaction,
     TodaySpecial,
+    MembershipQrToken,
+    MerchantMembershipCardDesign,
 )
 
 class LoyaltyRulesSerializer(serializers.ModelSerializer):
@@ -263,3 +265,195 @@ class CustomerMerchantWalletSerializer(serializers.ModelSerializer):
             "updated_at",
         ]
         read_only_fields = fields
+
+
+class MembershipSerializer(serializers.ModelSerializer):
+    """Serializer for the customer membership response.
+
+    Returns the shape requested by the membership API:
+    {
+        "membership_id": 42,
+        "membership_number": "CAF-A91K22",
+        "merchant": { "name": "...", "slug": "...", "logo": "..." },
+        "joined_at": "...",
+        "status": "active"
+    }
+    """
+
+    membership_id = serializers.IntegerField(source="id", read_only=True)
+    merchant = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CustomerMerchantProfile
+        fields = [
+            "membership_id",
+            "membership_number",
+            "merchant",
+            "joined_at",
+            "status",
+            "is_active",
+            "last_active_at",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = [
+            "membership_id",
+            "membership_number",
+            "joined_at",
+            "status",
+            "is_active",
+            "last_active_at",
+            "created_at",
+            "updated_at",
+        ]
+
+    def get_merchant(self, obj):
+        return {
+            "name": obj.merchant.business_name,
+            "slug": obj.merchant.slug,
+            "logo": obj.merchant.logo_url,
+        }
+
+
+class MembershipCardSerializer(serializers.ModelSerializer):
+    """Returns the full card data for the customer card stack UI."""
+
+    merchant = serializers.SerializerMethodField()
+    membership = serializers.SerializerMethodField()
+    wallet = serializers.SerializerMethodField()
+    card_design = serializers.SerializerMethodField()
+    transfer_enabled = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CustomerMerchantProfile
+        fields = [
+            "merchant",
+            "membership",
+            "wallet",
+            "card_design",
+            "transfer_enabled",
+        ]
+
+    def get_merchant(self, obj):
+        return {
+            "name": obj.merchant.business_name,
+            "slug": obj.merchant.slug,
+            "logo": obj.merchant.logo_url,
+        }
+
+    def get_membership(self, obj):
+        num = obj.membership_number or ""
+        if len(num) > 4:
+            masked = "•••• " + num[-6:]
+        else:
+            masked = num
+        return {
+            "membership_number_masked": masked,
+            "membership_number_full": num,
+            "joined_at": obj.joined_at.isoformat() if obj.joined_at else None,
+            "status": obj.status,
+        }
+
+    def get_wallet(self, obj):
+        w = None
+        try:
+            # Try reverse FK first (wallets linked via membership FK)
+            w = obj.wallets.first()
+        except Exception:
+            pass
+        if not w:
+            try:
+                # Fallback: match by customer+merchant directly
+                from .models import CustomerMerchantWallet
+                w = CustomerMerchantWallet.objects.filter(
+                    customer=obj.customer,
+                    merchant=obj.merchant,
+                ).first()
+            except Exception:
+                pass
+        if not w:
+            return {
+                "points_balance": 0,
+                "lifetime_points": 0,
+                "redeemed_points": 0,
+                "tier": "bronze",
+                "streak_days": 0,
+            }
+        return {
+            "points_balance": w.points_balance,
+            "lifetime_points": w.lifetime_points,
+            "redeemed_points": w.redeemed_points,
+            "tier": w.tier_level,
+            "streak_days": getattr(w, "streak_days", 0),
+        }
+
+    def get_card_design(self, obj):
+        try:
+            design = obj.merchant.card_design
+            if not design.is_published:
+                return None
+            return {
+                "primary_color": design.primary_color,
+                "secondary_color": design.secondary_color,
+                "accent_color": design.accent_color,
+                "text_mode": design.text_mode,
+                "background_pattern": design.background_pattern,
+                "background_type": design.background_type,
+                "background_image": design.background_image,
+                "card_title": design.card_title,
+                "card_subtitle": design.card_subtitle,
+                "logo": design.logo,
+                "tier_style": design.tier_style,
+                "points_label": design.points_label,
+                "membership_label": design.membership_label,
+                "show_lifetime_points": design.show_lifetime_points,
+                "show_joined_date": design.show_joined_date,
+                "show_qr_shortcut": design.show_qr_shortcut,
+            }
+        except MerchantMembershipCardDesign.DoesNotExist:
+            return None
+
+    def get_transfer_enabled(self, obj):
+        return obj.merchant.allow_point_transfer
+
+
+class MembershipQrTokenSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MembershipQrToken
+        fields = [
+            "id",
+            "public_token",
+            "token_version",
+            "is_active",
+            "created_at",
+            "rotated_at",
+        ]
+        read_only_fields = fields
+
+
+class MerchantCardDesignSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = MerchantMembershipCardDesign
+        fields = [
+            "id",
+            "card_title",
+            "card_subtitle",
+            "background_type",
+            "primary_color",
+            "secondary_color",
+            "accent_color",
+            "text_mode",
+            "background_image",
+            "background_pattern",
+            "logo",
+            "tier_style",
+            "points_label",
+            "membership_label",
+            "show_lifetime_points",
+            "show_joined_date",
+            "show_qr_shortcut",
+            "is_published",
+            "created_at",
+            "updated_at",
+        ]
+        read_only_fields = ["id", "created_at", "updated_at"]

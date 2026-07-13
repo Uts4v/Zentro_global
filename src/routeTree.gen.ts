@@ -20,6 +20,7 @@ import { Route as MapRouteImport } from './routes/map'
 import { Route as LoyaltyRouteImport } from './routes/loyalty'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as CartRouteImport } from './routes/cart'
+import { Route as CardsRouteImport } from './routes/cards'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as MerchantIndexRouteImport } from './routes/merchant.index'
@@ -37,6 +38,7 @@ import { Route as MSlugRouteImport } from './routes/m.$slug'
 import { Route as CustomerOrdersRouteImport } from './routes/customer.orders'
 import { Route as CustomerOrderRouteImport } from './routes/customer.order'
 import { Route as CustomerMerchantsRouteImport } from './routes/customer.merchants'
+import { Route as CardsMerchantSlugRouteImport } from './routes/cards.$merchantSlug'
 import { Route as AuthSignupRouteImport } from './routes/auth.signup'
 import { Route as AuthResetPasswordRouteImport } from './routes/auth.reset-password'
 import { Route as AuthMerchantRouteImport } from './routes/auth.merchant'
@@ -100,6 +102,11 @@ const LeaderboardRoute = LeaderboardRouteImport.update({
 const CartRoute = CartRouteImport.update({
   id: '/cart',
   path: '/cart',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CardsRoute = CardsRouteImport.update({
+  id: '/cards',
+  path: '/cards',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -187,6 +194,11 @@ const CustomerMerchantsRoute = CustomerMerchantsRouteImport.update({
   path: '/customer/merchants',
   getParentRoute: () => rootRouteImport,
 } as any)
+const CardsMerchantSlugRoute = CardsMerchantSlugRouteImport.update({
+  id: '/$merchantSlug',
+  path: '/$merchantSlug',
+  getParentRoute: () => CardsRoute,
+} as any)
 const AuthSignupRoute = AuthSignupRouteImport.update({
   id: '/signup',
   path: '/signup',
@@ -236,6 +248,7 @@ const MSlugTableTokenRoute = MSlugTableTokenRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
+  '/cards': typeof CardsRouteWithChildren
   '/cart': typeof CartRoute
   '/leaderboard': typeof LeaderboardRoute
   '/loyalty': typeof LoyaltyRoute
@@ -252,6 +265,7 @@ export interface FileRoutesByFullPath {
   '/auth/merchant': typeof AuthMerchantRouteWithChildren
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/auth/signup': typeof AuthSignupRoute
+  '/cards/$merchantSlug': typeof CardsMerchantSlugRoute
   '/customer/merchants': typeof CustomerMerchantsRoute
   '/customer/order': typeof CustomerOrderRoute
   '/customer/orders': typeof CustomerOrdersRoute
@@ -275,6 +289,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
+  '/cards': typeof CardsRouteWithChildren
   '/cart': typeof CartRoute
   '/leaderboard': typeof LeaderboardRoute
   '/loyalty': typeof LoyaltyRoute
@@ -290,6 +305,7 @@ export interface FileRoutesByTo {
   '/auth/merchant': typeof AuthMerchantRouteWithChildren
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/auth/signup': typeof AuthSignupRoute
+  '/cards/$merchantSlug': typeof CardsMerchantSlugRoute
   '/customer/merchants': typeof CustomerMerchantsRoute
   '/customer/order': typeof CustomerOrderRoute
   '/customer/orders': typeof CustomerOrdersRoute
@@ -314,6 +330,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/auth': typeof AuthRouteWithChildren
+  '/cards': typeof CardsRouteWithChildren
   '/cart': typeof CartRoute
   '/leaderboard': typeof LeaderboardRoute
   '/loyalty': typeof LoyaltyRoute
@@ -330,6 +347,7 @@ export interface FileRoutesById {
   '/auth/merchant': typeof AuthMerchantRouteWithChildren
   '/auth/reset-password': typeof AuthResetPasswordRoute
   '/auth/signup': typeof AuthSignupRoute
+  '/cards/$merchantSlug': typeof CardsMerchantSlugRoute
   '/customer/merchants': typeof CustomerMerchantsRoute
   '/customer/order': typeof CustomerOrderRoute
   '/customer/orders': typeof CustomerOrdersRoute
@@ -355,6 +373,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/cards'
     | '/cart'
     | '/leaderboard'
     | '/loyalty'
@@ -371,6 +390,7 @@ export interface FileRouteTypes {
     | '/auth/merchant'
     | '/auth/reset-password'
     | '/auth/signup'
+    | '/cards/$merchantSlug'
     | '/customer/merchants'
     | '/customer/order'
     | '/customer/orders'
@@ -394,6 +414,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/cards'
     | '/cart'
     | '/leaderboard'
     | '/loyalty'
@@ -409,6 +430,7 @@ export interface FileRouteTypes {
     | '/auth/merchant'
     | '/auth/reset-password'
     | '/auth/signup'
+    | '/cards/$merchantSlug'
     | '/customer/merchants'
     | '/customer/order'
     | '/customer/orders'
@@ -432,6 +454,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/auth'
+    | '/cards'
     | '/cart'
     | '/leaderboard'
     | '/loyalty'
@@ -448,6 +471,7 @@ export interface FileRouteTypes {
     | '/auth/merchant'
     | '/auth/reset-password'
     | '/auth/signup'
+    | '/cards/$merchantSlug'
     | '/customer/merchants'
     | '/customer/order'
     | '/customer/orders'
@@ -472,6 +496,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthRoute: typeof AuthRouteWithChildren
+  CardsRoute: typeof CardsRouteWithChildren
   CartRoute: typeof CartRoute
   LeaderboardRoute: typeof LeaderboardRoute
   LoyaltyRoute: typeof LoyaltyRoute
@@ -569,6 +594,13 @@ declare module '@tanstack/react-router' {
       path: '/cart'
       fullPath: '/cart'
       preLoaderRoute: typeof CartRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/cards': {
+      id: '/cards'
+      path: '/cards'
+      fullPath: '/cards'
+      preLoaderRoute: typeof CardsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -690,6 +722,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof CustomerMerchantsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/cards/$merchantSlug': {
+      id: '/cards/$merchantSlug'
+      path: '/$merchantSlug'
+      fullPath: '/cards/$merchantSlug'
+      preLoaderRoute: typeof CardsMerchantSlugRouteImport
+      parentRoute: typeof CardsRoute
+    }
     '/auth/signup': {
       id: '/auth/signup'
       path: '/signup'
@@ -788,6 +827,16 @@ const AuthRouteChildren: AuthRouteChildren = {
 
 const AuthRouteWithChildren = AuthRoute._addFileChildren(AuthRouteChildren)
 
+interface CardsRouteChildren {
+  CardsMerchantSlugRoute: typeof CardsMerchantSlugRoute
+}
+
+const CardsRouteChildren: CardsRouteChildren = {
+  CardsMerchantSlugRoute: CardsMerchantSlugRoute,
+}
+
+const CardsRouteWithChildren = CardsRoute._addFileChildren(CardsRouteChildren)
+
 interface MerchantRouteChildren {
   MerchantAnalyticsRoute: typeof MerchantAnalyticsRoute
   MerchantLoyaltyRoute: typeof MerchantLoyaltyRoute
@@ -829,6 +878,7 @@ const MSlugRouteWithChildren = MSlugRoute._addFileChildren(MSlugRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthRoute: AuthRouteWithChildren,
+  CardsRoute: CardsRouteWithChildren,
   CartRoute: CartRoute,
   LeaderboardRoute: LeaderboardRoute,
   LoyaltyRoute: LoyaltyRoute,

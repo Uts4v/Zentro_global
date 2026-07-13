@@ -1048,6 +1048,89 @@ export const transferApi = {
   },
 };
 
+// ── Membership Cards ─────────────────────────────────────────────────────────
+
+export interface MembershipCardDesign {
+  card_title: string;
+  card_subtitle: string | null;
+  primary_color: string;
+  secondary_color: string;
+  accent_color: string;
+  text_mode: string;
+  background_type: string;
+  background_image: string | null;
+  background_pattern: string | null;
+  logo: string | null;
+  tier_style: string;
+  points_label: string | null;
+  membership_label: string | null;
+  show_lifetime_points: boolean;
+  show_joined_date: boolean;
+  show_qr_shortcut: boolean;
+}
+
+export interface MembershipCard {
+  merchant: {
+    name: string;
+    slug: string;
+    logo: string | null;
+  };
+  membership: {
+    membership_number_masked: string;
+    membership_number_full: string;
+    joined_at: string | null;
+    status: string;
+  };
+  wallet: {
+    points_balance: number;
+    lifetime_points: number;
+    redeemed_points: number;
+    tier: string;
+    streak_days: number;
+  };
+  card_design: MembershipCardDesign | null;
+  transfer_enabled: boolean;
+}
+
+export interface MembershipQrToken {
+  public_token: string;
+  token_version: number;
+  created_at: string;
+}
+
+export const membershipCardApi = {
+  list: async (): Promise<MembershipCard[]> => {
+    return djangoFetch<MembershipCard[]>(apiUrl("/loyalty/membership-cards/"), {
+      headers: authHeaders(),
+    });
+  },
+
+  getQr: async (merchantSlug: string): Promise<MembershipQrToken> => {
+    return djangoFetch<MembershipQrToken>(
+      apiUrl(`/customer/memberships/${encodeURIComponent(merchantSlug)}/qr/`),
+      { headers: authHeaders() }
+    );
+  },
+
+  rotateQr: async (merchantSlug: string): Promise<MembershipQrToken> => {
+    return djangoFetch<MembershipQrToken>(
+      apiUrl(`/customer/memberships/${encodeURIComponent(merchantSlug)}/qr/`),
+      {
+        method: "POST",
+        headers: authHeaders(true),
+        body: JSON.stringify({}),
+      }
+    );
+  },
+
+  getMembershipDetail: async (merchantSlug: string) => {
+    return djangoFetch<any>(
+      apiUrl(`/customer/memberships/${encodeURIComponent(merchantSlug)}/`),
+      { headers: authHeaders() }
+    );
+  },
+};
+
 // ── Leaderboard ───────────────────────────────────────────────────────────────
 
 export const leaderboardApi = {

@@ -14,6 +14,8 @@ from .models import (
     MerchantPunchCard,
     CustomerPunchCard,
     PointTransaction,
+    MembershipQrToken,
+    MerchantMembershipCardDesign,
 )
 
 
@@ -95,3 +97,21 @@ class RedemptionAdmin(admin.ModelAdmin):
     list_filter = ["status"]
     search_fields = ["code", "customer__full_name", "reward__name"]
     readonly_fields = ["created_at"]
+
+
+@admin.register(MembershipQrToken)
+class MembershipQrTokenAdmin(admin.ModelAdmin):
+    list_display = ["public_token", "membership", "token_version", "is_active", "created_at"]
+    list_filter = ["is_active"]
+    search_fields = ["public_token", "membership__membership_number"]
+    readonly_fields = ["public_token", "created_at", "rotated_at"]
+
+
+@admin.register(MerchantMembershipCardDesign)
+class MerchantMembershipCardDesignAdmin(admin.ModelAdmin):
+    list_display = [
+        "merchant", "card_title", "primary_color", "accent_color",
+        "is_published", "updated_at",
+    ]
+    list_filter = ["is_published", "text_mode", "background_type"]
+    search_fields = ["merchant__business_name"]

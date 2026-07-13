@@ -49,6 +49,10 @@ class MerchantProfile(models.Model):
     allow_pickup = models.BooleanField(default=True)
     allow_delivery = models.BooleanField(default=False)
     allow_dine_in = models.BooleanField(default=False)
+    allow_point_transfer = models.BooleanField(
+        default=False,
+        help_text="Allow customers to transfer points to other members of this business",
+    )
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
