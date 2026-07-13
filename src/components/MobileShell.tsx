@@ -9,11 +9,11 @@ import type { ReactNode } from "react";
 
 type NavItem = { to: string; label: string; icon: typeof Home; center?: boolean };
 const nav: NavItem[] = [
-  { to: "/",            label: "Home",      icon: Home },
-  { to: "/map",         label: "Discover",  icon: Map },
-  { to: "/cards",       label: "My Cards",  icon: Wallet, center: true },
-  { to: "/rewards",     label: "Rewards",   icon: Gift },
-  { to: "/profile",     label: "Profile",   icon: User },
+  { to: "/", label: "Home", icon: Home },
+  { to: "/map", label: "Discover", icon: Map },
+  { to: "/cards", label: "My Cards", icon: Wallet, center: true },
+  { to: "/rewards", label: "Rewards", icon: Gift },
+  { to: "/profile", label: "Profile", icon: User },
 ];
 
 export function MobileShell({ children }: { children: ReactNode }) {
@@ -83,8 +83,8 @@ export function TopBar({ title, right }: { title?: string; right?: ReactNode }) 
 
   const unreadCount = data?.unread_count ?? 0;
   const firstName = user?.first_name ?? null;
-  const initial   = getInitial(user?.first_name);
-  const greeting  = getGreeting();
+  const initial = getInitial(user?.first_name);
+  const greeting = getGreeting();
   const { resolved, setTheme, theme } = useTheme();
 
   function cycleTheme() {
@@ -94,16 +94,14 @@ export function TopBar({ title, right }: { title?: string; right?: ReactNode }) 
   }
 
   return (
-    <header className="sticky top-0 z-40 px-5 pb-3 pt-5">
-        <div className="flex items-center justify-between">
+    <header className="relative z-40 px-5 pb-3 pt-5">
+      <div className="flex items-center justify-between">
         <Link to="/" className="font-display text-2xl tracking-tight text-foreground">
           zentro<span className="text-ember">.</span>
         </Link>
 
         {title && (
-          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-            {title}
-          </p>
+          <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">{title}</p>
         )}
 
         <div className="flex items-center gap-2">
@@ -150,10 +148,12 @@ export function TopBar({ title, right }: { title?: string; right?: ReactNode }) 
           {loading ? (
             <div className="h-4 w-32 animate-pulse rounded-full bg-muted" />
           ) : (
-              <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-muted-foreground">
               {greeting}
               {firstName ? (
-                <>, <span className="font-medium text-foreground">{firstName}</span></>
+                <>
+                  , <span className="font-medium text-foreground">{firstName}</span>
+                </>
               ) : null}{" "}
               👋
             </p>

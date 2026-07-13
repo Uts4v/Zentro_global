@@ -11,11 +11,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export const Route = createFileRoute("/transfers")({
   beforeLoad: requireAuth,
   head: () => ({ meta: [{ title: "Transfer points · Zentro" }] }),
+  validateSearch: (search: Record<string, unknown>) => ({
+    code: (search.code as string) || undefined,
+  }),
   component: TransfersPage,
 });
 
 function TransfersPage() {
   const [refreshKey, setRefreshKey] = useState(0);
+  const { code } = Route.useSearch();
 
   return (
     <MobileShell>
@@ -29,7 +33,10 @@ function TransfersPage() {
           </TabsList>
 
           <TabsContent value="send">
-            <TransferForm onSuccess={() => setRefreshKey((k) => k + 1)} />
+            <TransferForm
+              scannedTransferCode={code}
+              onSuccess={() => setRefreshKey((k) => k + 1)}
+            />
           </TabsContent>
 
           <TabsContent value="receive">

@@ -4,8 +4,16 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { membershipCardApi, type MembershipCard } from "@/lib/api";
 import { QRCodeSVG } from "qrcode.react";
 import {
-  QrCode, ChevronRight, Sparkles, ArrowRightLeft, Layers, Flame, Store, X,
+  QrCode,
+  ChevronRight,
+  Sparkles,
+  ArrowRightLeft,
+  Flame,
+  Store,
+  X,
+  Scan,
 } from "lucide-react";
+import { QRScanner } from "@/features/transfers/components/QRScanner";
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 
@@ -32,25 +40,33 @@ function tierLabel(tier: string) {
 function tierBadgeBg(tier: string, isDark: boolean) {
   if (isDark) {
     switch (tier) {
-      case "platinum": return "rgba(255,255,255,0.18)";
-      case "gold": return "rgba(217,169,78,0.25)";
-      case "silver": return "rgba(255,255,255,0.12)";
-      default: return "rgba(255,255,255,0.08)";
+      case "platinum":
+        return "rgba(255,255,255,0.18)";
+      case "gold":
+        return "rgba(217,169,78,0.25)";
+      case "silver":
+        return "rgba(255,255,255,0.12)";
+      default:
+        return "rgba(255,255,255,0.08)";
     }
   }
   switch (tier) {
-    case "platinum": return "rgba(255,255,255,0.22)";
-    case "gold": return "rgba(180,130,40,0.18)";
-    case "silver": return "rgba(255,255,255,0.15)";
-    default: return "rgba(255,255,255,0.10)";
+    case "platinum":
+      return "rgba(255,255,255,0.22)";
+    case "gold":
+      return "rgba(180,130,40,0.18)";
+    case "silver":
+      return "rgba(255,255,255,0.15)";
+    default:
+      return "rgba(255,255,255,0.10)";
   }
 }
 
 /* ── Card peek height constants (px) ───────────────────────────────────── */
 
-const PEEK_1 = 58;
-const PEEK_2 = 44;
-const STACK_GAP = 12;
+const PEEK_1 = 52;
+const PEEK_2 = 40;
+const STACK_GAP = 10;
 
 /* ── QR Modal ──────────────────────────────────────────────────────────── */
 
@@ -158,10 +174,7 @@ function CardFace({
 
   if (compact) {
     return (
-      <div
-        className="flex items-center gap-3 px-5 py-3.5"
-        style={{ color: style.color }}
-      >
+      <div className="flex items-center gap-3 px-5 py-3.5" style={{ color: style.color }}>
         {card.merchant.logo ? (
           <img
             src={card.merchant.logo}
@@ -169,11 +182,12 @@ function CardFace({
             className="h-7 w-7 shrink-0 rounded-lg object-cover"
           />
         ) : (
-          <div className="h-7 w-7 shrink-0 rounded-lg" style={{ background: "rgba(255,255,255,0.15)" }} />
+          <div
+            className="h-7 w-7 shrink-0 rounded-lg"
+            style={{ background: "rgba(255,255,255,0.15)" }}
+          />
         )}
-        <p className="min-w-0 flex-1 truncate font-display text-[17px]">
-          {merchantName}
-        </p>
+        <p className="min-w-0 flex-1 truncate font-display text-[17px]">{merchantName}</p>
         <span
           className="shrink-0 rounded-full px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-widest"
           style={{ background: tierBadgeBg(tier, isLightText), color: style.color }}
@@ -210,9 +224,7 @@ function CardFace({
             <p className="text-[9px] uppercase tracking-[0.22em] opacity-45">
               {card.card_design?.card_title || "Membership"}
             </p>
-            <p className="mt-0.5 truncate font-display text-[22px] leading-tight">
-              {merchantName}
-            </p>
+            <p className="mt-0.5 truncate font-display text-[22px] leading-tight">{merchantName}</p>
           </div>
         </div>
         <span
@@ -296,9 +308,7 @@ function CardSkeletonStack() {
   return (
     <div className="relative" style={{ height: 300 }}>
       <div className="absolute left-0 right-0 top-0 h-[52px] animate-pulse rounded-t-[24px] bg-muted opacity-60" />
-      <div
-        className="absolute left-0 right-0 top-[44px] h-[52px] animate-pulse rounded-t-[24px] bg-muted opacity-40"
-      />
+      <div className="absolute left-0 right-0 top-[44px] h-[52px] animate-pulse rounded-t-[24px] bg-muted opacity-40" />
       <div className="absolute inset-x-0 top-[80px] bottom-0 animate-pulse rounded-[24px] bg-muted" />
     </div>
   );
@@ -312,6 +322,8 @@ export function MembershipCardStack() {
   const [error, setError] = useState<string | null>(null);
   const [activeIdx, setActiveIdx] = useState(0);
   const [qrModal, setQrModal] = useState<{ slug: string; name: string } | null>(null);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [scannerOpen, setScannerOpen] = useState(false);
   const navigate = useNavigate();
 
   const dragRef = useRef({ startY: 0, active: false });
@@ -331,23 +343,31 @@ export function MembershipCardStack() {
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
     if (activeIdx >= cards.length) setActiveIdx(Math.max(0, cards.length - 1));
   }, [cards.length, activeIdx]);
 
-  const goTo = useCallback((idx: number) => {
-    setActiveIdx(Math.max(0, Math.min(idx, cards.length - 1)));
-  }, [cards.length]);
+  const goTo = useCallback(
+    (idx: number) => {
+      setActiveIdx(Math.max(0, Math.min(idx, cards.length - 1)));
+    },
+    [cards.length],
+  );
 
   const prev = useCallback(() => goTo(activeIdx - 1), [activeIdx, goTo]);
   const next = useCallback(() => goTo(activeIdx + 1), [activeIdx, goTo]);
 
-  const openDetail = useCallback((slug: string) => {
-    navigate({ to: "/cards/$merchantSlug", params: { merchantSlug: slug } });
-  }, [navigate]);
+  const openDetail = useCallback(
+    (slug: string) => {
+      navigate({ to: "/cards/$merchantSlug", params: { merchantSlug: slug } });
+    },
+    [navigate],
+  );
 
   const openQr = useCallback((slug: string, name: string) => {
     setQrModal({ slug, name });
@@ -356,51 +376,76 @@ export function MembershipCardStack() {
   /* ── Touch drag ── */
   const onTouchStart = useCallback((e: React.TouchEvent) => {
     dragRef.current = { startY: e.touches[0].clientY, active: true };
+    setDragOffset(0);
   }, []);
 
-  const onTouchEnd = useCallback((e: React.TouchEvent) => {
+  const onTouchMove = useCallback((e: React.TouchEvent) => {
     if (!dragRef.current.active) return;
-    dragRef.current.active = false;
-    const dy = e.changedTouches[0].clientY - dragRef.current.startY;
-    if (Math.abs(dy) > 30) {
-      if (dy < 0) next();
-      else prev();
-    }
-  }, [next, prev]);
+    const dy = e.touches[0].clientY - dragRef.current.startY;
+    setDragOffset(dy * 0.4); // dampened drag
+  }, []);
+
+  const onTouchEnd = useCallback(
+    (e: React.TouchEvent) => {
+      if (!dragRef.current.active) return;
+      dragRef.current.active = false;
+      const dy = e.changedTouches[0].clientY - dragRef.current.startY;
+      setDragOffset(0);
+      if (dy < -40) next();
+      else if (dy > 40) prev();
+    },
+    [next, prev],
+  );
 
   /* ── Mouse wheel to cycle through cards ── */
-  const onWheel = useCallback((e: React.WheelEvent) => {
-    if (wheelCooldown.current) return;
-    const absY = Math.abs(e.deltaY);
-    if (absY < 15) return;
-    wheelCooldown.current = true;
-    if (e.deltaY > 0) next();
-    else prev();
-    setTimeout(() => { wheelCooldown.current = false; }, 300);
-  }, [next, prev]);
+  const onWheel = useCallback(
+    (e: React.WheelEvent) => {
+      if (wheelCooldown.current) return;
+      const absY = Math.abs(e.deltaY);
+      if (absY < 15) return;
+      wheelCooldown.current = true;
+      if (e.deltaY > 0) next();
+      else prev();
+      setTimeout(() => {
+        wheelCooldown.current = false;
+      }, 300);
+    },
+    [next, prev],
+  );
 
   /* ── Keyboard ── */
-  const onKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === "ArrowUp" || e.key === "ArrowLeft") { e.preventDefault(); prev(); }
-    if (e.key === "ArrowDown" || e.key === "ArrowRight") { e.preventDefault(); next(); }
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      const card = cards[activeIdx];
-      if (card) openQr(card.merchant.slug, card.merchant.name);
-    }
-  }, [prev, next, cards, activeIdx, openQr]);
+  const onKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
+        e.preventDefault();
+        prev();
+      }
+      if (e.key === "ArrowDown" || e.key === "ArrowRight") {
+        e.preventDefault();
+        next();
+      }
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        const card = cards[activeIdx];
+        if (card) openQr(card.merchant.slug, card.merchant.name);
+      }
+    },
+    [prev, next, cards, activeIdx, openQr],
+  );
 
   /* ── Stack layout ── */
   function stackStyle(idx: number): React.CSSProperties {
     const dist = idx - activeIdx;
     if (dist < 0) return { display: "none" };
-    const spring = "cubic-bezier(0.34,1.56,0.64,1)";
     if (dist === 0) {
       return {
-        transform: "translateY(0) scale(1)",
+        transform: `translateY(${dragOffset}px) scale(1)`,
         opacity: 1,
         zIndex: 100 - dist,
-        transition: `transform 0.45s ${spring}, opacity 0.35s ease`,
+        transition:
+          dragOffset !== 0
+            ? "none"
+            : `transform 0.5s cubic-bezier(0.16,1,0.3,1), opacity 0.4s ease`,
       };
     }
     if (dist === 1) {
@@ -408,7 +453,7 @@ export function MembershipCardStack() {
         transform: `translateY(${PEEK_1}px) scale(0.975)`,
         opacity: 1,
         zIndex: 100 - dist,
-        transition: `transform 0.45s ${spring}, opacity 0.35s ease`,
+        transition: `transform 0.5s cubic-bezier(0.16,1,0.3,1), opacity 0.4s ease`,
       };
     }
     if (dist === 2) {
@@ -416,7 +461,7 @@ export function MembershipCardStack() {
         transform: `translateY(${PEEK_1 + PEEK_2 + STACK_GAP - 4}px) scale(0.955)`,
         opacity: 0.95,
         zIndex: 100 - dist,
-        transition: `transform 0.45s ${spring}, opacity 0.35s ease`,
+        transition: `transform 0.5s cubic-bezier(0.16,1,0.3,1), opacity 0.4s ease`,
       };
     }
     return {
@@ -424,15 +469,16 @@ export function MembershipCardStack() {
       opacity: 0,
       zIndex: 0,
       pointerEvents: "none",
-      transition: "transform 0.4s ease, opacity 0.3s ease",
+      transition: `transform 0.4s cubic-bezier(0.16,1,0.3,1), opacity 0.3s ease`,
     };
   }
 
-  const walletHeight = cards.length <= 1
-    ? 300
-    : cards.length === 2
-      ? 300 + PEEK_1 + 8
-      : 300 + PEEK_1 + PEEK_2 + STACK_GAP + 8;
+  const walletHeight =
+    cards.length <= 1
+      ? 300
+      : cards.length === 2
+        ? 300 + PEEK_1 + 8
+        : 300 + PEEK_1 + PEEK_2 + STACK_GAP + 8;
 
   const activeCard = cards[activeIdx];
 
@@ -479,7 +525,11 @@ export function MembershipCardStack() {
         </div>
       )}
 
-      {loading && <div className="mt-4"><CardSkeletonStack /></div>}
+      {loading && (
+        <div className="mt-4">
+          <CardSkeletonStack />
+        </div>
+      )}
 
       {/* ── Wallet Stack ────────────────────────────────────────────── */}
       {!loading && !error && cards.length > 0 && (
@@ -489,13 +539,16 @@ export function MembershipCardStack() {
             className="relative mt-5 w-full select-none outline-none"
             style={{ height: walletHeight }}
             onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
             onWheel={onWheel}
             onKeyDown={onKeyDown}
             tabIndex={0}
             role="listbox"
             aria-label="Membership cards — swipe or use arrow keys to browse"
-            aria-activedescendant={activeCard ? `wallet-card-${activeCard.merchant.slug}` : undefined}
+            aria-activedescendant={
+              activeCard ? `wallet-card-${activeCard.merchant.slug}` : undefined
+            }
           >
             {cards.map((card, idx) => {
               const dist = idx - activeIdx;
@@ -520,8 +573,8 @@ export function MembershipCardStack() {
                     background: bg.background,
                     color: bg.color,
                     boxShadow: isActive
-                      ? "0 14px 44px -8px rgba(0,0,0,0.30), 0 2px 10px -2px rgba(0,0,0,0.14)"
-                      : "0 4px 18px -4px rgba(0,0,0,0.18)",
+                      ? "0 20px 50px -12px rgba(0,0,0,0.35), 0 4px 12px -4px rgba(0,0,0,0.15)"
+                      : "0 6px 20px -6px rgba(0,0,0,0.2)",
                     overflow: "hidden",
                   }}
                   onClick={() => {
@@ -541,12 +594,16 @@ export function MembershipCardStack() {
 
           {/* Dot indicator */}
           {cards.length > 1 && (
-            <div className="mt-3 flex items-center justify-center gap-2" role="tablist" aria-label="Card position">
+            <div
+              className="mt-3 flex items-center justify-center gap-2"
+              role="tablist"
+              aria-label="Card position"
+            >
               {cards.map((c, i) => (
                 <button
                   key={c.merchant.slug}
                   onClick={() => goTo(i)}
-                  className="rounded-full transition-all duration-300"
+                  className="rounded-full"
                   role="tab"
                   aria-selected={i === activeIdx}
                   aria-label={c.merchant?.name || `Card ${i + 1}`}
@@ -555,6 +612,8 @@ export function MembershipCardStack() {
                     height: 7,
                     background: i === activeIdx ? "var(--ember)" : "var(--muted-foreground)",
                     opacity: i === activeIdx ? 1 : 0.35,
+                    transition:
+                      "width 0.3s cubic-bezier(0.16,1,0.3,1), background 0.3s, opacity 0.3s",
                   }}
                 />
               ))}
@@ -588,15 +647,15 @@ export function MembershipCardStack() {
               </Link>
             )}
 
-            <Link
-              to="/map"
+            <button
+              onClick={() => setScannerOpen(true)}
               className="glass flex flex-col items-center justify-center gap-1.5 rounded-2xl p-3.5 transition-all hover:bg-muted/50 active:scale-[0.98]"
             >
               <div className="grid h-9 w-9 place-items-center rounded-xl bg-muted">
-                <Layers className="h-4 w-4 text-foreground" />
+                <Scan className="h-4 w-4 text-foreground" />
               </div>
-              <span className="text-[11px] font-medium text-foreground">Discover</span>
-            </Link>
+              <span className="text-[11px] font-medium text-foreground">Scan QR</span>
+            </button>
           </div>
         </>
       )}
@@ -606,6 +665,16 @@ export function MembershipCardStack() {
           merchantSlug={qrModal.slug}
           merchantName={qrModal.name}
           onClose={() => setQrModal(null)}
+        />
+      )}
+
+      {scannerOpen && (
+        <QRScanner
+          onScan={(code) => {
+            setScannerOpen(false);
+            navigate({ to: "/transfers", search: { code } });
+          }}
+          onClose={() => setScannerOpen(false)}
         />
       )}
     </section>

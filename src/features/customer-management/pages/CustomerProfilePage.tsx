@@ -1,9 +1,17 @@
-// C:\Users\ACER\Desktop\NTE Loyalty\zentro-glow-loyalty\src\features\customer-management\pages\CustomerProfilePage.tsx 
+// C:\Users\ACER\Desktop\NTE Loyalty\zentro-glow-loyalty\src\features\customer-management\pages\CustomerProfilePage.tsx
 import { Link, useNavigate } from "@tanstack/react-router";
 import { MobileShell, TopBar } from "@/components/MobileShell";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useAuth } from "@/lib/auth";
-import { Settings, Bell, CreditCard, ChevronRight, LogOut, Loader2, ArrowLeftRight } from "lucide-react";
+import {
+  Settings,
+  Bell,
+  CreditCard,
+  ChevronRight,
+  LogOut,
+  Loader2,
+  ArrowLeftRight,
+} from "lucide-react";
 import { customerApi, orderApi, type Order, type CustomerProfile } from "@/lib/api";
 import { useState, useEffect } from "react";
 
@@ -16,8 +24,14 @@ export function CustomerProfilePage() {
 
   useEffect(() => {
     Promise.all([
-      customerApi.profile().then(setCustomerProfile).catch(() => {}),
-      orderApi.myOrders().then(setOrders).catch(() => {}),
+      customerApi
+        .profile()
+        .then(setCustomerProfile)
+        .catch(() => {}),
+      orderApi
+        .myOrders()
+        .then(setOrders)
+        .catch(() => {}),
     ]).finally(() => setLoading(false));
   }, []);
 
@@ -26,8 +40,7 @@ export function CustomerProfilePage() {
     navigate({ to: "/auth", search: {} as any });
   };
 
-  const displayName =
-    customerProfile?.full_name || user?.first_name || "Guest";
+  const displayName = customerProfile?.full_name || user?.first_name || "Guest";
   const displayTier = customerProfile?.tier || "Bronze";
   const displayPoints = customerProfile?.loyalty_points ?? 0;
   const displayStreak = customerProfile?.streak_days ?? 0;
@@ -45,9 +58,7 @@ export function CustomerProfilePage() {
             <p className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
               {displayTier} tier
             </p>
-            <h1 className="font-display truncate text-3xl text-foreground">
-              {displayName}
-            </h1>
+            <h1 className="font-display truncate text-3xl text-foreground">{displayName}</h1>
             <p className="text-xs text-muted-foreground">Zentro member</p>
           </div>
         </div>
@@ -71,6 +82,7 @@ export function CustomerProfilePage() {
           </div>
           <Link
             to="/transfers"
+            search={{ code: undefined }}
             className="inline-flex items-center gap-2 rounded-full bg-ink px-4 py-2 text-xs font-medium text-primary-foreground"
           >
             <ArrowLeftRight className="h-3.5 w-3.5" /> Transfer points
@@ -105,12 +117,9 @@ export function CustomerProfilePage() {
                   ☕
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-foreground">
-                    Order #{o.id}
-                  </p>
+                  <p className="truncate text-sm font-medium text-foreground">Order #{o.id}</p>
                   <p className="text-[11px] text-muted-foreground">
-                    {o.items?.length ?? o.order_items?.length ?? 0} items ·{" "}
-                    {o.status}
+                    {o.items?.length ?? o.order_items?.length ?? 0} items · {o.status}
                   </p>
                 </div>
                 <div className="text-right">
@@ -137,10 +146,7 @@ export function CustomerProfilePage() {
             <span className="flex-1 text-sm text-foreground">Appearance</span>
             <ThemeToggle />
           </div>
-          <button
-            onClick={handleSignOut}
-            className="flex w-full items-center gap-3 p-4 text-left"
-          >
+          <button onClick={handleSignOut} className="flex w-full items-center gap-3 p-4 text-left">
             <LogOut className="h-4 w-4 text-destructive" />
             <span className="flex-1 text-sm text-destructive">Sign out</span>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -155,9 +161,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="glass rounded-2xl p-3 text-center">
       <p className="font-display text-2xl text-foreground">{value}</p>
-      <p className="mt-0.5 text-[10px] uppercase tracking-widest text-muted-foreground">
-        {label}
-      </p>
+      <p className="mt-0.5 text-[10px] uppercase tracking-widest text-muted-foreground">{label}</p>
     </div>
   );
 }

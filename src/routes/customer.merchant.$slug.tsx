@@ -99,8 +99,6 @@ function CustomerMerchantDashboard() {
     }
   }, [merchant?.store_theme_color, setThemeColor]);
 
-  
-
   // Logged-in customer → join merchant + load wallet
   useEffect(() => {
     if (authLoading || loading || !merchant || !user || user.role !== "customer") return;
@@ -143,7 +141,10 @@ function CustomerMerchantDashboard() {
       <div className="flex min-h-dvh flex-col items-center justify-center gap-4 px-5 text-center">
         <p className="text-4xl">🔍</p>
         <p className="text-sm text-muted-foreground">{error ?? "Store not found."}</p>
-        <Link to="/" className="text-sm font-medium text-foreground underline-offset-4 hover:underline">
+        <Link
+          to="/"
+          className="text-sm font-medium text-foreground underline-offset-4 hover:underline"
+        >
           Back to home
         </Link>
       </div>
@@ -197,12 +198,8 @@ function CustomerMerchantDashboard() {
               <Utensils className="h-5 w-5 text-blue-600" />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-blue-800">
-                Dine-in · {activeTable.tableName}
-              </p>
-              <p className="text-xs text-blue-500">
-                Your order will be placed at this table
-              </p>
+              <p className="text-sm font-medium text-blue-800">Dine-in · {activeTable.tableName}</p>
+              <p className="text-xs text-blue-500">Your order will be placed at this table</p>
             </div>
             <button
               onClick={() => setActiveTable(null)}
@@ -240,19 +237,40 @@ function CustomerMerchantDashboard() {
           <div className="mt-5 flex flex-wrap gap-2">
             <span
               className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors duration-300"
-              style={merchant.store_theme_color ? { background: `var(--merchant-light, ${merchant.store_theme_color}1a)`, color: merchant.store_theme_color } : {}}
+              style={
+                merchant.store_theme_color
+                  ? {
+                      background: `var(--merchant-light, ${merchant.store_theme_color}1a)`,
+                      color: merchant.store_theme_color,
+                    }
+                  : {}
+              }
             >
               <Flame className="h-3 w-3" /> {streak}-day streak
             </span>
             <span
               className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors duration-300"
-              style={merchant.store_theme_color ? { background: `var(--merchant-light, ${merchant.store_theme_color}1a)`, color: merchant.store_theme_color } : {}}
+              style={
+                merchant.store_theme_color
+                  ? {
+                      background: `var(--merchant-light, ${merchant.store_theme_color}1a)`,
+                      color: merchant.store_theme_color,
+                    }
+                  : {}
+              }
             >
               <Sparkles className="h-3 w-3" /> {wallet?.lifetime_points ?? 0} lifetime
             </span>
             <span
               className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors duration-300"
-              style={merchant.store_theme_color ? { background: `var(--merchant-light, ${merchant.store_theme_color}1a)`, color: merchant.store_theme_color } : {}}
+              style={
+                merchant.store_theme_color
+                  ? {
+                      background: `var(--merchant-light, ${merchant.store_theme_color}1a)`,
+                      color: merchant.store_theme_color,
+                    }
+                  : {}
+              }
             >
               {wallet?.order_count ?? 0} orders here
             </span>
@@ -267,7 +285,12 @@ function CustomerMerchantDashboard() {
           >
             <div
               className="grid h-9 w-9 place-items-center rounded-xl transition-colors duration-300"
-              style={{ background: merchant.store_theme_color ? `var(--merchant-light, ${merchant.store_theme_color}1a)` : "var(--muted)", color: merchant.store_theme_color || "var(--ember)" }}
+              style={{
+                background: merchant.store_theme_color
+                  ? `var(--merchant-light, ${merchant.store_theme_color}1a)`
+                  : "var(--muted)",
+                color: merchant.store_theme_color || "var(--ember)",
+              }}
             >
               <ShoppingBag className="h-5 w-5" />
             </div>
@@ -280,7 +303,12 @@ function CustomerMerchantDashboard() {
           >
             <div
               className="grid h-9 w-9 place-items-center rounded-xl transition-colors duration-300"
-              style={{ background: merchant.store_theme_color ? `var(--merchant-light, ${merchant.store_theme_color}1a)` : "var(--muted)", color: merchant.store_theme_color || "var(--ember)" }}
+              style={{
+                background: merchant.store_theme_color
+                  ? `var(--merchant-light, ${merchant.store_theme_color}1a)`
+                  : "var(--muted)",
+                color: merchant.store_theme_color || "var(--ember)",
+              }}
             >
               <Sparkles className="h-5 w-5" />
             </div>
@@ -293,7 +321,12 @@ function CustomerMerchantDashboard() {
           >
             <div
               className="grid h-9 w-9 place-items-center rounded-xl transition-colors duration-300"
-              style={{ background: merchant.store_theme_color ? `var(--merchant-light, ${merchant.store_theme_color}1a)` : "var(--muted)", color: merchant.store_theme_color || "var(--ember)" }}
+              style={{
+                background: merchant.store_theme_color
+                  ? `var(--merchant-light, ${merchant.store_theme_color}1a)`
+                  : "var(--muted)",
+                color: merchant.store_theme_color || "var(--ember)",
+              }}
             >
               <Gift className="h-5 w-5" />
             </div>
@@ -306,7 +339,12 @@ function CustomerMerchantDashboard() {
           >
             <div
               className="grid h-9 w-9 place-items-center rounded-xl transition-colors duration-300"
-              style={{ background: merchant.store_theme_color ? `var(--merchant-light, ${merchant.store_theme_color}1a)` : "var(--muted)", color: merchant.store_theme_color || "var(--ember)" }}
+              style={{
+                background: merchant.store_theme_color
+                  ? `var(--merchant-light, ${merchant.store_theme_color}1a)`
+                  : "var(--muted)",
+                color: merchant.store_theme_color || "var(--ember)",
+              }}
             >
               <Trophy className="h-5 w-5" />
             </div>
@@ -315,11 +353,17 @@ function CustomerMerchantDashboard() {
           </Link>
           <Link
             to="/transfers"
+            search={{ code: undefined }}
             className="glass flex flex-col items-start gap-2 rounded-2xl p-4 transition-transform active:scale-[0.98]"
           >
             <div
               className="grid h-9 w-9 place-items-center rounded-xl transition-colors duration-300"
-              style={{ background: merchant.store_theme_color ? `var(--merchant-light, ${merchant.store_theme_color}1a)` : "var(--muted)", color: merchant.store_theme_color || "var(--ember)" }}
+              style={{
+                background: merchant.store_theme_color
+                  ? `var(--merchant-light, ${merchant.store_theme_color}1a)`
+                  : "var(--muted)",
+                color: merchant.store_theme_color || "var(--ember)",
+              }}
             >
               <ArrowLeftRight className="h-5 w-5" />
             </div>

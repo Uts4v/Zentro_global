@@ -1,4 +1,4 @@
-// C:\Users\ACER\Desktop\NTE Loyalty\zentro-glow-loyalty\src\features\cards\components\MembershipCardDetail.tsx 
+// C:\Users\ACER\Desktop\NTE Loyalty\zentro-glow-loyalty\src\features\cards\components\MembershipCardDetail.tsx
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "@tanstack/react-router";
 import {
@@ -13,7 +13,15 @@ import {
 } from "@/lib/api";
 import { MobileShell } from "@/components/MobileShell";
 import { PunchCardProofModal } from "@/components/PunchCardProofModal";
-import { ArrowLeft, QrCode, ArrowRightLeft, Flame, Sparkles, Gift, ChevronRight } from "lucide-react";
+import {
+  ArrowLeft,
+  QrCode,
+  ArrowRightLeft,
+  Flame,
+  Sparkles,
+  Gift,
+  ChevronRight,
+} from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
 function cardGradient(design: MembershipCard["card_design"], merchantName: string) {
@@ -34,10 +42,14 @@ function cardGradient(design: MembershipCard["card_design"], merchantName: strin
 
 function tierBadgeColor(tier: string) {
   switch (tier) {
-    case "platinum": return "bg-white/20 text-white";
-    case "gold": return "bg-amber-300/20 text-amber-100";
-    case "silver": return "bg-white/15 text-white/80";
-    default: return "bg-white/10 text-white/60";
+    case "platinum":
+      return "bg-white/20 text-white";
+    case "gold":
+      return "bg-amber-300/20 text-amber-100";
+    case "silver":
+      return "bg-white/15 text-white/80";
+    default:
+      return "bg-white/10 text-white/60";
   }
 }
 
@@ -71,7 +83,10 @@ export function MembershipCardDetail({ merchantSlug }: { merchantSlug: string })
   const [missions, setMissions] = useState<MissionView[]>([]);
   const [missionsLoading, setMissionsLoading] = useState(true);
 
-  const [punchCards, setPunchCards] = useState<{ active: CustomerPunchCard[]; completed: CustomerPunchCard[] }>({ active: [], completed: [] });
+  const [punchCards, setPunchCards] = useState<{
+    active: CustomerPunchCard[];
+    completed: CustomerPunchCard[];
+  }>({ active: [], completed: [] });
   const [punchLoading, setPunchLoading] = useState(true);
   const [proofCard, setProofCard] = useState<CustomerPunchCard | null>(null);
 
@@ -124,7 +139,9 @@ export function MembershipCardDetail({ merchantSlug }: { merchantSlug: string })
           setPunchLoading(false);
         }
       });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [merchantSlug, fetchQr]);
 
   if (loading) {
@@ -183,12 +200,18 @@ export function MembershipCardDetail({ merchantSlug }: { merchantSlug: string })
               </p>
               <div className="mt-1 flex items-center gap-2">
                 {card.merchant.logo && (
-                  <img src={card.merchant.logo} alt="" className="h-10 w-10 shrink-0 rounded-xl object-cover" />
+                  <img
+                    src={card.merchant.logo}
+                    alt=""
+                    className="h-10 w-10 shrink-0 rounded-xl object-cover"
+                  />
                 )}
                 <p className="truncate font-display text-3xl">{merchantName}</p>
               </div>
             </div>
-            <span className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${tierBadgeColor(tier)}`}>
+            <span
+              className={`shrink-0 rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-widest ${tierBadgeColor(tier)}`}
+            >
               {tier}
             </span>
           </div>
@@ -226,7 +249,10 @@ export function MembershipCardDetail({ merchantSlug }: { merchantSlug: string })
                   <Sparkles className="h-3 w-3" /> Joined
                 </div>
                 <p className="font-display mt-1 text-sm">
-                  {new Date(card.membership.joined_at).toLocaleDateString("en-US", { month: "short", year: "numeric" })}
+                  {new Date(card.membership.joined_at).toLocaleDateString("en-US", {
+                    month: "short",
+                    year: "numeric",
+                  })}
                 </p>
               </div>
             )}
@@ -257,11 +283,15 @@ export function MembershipCardDetail({ merchantSlug }: { merchantSlug: string })
                 <QrCode className="h-5 w-5 text-ember" />
               </div>
               <div className="text-left">
-                <p className="text-sm font-medium text-foreground">{showQr ? "Hide QR Code" : "Show QR Code"}</p>
+                <p className="text-sm font-medium text-foreground">
+                  {showQr ? "Hide QR Code" : "Show QR Code"}
+                </p>
                 <p className="text-xs text-muted-foreground">Let the merchant scan this</p>
               </div>
             </div>
-            <ChevronRight className={`h-4 w-4 text-muted-foreground transition-transform ${showQr ? "rotate-90" : ""}`} />
+            <ChevronRight
+              className={`h-4 w-4 text-muted-foreground transition-transform ${showQr ? "rotate-90" : ""}`}
+            />
           </button>
 
           {showQr && (
@@ -284,7 +314,9 @@ export function MembershipCardDetail({ merchantSlug }: { merchantSlug: string })
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-3">
-                  <p className="text-sm text-muted-foreground">{qrError || "Could not load QR code"}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {qrError || "Could not load QR code"}
+                  </p>
                   <button
                     onClick={() => fetchQr()}
                     className="rounded-full bg-ember px-4 py-2 text-xs font-medium text-white active:scale-95"
@@ -298,7 +330,10 @@ export function MembershipCardDetail({ merchantSlug }: { merchantSlug: string })
         </div>
 
         {/* Quick stats */}
-        <div className="mt-4 grid grid-cols-3 gap-3 animate-slide-up" style={{ animationDelay: "150ms" }}>
+        <div
+          className="mt-4 grid grid-cols-3 gap-3 animate-slide-up"
+          style={{ animationDelay: "150ms" }}
+        >
           <div className="glass rounded-2xl p-4">
             <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Earned</p>
             <p className="font-display mt-1 text-xl text-foreground">{lifetime.toLocaleString()}</p>
@@ -318,7 +353,10 @@ export function MembershipCardDetail({ merchantSlug }: { merchantSlug: string })
         </div>
 
         {/* Progress to Platinum */}
-        <div className="glass mt-4 rounded-3xl p-5 animate-slide-up" style={{ animationDelay: "200ms" }}>
+        <div
+          className="glass mt-4 rounded-3xl p-5 animate-slide-up"
+          style={{ animationDelay: "200ms" }}
+        >
           <div className="flex items-center justify-between">
             <p className="text-sm font-medium text-foreground">Progress to Platinum</p>
             <p className="text-xs text-muted-foreground">{points}/5000 pts</p>
@@ -354,7 +392,9 @@ export function MembershipCardDetail({ merchantSlug }: { merchantSlug: string })
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-foreground">{pc.merchant_name}</p>
-                      <p className="text-xs text-muted-foreground">{pc.current_stamps}/{pc.punch_card?.stamps_required ?? 10} stamps</p>
+                      <p className="text-xs text-muted-foreground">
+                        {pc.current_stamps}/{pc.punch_card?.stamps_required ?? 10} stamps
+                      </p>
                     </div>
                     {pc.is_completed && (
                       <button
@@ -368,7 +408,9 @@ export function MembershipCardDetail({ merchantSlug }: { merchantSlug: string })
                   <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-mist">
                     <div
                       className="h-full rounded-full gradient-ember transition-all"
-                      style={{ width: `${Math.min((pc.current_stamps / (pc.punch_card?.stamps_required ?? 10)) * 100, 100)}%` }}
+                      style={{
+                        width: `${Math.min((pc.current_stamps / (pc.punch_card?.stamps_required ?? 10)) * 100, 100)}%`,
+                      }}
                     />
                   </div>
                 </div>
@@ -446,7 +488,10 @@ export function MembershipCardDetail({ merchantSlug }: { merchantSlug: string })
           ) : (
             <div className="space-y-2">
               {transactions.slice(0, 8).map((tx) => (
-                <div key={tx.id} className="glass rounded-2xl p-3.5 flex items-center justify-between">
+                <div
+                  key={tx.id}
+                  className="glass rounded-2xl p-3.5 flex items-center justify-between"
+                >
                   <div>
                     <p className="text-sm font-medium text-foreground capitalize">
                       {tx.transaction_type.toLowerCase().replace("_", " ")}
@@ -456,12 +501,13 @@ export function MembershipCardDetail({ merchantSlug }: { merchantSlug: string })
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className={`text-sm font-bold ${tx.points >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                      {tx.points > 0 ? "+" : ""}{tx.points} pts
+                    <p
+                      className={`text-sm font-bold ${tx.points >= 0 ? "text-emerald-600" : "text-rose-600"}`}
+                    >
+                      {tx.points > 0 ? "+" : ""}
+                      {tx.points} pts
                     </p>
-                    <p className="text-[10px] text-muted-foreground">
-                      Bal: {tx.balance_after}
-                    </p>
+                    <p className="text-[10px] text-muted-foreground">Bal: {tx.balance_after}</p>
                   </div>
                 </div>
               ))}
@@ -473,6 +519,7 @@ export function MembershipCardDetail({ merchantSlug }: { merchantSlug: string })
         {card.transfer_enabled && (
           <Link
             to="/transfers"
+            search={{ code: undefined }}
             className="mt-6 flex items-center justify-between glass rounded-2xl p-4 transition-all hover:bg-muted/50"
           >
             <div className="flex items-center gap-3">
@@ -481,7 +528,9 @@ export function MembershipCardDetail({ merchantSlug }: { merchantSlug: string })
               </div>
               <div>
                 <p className="text-sm font-medium text-foreground">Send Points</p>
-                <p className="text-xs text-muted-foreground">Transfer to a friend at this merchant</p>
+                <p className="text-xs text-muted-foreground">
+                  Transfer to a friend at this merchant
+                </p>
               </div>
             </div>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
@@ -513,7 +562,8 @@ export function MembershipCardDetail({ merchantSlug }: { merchantSlug: string })
           onClose={() => setProofCard(null)}
           onRedeemed={() => {
             setProofCard(null);
-            punchCardApi.customerList(merchantSlug)
+            punchCardApi
+              .customerList(merchantSlug)
               .then((data) => setPunchCards(data))
               .catch(() => {});
           }}
