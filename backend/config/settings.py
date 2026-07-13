@@ -100,9 +100,26 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 
 # ── Database ──────────────────────────────────────────────────────────────────
-DB_ENGINE = os.getenv("DB_ENGINE", "django.db.backends.sqlite3")
+DATABASE_URL = os.getenv("DATABASE_URL", "")
 
-if DB_ENGINE == "django.db.backends.postgresql":
+if DATABASE_URL:
+    import urllib.parse
+    url = urllib.parse.urlparse(DATABASE_URL)
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": url.path[1:],
+            "USER": url.username or "",
+            "PASSWORD": url.password or "",
+            "HOST": url.hostname or "localhost",
+            "PORT": url.port or 5432,
+            "CONN_MAX_AGE": 60,
+            "OPTIONS": {
+                "sslmode": os.getenv("DB_SSLMODE", "require"),
+            },
+        }
+    }
+elif os.getenv("DB_ENGINE") == "django.db.backends.postgresql":
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",

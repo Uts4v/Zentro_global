@@ -2,25 +2,37 @@
 """Fix inconsistent migration history by recording missing migrations."""
 import os
 import sys
-import urllib.parse
 from datetime import datetime, timezone
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
-if not DATABASE_URL:
-    print("No DATABASE_URL, skipping migration fix")
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
+
+if DATABASE_URL:
+    import urllib.parse
+    url = urllib.parse.urlparse(DATABASE_URL)
+    db_params = {
+        "dbname": url.path[1:],
+        "user": url.username or "",
+        "password": url.password or "",
+        "host": url.hostname or "localhost",
+        "port": url.port or 5432,
+        "sslmode": "require",
+    }
+elif os.environ.get("DB_ENGINE") == "django.db.backends.postgresql":
+    db_params = {
+        "dbname": os.environ.get("DB_NAME", "zentro"),
+        "user": os.environ.get("DB_USER", "postgres"),
+        "password": os.environ.get("DB_PASSWORD", ""),
+        "host": os.environ.get("DB_HOST", "localhost"),
+        "port": os.environ.get("DB_PORT", "5432"),
+        "sslmode": os.environ.get("DB_SSLMODE", "prefer"),
+    }
+else:
+    print("No database config found, skipping migration fix")
     sys.exit(0)
 
 import psycopg
 
-url = urllib.parse.urlparse(DATABASE_URL)
-conn = psycopg.connect(
-    dbname=url.path[1:],
-    user=url.username,
-    password=url.password,
-    host=url.hostname,
-    port=url.port,
-    sslmode="require"
-)
+conn = psycopg.connect(**db_params)
 conn.autocommit = True
 
 migrations = [
