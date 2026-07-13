@@ -4,12 +4,19 @@ All API routes are prefixed with /api/.
 """
 
 from django.contrib import admin
+from django.http import JsonResponse
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from accounts.views import upload_image
 
+
+def healthz(request):
+    return JsonResponse({"status": "ok"})
+
+
 urlpatterns = [
+    path("healthz/", healthz),
     path("admin/", admin.site.urls),
     path("api/auth/", include("accounts.urls")),
     path("api/media/upload/", upload_image, name="media-upload"),
