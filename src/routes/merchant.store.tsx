@@ -672,10 +672,21 @@ function StoreConfig() {
           <div
             className="relative w-[320px] h-[200px] rounded-[28px] overflow-hidden shadow-lg"
             style={{
-              background: `linear-gradient(145deg, ${cardDesign.primary_color} 0%, ${cardDesign.secondary_color} 100%)`,
+              background: cardDesign.background_image
+                ? "rgba(0,0,0,0.25)"
+                : `linear-gradient(145deg, ${cardDesign.primary_color} 0%, ${cardDesign.secondary_color} 100%)`,
               color: cardDesign.text_mode === "light" ? "#ffffff" : "#1a1a1a",
             }}
           >
+            {/* Background image */}
+            {cardDesign.background_image && (
+              <img
+                src={cardDesign.background_image}
+                alt=""
+                className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+              />
+            )}
+
             {/* Pattern overlays */}
             {cardDesign.background_pattern === "dots" && (
               <div
@@ -833,6 +844,23 @@ function StoreConfig() {
               ))}
             </div>
           </div>
+
+          {/* Background image */}
+          {merchantId && (
+            <InlineImageUploader
+              label="Card Background Image"
+              hint="Recommended 800 × 500 px"
+              currentUrl={cardDesign.background_image}
+              onUpload={(url) => setCardDesign((p) => ({ ...p, background_image: url, background_type: "image" }))}
+              onClear={() => setCardDesign((p) => ({ ...p, background_image: null, background_type: "solid" }))}
+              aspectClass="aspect-[16/10]"
+              shape="square"
+              merchantId={merchantId}
+              bucket="card-images"
+              storagePath={`${merchantId}/card-bg.webp`}
+              preset="banner"
+            />
+          )}
 
           {/* Background pattern */}
           <div>

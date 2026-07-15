@@ -1,0 +1,17 @@
+{
+  "name": "Zentro — Order & Loyalty",
+  "short_name": "Zentro",
+  "description": "Premium coffee ordering with a loyalty card that feels like a keepsake.",
+  "theme_color": "#1a1a1a",
+  "background_color": "#1a1a1a",
+  "display": "standalone",
+  "scope": "/",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

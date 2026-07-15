@@ -9,11 +9,8 @@ import {
   Sparkles,
   ArrowRightLeft,
   Flame,
-  Store,
   X,
-  Scan,
 } from "lucide-react";
-import { QRScanner } from "@/features/transfers/components/QRScanner";
 
 /* ── Helpers ─────────────────────────────────────────────────────────────── */
 
@@ -323,7 +320,6 @@ export function MembershipCardStack() {
   const [activeIdx, setActiveIdx] = useState(0);
   const [qrModal, setQrModal] = useState<{ slug: string; name: string } | null>(null);
   const [dragOffset, setDragOffset] = useState(0);
-  const [scannerOpen, setScannerOpen] = useState(false);
   const navigate = useNavigate();
 
   const dragRef = useRef({ startY: 0, active: false });
@@ -570,7 +566,9 @@ export function MembershipCardStack() {
                     height: 290,
                     ...s,
                     borderRadius: 24,
-                    background: bg.background,
+                    background: card.card_design?.background_image && isActive
+                      ? "rgba(0,0,0,0.25)"
+                      : bg.background,
                     color: bg.color,
                     boxShadow: isActive
                       ? "0 20px 50px -12px rgba(0,0,0,0.35), 0 4px 12px -4px rgba(0,0,0,0.15)"
@@ -578,9 +576,21 @@ export function MembershipCardStack() {
                     overflow: "hidden",
                   }}
                   onClick={() => {
-                    if (!isActive) goTo(idx);
+                    if (isActive) {
+                      navigate({ to: "/m/$slug", params: { slug: card.merchant.slug } });
+                    } else {
+                      goTo(idx);
+                    }
                   }}
                 >
+                  {card.card_design?.background_image && isActive && (
+                    <img
+                      src={card.card_design.background_image}
+                      alt=""
+                      className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+                      style={{ borderRadius: 24 }}
+                    />
+                  )}
                   <CardFace
                     card={card}
                     isDark={isLightText(bg.color)}
@@ -620,43 +630,12 @@ export function MembershipCardStack() {
             </div>
           )}
 
-          {/* Quick actions */}
-          <div className="mt-4 grid grid-cols-3 gap-3">
-            {activeCard && (
-              <button
-                onClick={() => openQr(activeCard.merchant.slug, activeCard.merchant.name)}
-                className="glass flex flex-col items-center justify-center gap-1.5 rounded-2xl p-3.5 transition-all hover:bg-muted/50 active:scale-[0.98]"
-              >
-                <div className="grid h-9 w-9 place-items-center rounded-xl bg-ember-soft">
-                  <QrCode className="h-4 w-4 text-ember" />
-                </div>
-                <span className="text-[11px] font-medium text-foreground">Show QR</span>
-              </button>
-            )}
-
-            {activeCard && (
-              <Link
-                to="/m/$slug"
-                params={{ slug: activeCard.merchant.slug }}
-                className="glass flex flex-col items-center justify-center gap-1.5 rounded-2xl p-3.5 transition-all hover:bg-muted/50 active:scale-[0.98]"
-              >
-                <div className="grid h-9 w-9 place-items-center rounded-xl bg-muted">
-                  <Store className="h-4 w-4 text-foreground" />
-                </div>
-                <span className="text-[11px] font-medium text-foreground">Visit Store</span>
-              </Link>
-            )}
-
-            <button
-              onClick={() => setScannerOpen(true)}
-              className="glass flex flex-col items-center justify-center gap-1.5 rounded-2xl p-3.5 transition-all hover:bg-muted/50 active:scale-[0.98]"
-            >
-              <div className="grid h-9 w-9 place-items-center rounded-xl bg-muted">
-                <Scan className="h-4 w-4 text-foreground" />
-              </div>
-              <span className="text-[11px] font-medium text-foreground">Scan QR</span>
-            </button>
-          </div>
+          {/* Hint */}
+          {activeCard && (
+            <p className="mt-3 text-center text-[11px] text-muted-foreground">
+              Tap card to visit store
+            </p>
+          )}
         </>
       )}
 
@@ -665,16 +644,6 @@ export function MembershipCardStack() {
           merchantSlug={qrModal.slug}
           merchantName={qrModal.name}
           onClose={() => setQrModal(null)}
-        />
-      )}
-
-      {scannerOpen && (
-        <QRScanner
-          onScan={(code) => {
-            setScannerOpen(false);
-            navigate({ to: "/transfers", search: { code } });
-          }}
-          onClose={() => setScannerOpen(false)}
         />
       )}
     </section>

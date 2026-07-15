@@ -188,8 +188,15 @@ export function MembershipCardDetail({ merchantSlug }: { merchantSlug: string })
         {/* Full card */}
         <div
           className="relative overflow-hidden rounded-[28px] p-6 shadow-lg animate-card-enter"
-          style={style}
+          style={design?.background_image ? { ...style, background: "rgba(0,0,0,0.25)" } : style}
         >
+          {design?.background_image && (
+            <img
+              src={design.background_image}
+              alt=""
+              className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+            />
+          )}
           <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-white/10 blur-3xl" />
           <div className="absolute -bottom-16 -left-16 h-40 w-40 rounded-full bg-white/5 blur-3xl" />
 
