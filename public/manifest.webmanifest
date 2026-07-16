@@ -1,17 +1,49 @@
 {
   "name": "Zentro — Order & Loyalty",
   "short_name": "Zentro",
-  "description": "Premium coffee ordering with a loyalty card that feels like a keepsake.",
-  "theme_color": "#1a1a1a",
-  "background_color": "#1a1a1a",
-  "display": "standalone",
-  "scope": "/",
+  "description": "Your memberships, rewards, orders and loyalty points in one place.",
+  "id": "/",
   "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#FAF7F2",
+  "theme_color": "#FA6A4A",
+  "lang": "en",
+  "categories": ["shopping", "food", "lifestyle"],
   "icons": [
     {
-      "src": "/favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml"
+      "src": "/icons/pwa-192x192.svg",
+      "sizes": "192x192",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/pwa-512x512.svg",
+      "sizes": "512x512",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "My Cards",
+      "short_name": "Cards",
+      "url": "/cards?source=shortcut",
+      "description": "View your membership cards"
+    },
+    {
+      "name": "Discover",
+      "short_name": "Discover",
+      "url": "/map?source=shortcut",
+      "description": "Find nearby stores"
+    },
+    {
+      "name": "Rewards",
+      "short_name": "Rewards",
+      "url": "/rewards?source=shortcut",
+      "description": "View your rewards"
     }
   ]
 }

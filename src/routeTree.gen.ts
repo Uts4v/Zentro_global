@@ -13,6 +13,7 @@ import { Route as TransfersRouteImport } from './routes/transfers'
 import { Route as StoresRouteImport } from './routes/stores'
 import { Route as RewardsRouteImport } from './routes/rewards'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as OfflineRouteImport } from './routes/offline'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as MissionsRouteImport } from './routes/missions'
 import { Route as MerchantRouteImport } from './routes/merchant'
@@ -68,6 +69,11 @@ const RewardsRoute = RewardsRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OfflineRoute = OfflineRouteImport.update({
+  id: '/offline',
+  path: '/offline',
   getParentRoute: () => rootRouteImport,
 } as any)
 const NotificationsRoute = NotificationsRouteImport.update({
@@ -262,6 +268,7 @@ export interface FileRoutesByFullPath {
   '/merchant': typeof MerchantRouteWithChildren
   '/missions': typeof MissionsRoute
   '/notifications': typeof NotificationsRoute
+  '/offline': typeof OfflineRoute
   '/profile': typeof ProfileRoute
   '/rewards': typeof RewardsRoute
   '/stores': typeof StoresRoute
@@ -303,6 +310,7 @@ export interface FileRoutesByTo {
   '/map': typeof MapRoute
   '/missions': typeof MissionsRoute
   '/notifications': typeof NotificationsRoute
+  '/offline': typeof OfflineRoute
   '/profile': typeof ProfileRoute
   '/rewards': typeof RewardsRoute
   '/stores': typeof StoresRoute
@@ -346,6 +354,7 @@ export interface FileRoutesById {
   '/merchant': typeof MerchantRouteWithChildren
   '/missions': typeof MissionsRoute
   '/notifications': typeof NotificationsRoute
+  '/offline': typeof OfflineRoute
   '/profile': typeof ProfileRoute
   '/rewards': typeof RewardsRoute
   '/stores': typeof StoresRoute
@@ -390,6 +399,7 @@ export interface FileRouteTypes {
     | '/merchant'
     | '/missions'
     | '/notifications'
+    | '/offline'
     | '/profile'
     | '/rewards'
     | '/stores'
@@ -431,6 +441,7 @@ export interface FileRouteTypes {
     | '/map'
     | '/missions'
     | '/notifications'
+    | '/offline'
     | '/profile'
     | '/rewards'
     | '/stores'
@@ -473,6 +484,7 @@ export interface FileRouteTypes {
     | '/merchant'
     | '/missions'
     | '/notifications'
+    | '/offline'
     | '/profile'
     | '/rewards'
     | '/stores'
@@ -516,6 +528,7 @@ export interface RootRouteChildren {
   MerchantRoute: typeof MerchantRouteWithChildren
   MissionsRoute: typeof MissionsRoute
   NotificationsRoute: typeof NotificationsRoute
+  OfflineRoute: typeof OfflineRoute
   ProfileRoute: typeof ProfileRoute
   RewardsRoute: typeof RewardsRoute
   StoresRoute: typeof StoresRoute
@@ -557,6 +570,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/offline': {
+      id: '/offline'
+      path: '/offline'
+      fullPath: '/offline'
+      preLoaderRoute: typeof OfflineRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/notifications': {
@@ -916,6 +936,7 @@ const rootRouteChildren: RootRouteChildren = {
   MerchantRoute: MerchantRouteWithChildren,
   MissionsRoute: MissionsRoute,
   NotificationsRoute: NotificationsRoute,
+  OfflineRoute: OfflineRoute,
   ProfileRoute: ProfileRoute,
   RewardsRoute: RewardsRoute,
   StoresRoute: StoresRoute,

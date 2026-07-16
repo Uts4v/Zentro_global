@@ -14,6 +14,7 @@ import { useEffect, useMemo, type ReactNode } from "react";
 import { AuthProvider, useAuth } from "@/lib/auth";
 import { ThemeProvider } from "@/lib/theme";
 import { MerchantThemeProvider } from "@/lib/merchant-theme";
+import { PwaProvider } from "@/features/pwa/PwaProvider";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -142,6 +143,9 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { property: "og:description", content: "Order, earn, redeem. A modern loyalty experience for your favorite cafés." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "theme-color", content: "#FA6A4A" },
     ],
     links: [
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -151,6 +155,9 @@ export const Route = createRootRouteWithContext<RouterContext>()({
         href: "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap",
       },
       { rel: "stylesheet", href: appCss },
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "apple-touch-icon", href: "/icons/pwa-192x192.svg" },
+      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
     ],
   }),
   shellComponent: RootShell,
@@ -231,15 +238,17 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <MerchantThemeProvider>
-          <AuthProvider>
-            <GlobalNotificationToasts />
-            <InnerRoot />
-            <Toaster position="top-center" richColors expand visibleToasts={4} />
-          </AuthProvider>
-        </MerchantThemeProvider>
-      </ThemeProvider>
+        <ThemeProvider>
+          <MerchantThemeProvider>
+            <PwaProvider>
+              <AuthProvider>
+                <GlobalNotificationToasts />
+                <InnerRoot />
+                <Toaster position="top-center" richColors expand visibleToasts={4} />
+              </AuthProvider>
+            </PwaProvider>
+          </MerchantThemeProvider>
+        </ThemeProvider>
     </QueryClientProvider>
   );
 }
