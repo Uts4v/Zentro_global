@@ -63,7 +63,7 @@ function CustomerOrder() {
     let cancelled = false;
     specialApi.forSlug(selectedMerchant.slug)
       .then((s) => {
-        if (!cancelled) setSpecial(s);
+        if (!cancelled) setSpecial(s?.is_active ? s : null);
       })
       .catch(() => {
         if (!cancelled) setSpecial(null);

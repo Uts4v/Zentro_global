@@ -138,7 +138,7 @@ function Index() {
       return;
     }
     specialApi.forSlug(merchantSlug)
-      .then((s) => setTodaySpecial(s))
+      .then((s) => setTodaySpecial(s?.is_active ? s : null))
       .catch(() => setTodaySpecial(null));
   }, [merchantSlug]);
 
