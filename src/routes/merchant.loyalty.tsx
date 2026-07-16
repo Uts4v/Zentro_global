@@ -1,4 +1,4 @@
-// C:\Users\ACER\Desktop\NTE Loyalty\zentro-glow-loyalty\src\routes\merchant.loyalty.tsx
+﻿// C:\Users\ACER\Desktop\NTE Loyalty\zentro-glow-loyalty\src\routes\merchant.loyalty.tsx
 import { createFileRoute } from "@tanstack/react-router";
 import { MerchantLoyaltyPage } from "@/features/loyalty-engine/pages/MerchantLoyaltyPage";
 

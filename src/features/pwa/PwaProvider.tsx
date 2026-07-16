@@ -103,30 +103,39 @@ export function PwaProvider({ children }: { children: ReactNode }) {
     // injectManifest only compiles the SW at build time; skip in dev
     if (import.meta.env.DEV) return;
 
-    navigator.serviceWorker
-      .register("/service-worker.js", { scope: "/" })
-      .then((reg) => {
-        const interval = setInterval(() => reg.update(), 60 * 60 * 1000);
+    // Defer service worker registration until after page load
+    const registerSW = () => {
+      navigator.serviceWorker
+        .register("/service-worker.js", { scope: "/" })
+        .then((reg) => {
+          const interval = setInterval(() => reg.update(), 60 * 60 * 1000);
 
-        reg.addEventListener("updatefound", () => {
-          const newSw = reg.installing;
-          if (!newSw) return;
-          newSw.addEventListener("statechange", () => {
-            if (newSw.state === "installed" && navigator.serviceWorker.controller) {
-              setUpdateAvailable(true);
-            }
+          reg.addEventListener("updatefound", () => {
+            const newSw = reg.installing;
+            if (!newSw) return;
+            newSw.addEventListener("statechange", () => {
+              if (newSw.state === "installed" && navigator.serviceWorker.controller) {
+                setUpdateAvailable(true);
+              }
+            });
           });
+
+          return () => clearInterval(interval);
+        })
+        .catch((err) => {
+          console.warn("SW registration failed:", err);
         });
 
-        return () => clearInterval(interval);
-      })
-      .catch((err) => {
-        console.warn("SW registration failed:", err);
+      navigator.serviceWorker.addEventListener("controllerchange", () => {
+        window.location.reload();
       });
+    };
 
-    navigator.serviceWorker.addEventListener("controllerchange", () => {
-      window.location.reload();
-    });
+    if (document.readyState === "complete") {
+      registerSW();
+    } else {
+      window.addEventListener("load", registerSW, { once: true });
+    }
   }, []);
 
   // ── Offline ready from SW ───────────────────────────────────────────────────

@@ -1,8 +1,9 @@
-import { useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Loader2, Send, Camera } from "lucide-react";
 import { customerApi, transferApi, type CustomerMerchantWallet } from "@/lib/api";
 import { toast } from "sonner";
-import { QRScanner } from "./QRScanner";
+
+const QRScanner = lazy(() => import("./QRScanner").then(m => ({ default: m.QRScanner })));
 
 interface TransferFormProps {
   preselectedMerchantId?: string;
@@ -154,10 +155,16 @@ export function TransferForm({ preselectedMerchantId, scannedTransferCode, onSuc
       </div>
 
       {showScanner && (
-        <QRScanner
-          onScan={(code) => setReceiverCode(code)}
-          onClose={() => setShowScanner(false)}
-        />
+        <Suspense fallback={
+          <div className="flex justify-center py-6">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </div>
+        }>
+          <QRScanner
+            onScan={(code) => setReceiverCode(code)}
+            onClose={() => setShowScanner(false)}
+          />
+        </Suspense>
       )}
 
       <div>

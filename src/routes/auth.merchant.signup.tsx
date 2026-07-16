@@ -1,4 +1,4 @@
-// routes/auth.merchant.signup.tsx — Merchant sign-up only
+﻿// routes/auth.merchant.signup.tsx — Merchant sign-up only
 import { createFileRoute, Link, useNavigate, useSearch } from "@tanstack/react-router";
 import { useState } from "react";
 import { useAuth } from "@/lib/auth";

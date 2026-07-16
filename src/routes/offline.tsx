@@ -1,4 +1,4 @@
-// src/routes/offline.tsx
+﻿// src/routes/offline.tsx
 import { createFileRoute } from "@tanstack/react-router";
 import { WifiOff, RefreshCw } from "lucide-react";
 

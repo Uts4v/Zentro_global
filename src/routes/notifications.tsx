@@ -1,4 +1,4 @@
-// routes/notifications.tsx 
+﻿// routes/notifications.tsx 
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { requireAuth } from "@/lib/auth-guard";

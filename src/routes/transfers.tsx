@@ -1,4 +1,4 @@
-// src/routes/transfers.tsx — Point transfer hub
+﻿// src/routes/transfers.tsx — Point transfer hub
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { requireAuth } from "@/lib/auth-guard";

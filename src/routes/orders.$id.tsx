@@ -1,4 +1,4 @@
-// routes/orders.$id.tsx 
+﻿// routes/orders.$id.tsx 
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { type OrderStatus } from "@/lib/store";
 import { MobileShell, TopBar } from "@/components/MobileShell";

@@ -1,4 +1,4 @@
-// src/routes/map.tsx
+﻿// src/routes/map.tsx
 import { createFileRoute } from "@tanstack/react-router";
 import { requireAuth } from "@/lib/auth-guard";
 import { MobileShell, TopBar } from "@/components/MobileShell";

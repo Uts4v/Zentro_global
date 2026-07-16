@@ -1,4 +1,4 @@
-// routes/customer/order.tsx
+﻿// routes/customer/order.tsx
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect, useMemo } from "react";
 import { ShoppingCart, Plus, Minus, X, Loader2, Star, Zap } from "lucide-react";

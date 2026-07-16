@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+﻿import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Loader2, Store, User, Hash, Shield } from "lucide-react";
 import { publicQrApi, type MembershipQrResolve } from "@/lib/api";

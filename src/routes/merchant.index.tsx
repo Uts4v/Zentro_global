@@ -1,4 +1,4 @@
-// C:\Users\ACER\Desktop\NTE Loyalty\zentro-glow-loyalty\src\routes\merchant.index.tsx
+﻿// C:\Users\ACER\Desktop\NTE Loyalty\zentro-glow-loyalty\src\routes\merchant.index.tsx
 import { createFileRoute } from "@tanstack/react-router";
 import {
   TrendingUp,

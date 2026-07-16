@@ -19,7 +19,7 @@ export function TodaySpecialPopup({ slug, onOrderItem, onViewReward }: Props) {
     if (sessionStorage.getItem(seenKey)) return;
 
     specialApi.forSlug(slug).then((s) => {
-      if (s) {
+      if (s && s.is_active) {
         setSpecial(s);
         setVisible(true);
       }
@@ -50,8 +50,8 @@ export function TodaySpecialPopup({ slug, onOrderItem, onViewReward }: Props) {
     : null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 backdrop-blur-sm sm:items-center">
-      <div className="w-full max-w-sm overflow-hidden rounded-t-[2rem] bg-background shadow-2xl sm:rounded-[2rem]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="w-full max-w-sm overflow-hidden rounded-[2rem] bg-background shadow-2xl">
 
         {/* Banner image */}
         {special.image_url && (

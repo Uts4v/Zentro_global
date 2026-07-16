@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute } from "@tanstack/react-router";
 import { CustomerOrdersPage } from "@/features/transactions/pages/CustomerOrdersPage";
 
 export const Route = createFileRoute("/customer/orders")({

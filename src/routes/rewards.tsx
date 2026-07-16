@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute } from "@tanstack/react-router";
 import { rewardApi, customerApi, type Reward } from "@/lib/api";
 import { useStore } from "@/lib/store";
 import { MobileShell, TopBar } from "@/components/MobileShell";

@@ -1,4 +1,4 @@
-// routes/auth.forgot-password.tsx — Django password reset
+﻿// routes/auth.forgot-password.tsx — Django password reset
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { apiUrl, djangoFetch } from "@/lib/django-api-base";

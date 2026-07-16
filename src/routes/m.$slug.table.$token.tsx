@@ -1,4 +1,4 @@
-// routes/m.$slug.table.$token.tsx — Table QR scan entry point
+﻿// routes/m.$slug.table.$token.tsx — Table QR scan entry point
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Loader2, ArrowRight, MapPin, Utensils } from "lucide-react";

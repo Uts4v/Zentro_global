@@ -32,6 +32,8 @@ const PUBLIC_ROUTES = [
 ];
 
 // ── Auth gate ─────────────────────────────────────────────────────────────────
+// Renders children immediately; redirects to /auth once auth finishes loading
+// and no user is found. This avoids blocking FCP with a spinner.
 function AuthGate() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
@@ -59,22 +61,6 @@ function AuthGate() {
       });
     }
   }, [user, loading, isPublic, pathname]);
-
-  if (loading && !isPublic) {
-    return (
-      <div className="flex min-h-dvh items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
-
-  if (!loading && !user && !isPublic) {
-    return (
-      <div className="flex min-h-dvh items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
-  }
 
   return <Outlet />;
 }
@@ -151,6 +137,11 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
+        rel: "preload",
+        href: "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap",
+        as: "style",
+      },
+      {
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap",
       },
@@ -190,42 +181,61 @@ function GlobalNotificationToasts() {
     const token = tokenStore.getAccess();
     if (!token) return;
 
-    const wsProto = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const apiHost = (import.meta.env.VITE_DJANGO_API_BASE_URL as string | undefined)
-      ?.replace(/^https?:\/\//, "")
-      ?.replace(/\/api\/?$/, "")
-      || window.location.host;
-    const wsUrl = `${wsProto}//${apiHost}/ws/notifications/?token=${token}`;
-    const ws = new WebSocket(wsUrl);
+    // Defer WebSocket connection until after page load to avoid blocking initial render
+    const connectWebSocket = () => {
+      const wsProto = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const apiHost = (import.meta.env.VITE_DJANGO_API_BASE_URL as string | undefined)
+        ?.replace(/^https?:\/\//, "")
+        ?.replace(/\/api\/?$/, "")
+        || window.location.host;
+      const wsUrl = `${wsProto}//${apiHost}/ws/notifications/?token=${token}`;
+      const ws = new WebSocket(wsUrl);
 
-    ws.onopen = () => {
-      console.log("Notification WebSocket connected");
+      ws.onopen = () => {
+        console.log("Notification WebSocket connected");
+      };
+
+      ws.onmessage = (event) => {
+        try {
+          const notif = JSON.parse(event.data);
+          toast.success(notif.title, {
+            description: notif.message,
+            duration: 6000,
+          });
+          queryClient.invalidateQueries({ queryKey: ["notifications", "list"] });
+        } catch {
+          // ignore malformed messages
+        }
+      };
+
+      ws.onerror = () => {
+        console.warn("Notification WebSocket error — will retry on next mount");
+      };
+
+      ws.onclose = () => {
+        console.log("Notification WebSocket closed");
+      };
+
+      return ws;
     };
 
-    ws.onmessage = (event) => {
-      try {
-        const notif = JSON.parse(event.data);
-        toast.success(notif.title, {
-          description: notif.message,
-          duration: 6000,
-        });
-        // Refresh notification list so bell icon / page updates
-        queryClient.invalidateQueries({ queryKey: ["notifications", "list"] });
-      } catch {
-        // ignore malformed messages
-      }
-    };
+    let ws: WebSocket | undefined;
 
-    ws.onerror = () => {
-      console.warn("Notification WebSocket error — will retry on next mount");
-    };
-
-    ws.onclose = () => {
-      console.log("Notification WebSocket closed");
-    };
+    if (document.readyState === "complete") {
+      ws = connectWebSocket();
+    } else {
+      const onLoad = () => {
+        ws = connectWebSocket();
+      };
+      window.addEventListener("load", onLoad, { once: true });
+      return () => {
+        window.removeEventListener("load", onLoad);
+        ws?.close();
+      };
+    }
 
     return () => {
-      ws.close();
+      ws?.close();
     };
   }, [user, queryClient]);
 

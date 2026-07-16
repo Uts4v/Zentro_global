@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute } from "@tanstack/react-router";
 import { MerchantMenuPage } from "@/features/catalog/pages/MerchantMenuPage";
 
 export const Route = createFileRoute("/merchant/menu")({

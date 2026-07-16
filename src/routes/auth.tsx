@@ -1,4 +1,4 @@
-// routes/auth.tsx - Customer auth selector page
+﻿// routes/auth.tsx - Customer auth selector page
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/auth")({

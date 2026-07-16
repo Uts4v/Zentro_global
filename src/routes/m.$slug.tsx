@@ -1,4 +1,4 @@
-// routes/m.$slug.tsx — QR entry → redirects to merchant-specific customer dashboard
+﻿// routes/m.$slug.tsx — QR entry → redirects to merchant-specific customer dashboard
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Loader2, ArrowRight, MapPin } from "lucide-react";

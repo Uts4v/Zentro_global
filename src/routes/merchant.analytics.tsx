@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute } from "@tanstack/react-router";
 import { MerchantAnalyticsPage } from "@/features/analytics/pages/MerchantAnalyticsPage";
 
 export const Route = createFileRoute("/merchant/analytics")({

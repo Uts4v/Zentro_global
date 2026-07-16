@@ -1,4 +1,4 @@
-// src/routes/merchant.specials.tsx
+﻿// src/routes/merchant.specials.tsx
 import { createFileRoute } from "@tanstack/react-router";
 import { MerchantSpecialsPage } from "@/features/catalog/pages/MerchantSpecialsPage";
 

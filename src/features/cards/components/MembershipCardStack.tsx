@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { membershipCardApi, type MembershipCard } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import { QRCodeSVG } from "qrcode.react";
 import {
   QrCode,
@@ -76,26 +77,8 @@ function QrModal({
   merchantName: string;
   onClose: () => void;
 }) {
-  const [token, setToken] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchQr = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await membershipCardApi.getQr(merchantSlug);
-      setToken(data.public_token);
-    } catch (e: any) {
-      setError(e?.message || "Failed to load QR");
-    } finally {
-      setLoading(false);
-    }
-  }, [merchantSlug]);
-
-  useEffect(() => {
-    fetchQr();
-  }, [fetchQr]);
+  const { user } = useAuth();
+  const transferCode = user?.customer_profile?.transfer_code;
 
   return (
     <div
@@ -120,14 +103,10 @@ function QrModal({
         </p>
 
         <div className="mt-5 flex flex-col items-center">
-          {loading ? (
-            <div className="grid h-48 w-48 place-items-center">
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-muted border-t-foreground" />
-            </div>
-          ) : token ? (
+          {transferCode ? (
             <div className="rounded-2xl bg-white p-4">
               <QRCodeSVG
-                value={`${window.location.origin}/loyalty/qr/${token}`}
+                value={`zentro-transfer:${transferCode}`}
                 size={180}
                 bgColor="#ffffff"
                 fgColor="#000000"
@@ -135,12 +114,12 @@ function QrModal({
             </div>
           ) : (
             <div className="flex flex-col items-center gap-3 py-8">
-              <p className="text-sm text-muted-foreground">{error || "Could not load QR code"}</p>
+              <p className="text-sm text-muted-foreground">No transfer code available</p>
               <button
-                onClick={fetchQr}
+                onClick={onClose}
                 className="rounded-full bg-ember px-4 py-2 text-xs font-medium text-white active:scale-95"
               >
-                Retry
+                Close
               </button>
             </div>
           )}

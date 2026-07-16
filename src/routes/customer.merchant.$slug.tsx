@@ -1,4 +1,4 @@
-// routes/customer.merchant.$slug.tsx — Merchant-specific customer dashboard (QR entry)
+﻿// routes/customer.merchant.$slug.tsx — Merchant-specific customer dashboard (QR entry)
 //
 // Flow:
 // 1. Customer opens /customer/merchant/{slug}

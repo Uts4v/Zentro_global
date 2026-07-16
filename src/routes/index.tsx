@@ -1,17 +1,18 @@
-// routes/index.tsx 
+﻿// routes/index.tsx 
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useStore, cartTotal, type MenuItem } from "@/lib/store";
 import { merchantApi, menuApi, customerApi, specialApi, punchCardApi, missionApi, type TodaySpecial, type CustomerPunchCard, type MissionView } from "@/lib/api";
 import { MobileShell, TopBar } from "@/components/MobileShell";
 import { Plus, ShoppingBag, Flame, Search, X as XIcon, ArrowLeftRight, QrCode, SendHorizontal, UserPlus, Loader2 } from "lucide-react";
 import { requireAuth } from "@/lib/auth-guard";
-import { useState, useEffect, useMemo } from "react";
+import { lazy, Suspense, useState, useEffect, useMemo } from "react";
 import { TodaySpecialPopup } from "@/features/merchant-management/components/TodaySpecialPopup";
 import { TransferForm } from "@/features/transfers/components/TransferForm";
-import { PersonalQR } from "@/features/transfers/components/PersonalQR";
 import { PremiumPunchCard } from "@/components/PremiumPunchCard";
 import { PunchCardProofModal } from "@/components/PunchCardProofModal";
 import { useMerchantTheme, withAlpha } from "@/lib/merchant-theme";
+
+const PersonalQR = lazy(() => import("@/features/transfers/components/PersonalQR").then(m => ({ default: m.PersonalQR })));
 
 export const Route = createFileRoute("/")({
   beforeLoad: requireAuth,
@@ -385,7 +386,13 @@ function Index() {
                 />
               ) : (
                 <div className="py-2">
-                  <PersonalQR />
+                  <Suspense fallback={
+                    <div className="flex justify-center py-6">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  }>
+                    <PersonalQR />
+                  </Suspense>
                 </div>
               )}
             </div>

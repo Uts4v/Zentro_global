@@ -1,4 +1,4 @@
-// routes/merchant.tables.tsx — Merchant table management & QR codes
+﻿// routes/merchant.tables.tsx — Merchant table management & QR codes
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { requireMerchant } from "@/lib/merchant-auth-guard";
 import { useCallback, useEffect, useState } from "react";

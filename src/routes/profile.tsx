@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute } from "@tanstack/react-router";
 import { requireCustomer } from "@/lib/auth-guard";
 import { CustomerProfilePage } from "@/features/customer-management/pages/CustomerProfilePage";
 

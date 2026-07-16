@@ -1,5 +1,5 @@
 // C:\Users\ACER\Desktop\NTE Loyalty\zentro-glow-loyalty\src\features\cards\components\MembershipCardDetail.tsx
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   membershipCardApi,
@@ -11,6 +11,7 @@ import {
   type MissionView,
   type CustomerPunchCard,
 } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import { MobileShell } from "@/components/MobileShell";
 import { PunchCardProofModal } from "@/components/PunchCardProofModal";
 import {
@@ -68,14 +69,14 @@ function DetailSkeleton() {
 }
 
 export function MembershipCardDetail({ merchantSlug }: { merchantSlug: string }) {
+  const { user } = useAuth();
+  const transferCode = user?.customer_profile?.transfer_code;
+
   const [card, setCard] = useState<MembershipCard | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [showQr, setShowQr] = useState(true);
-  const [qrToken, setQrToken] = useState<string | null>(null);
-  const [qrLoading, setQrLoading] = useState(false);
-  const [qrError, setQrError] = useState<string | null>(null);
 
   const [transactions, setTransactions] = useState<PointTransaction[]>([]);
   const [txLoading, setTxLoading] = useState(true);
@@ -90,19 +91,6 @@ export function MembershipCardDetail({ merchantSlug }: { merchantSlug: string })
   const [punchLoading, setPunchLoading] = useState(true);
   const [proofCard, setProofCard] = useState<CustomerPunchCard | null>(null);
 
-  const fetchQr = useCallback(async () => {
-    setQrLoading(true);
-    setQrError(null);
-    try {
-      const data = await membershipCardApi.getQr(merchantSlug);
-      setQrToken(data.public_token);
-    } catch (e: any) {
-      setQrError(e?.message || "Failed to load QR");
-    } finally {
-      setQrLoading(false);
-    }
-  }, [merchantSlug]);
-
   useEffect(() => {
     let cancelled = false;
     membershipCardApi
@@ -112,7 +100,6 @@ export function MembershipCardDetail({ merchantSlug }: { merchantSlug: string })
         const found = cards.find((c) => c.merchant.slug === merchantSlug);
         if (found) {
           setCard(found);
-          if (!cancelled) fetchQr();
           return Promise.all([
             transactionApi.customerList(merchantSlug).catch(() => []),
             missionApi.myMissions(merchantSlug).catch(() => []),
@@ -142,7 +129,7 @@ export function MembershipCardDetail({ merchantSlug }: { merchantSlug: string })
     return () => {
       cancelled = true;
     };
-  }, [merchantSlug, fetchQr]);
+  }, [merchantSlug]);
 
   if (loading) {
     return (
@@ -303,14 +290,10 @@ export function MembershipCardDetail({ merchantSlug }: { merchantSlug: string })
 
           {showQr && (
             <div className="glass-strong mt-2 flex flex-col items-center rounded-3xl p-8">
-              {qrLoading ? (
-                <div className="grid h-48 w-48 place-items-center">
-                  <div className="h-8 w-8 animate-spin rounded-full border-2 border-muted border-t-foreground" />
-                </div>
-              ) : qrToken ? (
+              {transferCode ? (
                 <div className="flex flex-col items-center rounded-2xl bg-white p-4">
                   <QRCodeSVG
-                    value={`${window.location.origin}/loyalty/qr/${qrToken}`}
+                    value={`zentro-transfer:${transferCode}`}
                     size={180}
                     bgColor="#ffffff"
                     fgColor="#000000"
@@ -322,13 +305,13 @@ export function MembershipCardDetail({ merchantSlug }: { merchantSlug: string })
               ) : (
                 <div className="flex flex-col items-center gap-3">
                   <p className="text-sm text-muted-foreground">
-                    {qrError || "Could not load QR code"}
+                    No transfer code available
                   </p>
                   <button
-                    onClick={() => fetchQr()}
+                    onClick={() => setShowQr(false)}
                     className="rounded-full bg-ember px-4 py-2 text-xs font-medium text-white active:scale-95"
                   >
-                    Retry
+                    Close
                   </button>
                 </div>
               )}
