@@ -19,8 +19,10 @@ import {
   Menu,
   Sparkles,
   QrCode,
+  Monitor,
 } from "lucide-react";
 import { MerchantNav } from "@/components/merchant-nav";
+import { ThemeCycleButton } from "@/components/ThemeCycleButton";
 
 export const Route = createFileRoute("/merchant")({
   beforeLoad: async ({ context, location }) => {
@@ -47,6 +49,7 @@ const navItems = [
   { to: "/merchant/specials", label: "Today's Special", icon: Sparkles },
   { to: "/merchant/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/merchant/store", label: "Store", icon: Store },
+  { to: "/pos", label: "POS Terminal", icon: Monitor },
 ];
 
 function MerchantLayout() {
@@ -99,8 +102,11 @@ function MerchantLayout() {
           <Link to="/" className="font-display text-xl text-foreground">
             zentro<span className="text-ember">.</span>
           </Link>
-          <div className="ml-auto grid h-8 w-8 place-items-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
-            {(merchantProfile?.business_name ?? "M").charAt(0).toUpperCase()}
+          <div className="ml-auto flex items-center gap-2">
+            <ThemeCycleButton />
+            <div className="grid h-8 w-8 place-items-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
+              {(merchantProfile?.business_name ?? "M").charAt(0).toUpperCase()}
+            </div>
           </div>
         </header>
 

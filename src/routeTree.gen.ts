@@ -13,6 +13,7 @@ import { Route as TransfersRouteImport } from './routes/transfers'
 import { Route as StoresRouteImport } from './routes/stores'
 import { Route as RewardsRouteImport } from './routes/rewards'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as PosRouteImport } from './routes/pos'
 import { Route as OfflineRouteImport } from './routes/offline'
 import { Route as NotificationsRouteImport } from './routes/notifications'
 import { Route as MissionsRouteImport } from './routes/missions'
@@ -24,8 +25,18 @@ import { Route as CartRouteImport } from './routes/cart'
 import { Route as CardsRouteImport } from './routes/cards'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as PosIndexRouteImport } from './routes/pos.index'
 import { Route as MerchantIndexRouteImport } from './routes/merchant.index'
 import { Route as StoresIdRouteImport } from './routes/stores_.$id'
+import { Route as PosStaffReportRouteImport } from './routes/pos.staff-report'
+import { Route as PosStaffRouteImport } from './routes/pos.staff'
+import { Route as PosSettingsRouteImport } from './routes/pos.settings'
+import { Route as PosScheduleRouteImport } from './routes/pos.schedule'
+import { Route as PosReportsRouteImport } from './routes/pos.reports'
+import { Route as PosOrdersRouteImport } from './routes/pos.orders'
+import { Route as PosConflictsRouteImport } from './routes/pos.conflicts'
+import { Route as PosCashMovementsRouteImport } from './routes/pos.cash-movements'
+import { Route as PosAccountsRouteImport } from './routes/pos.accounts'
 import { Route as OrdersIdRouteImport } from './routes/orders.$id'
 import { Route as MerchantTablesRouteImport } from './routes/merchant.tables'
 import { Route as MerchantStoreRouteImport } from './routes/merchant.store'
@@ -45,6 +56,8 @@ import { Route as AuthResetPasswordRouteImport } from './routes/auth.reset-passw
 import { Route as AuthMerchantRouteImport } from './routes/auth.merchant'
 import { Route as AuthLoginRouteImport } from './routes/auth.login'
 import { Route as AuthForgotPasswordRouteImport } from './routes/auth.forgot-password'
+import { Route as TableTokenOrderRouteImport } from './routes/table.$token.order'
+import { Route as PosReportsZReportRouteImport } from './routes/pos.reports.z-report'
 import { Route as LoyaltyQrTokenRouteImport } from './routes/loyalty.qr.$token'
 import { Route as CustomerMerchantSlugRouteImport } from './routes/customer.merchant.$slug'
 import { Route as AuthMerchantSignupRouteImport } from './routes/auth.merchant.signup'
@@ -69,6 +82,11 @@ const RewardsRoute = RewardsRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PosRoute = PosRouteImport.update({
+  id: '/pos',
+  path: '/pos',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OfflineRoute = OfflineRouteImport.update({
@@ -126,6 +144,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PosIndexRoute = PosIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => PosRoute,
+} as any)
 const MerchantIndexRoute = MerchantIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -135,6 +158,51 @@ const StoresIdRoute = StoresIdRouteImport.update({
   id: '/stores_/$id',
   path: '/stores/$id',
   getParentRoute: () => rootRouteImport,
+} as any)
+const PosStaffReportRoute = PosStaffReportRouteImport.update({
+  id: '/staff-report',
+  path: '/staff-report',
+  getParentRoute: () => PosRoute,
+} as any)
+const PosStaffRoute = PosStaffRouteImport.update({
+  id: '/staff',
+  path: '/staff',
+  getParentRoute: () => PosRoute,
+} as any)
+const PosSettingsRoute = PosSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => PosRoute,
+} as any)
+const PosScheduleRoute = PosScheduleRouteImport.update({
+  id: '/schedule',
+  path: '/schedule',
+  getParentRoute: () => PosRoute,
+} as any)
+const PosReportsRoute = PosReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => PosRoute,
+} as any)
+const PosOrdersRoute = PosOrdersRouteImport.update({
+  id: '/orders',
+  path: '/orders',
+  getParentRoute: () => PosRoute,
+} as any)
+const PosConflictsRoute = PosConflictsRouteImport.update({
+  id: '/conflicts',
+  path: '/conflicts',
+  getParentRoute: () => PosRoute,
+} as any)
+const PosCashMovementsRoute = PosCashMovementsRouteImport.update({
+  id: '/cash-movements',
+  path: '/cash-movements',
+  getParentRoute: () => PosRoute,
+} as any)
+const PosAccountsRoute = PosAccountsRouteImport.update({
+  id: '/accounts',
+  path: '/accounts',
+  getParentRoute: () => PosRoute,
 } as any)
 const OrdersIdRoute = OrdersIdRouteImport.update({
   id: '/orders/$id',
@@ -231,6 +299,16 @@ const AuthForgotPasswordRoute = AuthForgotPasswordRouteImport.update({
   path: '/forgot-password',
   getParentRoute: () => AuthRoute,
 } as any)
+const TableTokenOrderRoute = TableTokenOrderRouteImport.update({
+  id: '/table/$token/order',
+  path: '/table/$token/order',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PosReportsZReportRoute = PosReportsZReportRouteImport.update({
+  id: '/z-report',
+  path: '/z-report',
+  getParentRoute: () => PosReportsRoute,
+} as any)
 const LoyaltyQrTokenRoute = LoyaltyQrTokenRouteImport.update({
   id: '/qr/$token',
   path: '/qr/$token',
@@ -269,6 +347,7 @@ export interface FileRoutesByFullPath {
   '/missions': typeof MissionsRoute
   '/notifications': typeof NotificationsRoute
   '/offline': typeof OfflineRoute
+  '/pos': typeof PosRouteWithChildren
   '/profile': typeof ProfileRoute
   '/rewards': typeof RewardsRoute
   '/stores': typeof StoresRoute
@@ -292,12 +371,24 @@ export interface FileRoutesByFullPath {
   '/merchant/store': typeof MerchantStoreRoute
   '/merchant/tables': typeof MerchantTablesRoute
   '/orders/$id': typeof OrdersIdRoute
+  '/pos/accounts': typeof PosAccountsRoute
+  '/pos/cash-movements': typeof PosCashMovementsRoute
+  '/pos/conflicts': typeof PosConflictsRoute
+  '/pos/orders': typeof PosOrdersRoute
+  '/pos/reports': typeof PosReportsRouteWithChildren
+  '/pos/schedule': typeof PosScheduleRoute
+  '/pos/settings': typeof PosSettingsRoute
+  '/pos/staff': typeof PosStaffRoute
+  '/pos/staff-report': typeof PosStaffReportRoute
   '/stores/$id': typeof StoresIdRoute
   '/merchant/': typeof MerchantIndexRoute
+  '/pos/': typeof PosIndexRoute
   '/auth/merchant/login': typeof AuthMerchantLoginRoute
   '/auth/merchant/signup': typeof AuthMerchantSignupRoute
   '/customer/merchant/$slug': typeof CustomerMerchantSlugRoute
   '/loyalty/qr/$token': typeof LoyaltyQrTokenRoute
+  '/pos/reports/z-report': typeof PosReportsZReportRoute
+  '/table/$token/order': typeof TableTokenOrderRoute
   '/m/$slug/table/$token': typeof MSlugTableTokenRoute
 }
 export interface FileRoutesByTo {
@@ -334,12 +425,24 @@ export interface FileRoutesByTo {
   '/merchant/store': typeof MerchantStoreRoute
   '/merchant/tables': typeof MerchantTablesRoute
   '/orders/$id': typeof OrdersIdRoute
+  '/pos/accounts': typeof PosAccountsRoute
+  '/pos/cash-movements': typeof PosCashMovementsRoute
+  '/pos/conflicts': typeof PosConflictsRoute
+  '/pos/orders': typeof PosOrdersRoute
+  '/pos/reports': typeof PosReportsRouteWithChildren
+  '/pos/schedule': typeof PosScheduleRoute
+  '/pos/settings': typeof PosSettingsRoute
+  '/pos/staff': typeof PosStaffRoute
+  '/pos/staff-report': typeof PosStaffReportRoute
   '/stores/$id': typeof StoresIdRoute
   '/merchant': typeof MerchantIndexRoute
+  '/pos': typeof PosIndexRoute
   '/auth/merchant/login': typeof AuthMerchantLoginRoute
   '/auth/merchant/signup': typeof AuthMerchantSignupRoute
   '/customer/merchant/$slug': typeof CustomerMerchantSlugRoute
   '/loyalty/qr/$token': typeof LoyaltyQrTokenRoute
+  '/pos/reports/z-report': typeof PosReportsZReportRoute
+  '/table/$token/order': typeof TableTokenOrderRoute
   '/m/$slug/table/$token': typeof MSlugTableTokenRoute
 }
 export interface FileRoutesById {
@@ -355,6 +458,7 @@ export interface FileRoutesById {
   '/missions': typeof MissionsRoute
   '/notifications': typeof NotificationsRoute
   '/offline': typeof OfflineRoute
+  '/pos': typeof PosRouteWithChildren
   '/profile': typeof ProfileRoute
   '/rewards': typeof RewardsRoute
   '/stores': typeof StoresRoute
@@ -378,12 +482,24 @@ export interface FileRoutesById {
   '/merchant/store': typeof MerchantStoreRoute
   '/merchant/tables': typeof MerchantTablesRoute
   '/orders/$id': typeof OrdersIdRoute
+  '/pos/accounts': typeof PosAccountsRoute
+  '/pos/cash-movements': typeof PosCashMovementsRoute
+  '/pos/conflicts': typeof PosConflictsRoute
+  '/pos/orders': typeof PosOrdersRoute
+  '/pos/reports': typeof PosReportsRouteWithChildren
+  '/pos/schedule': typeof PosScheduleRoute
+  '/pos/settings': typeof PosSettingsRoute
+  '/pos/staff': typeof PosStaffRoute
+  '/pos/staff-report': typeof PosStaffReportRoute
   '/stores_/$id': typeof StoresIdRoute
   '/merchant/': typeof MerchantIndexRoute
+  '/pos/': typeof PosIndexRoute
   '/auth/merchant/login': typeof AuthMerchantLoginRoute
   '/auth/merchant/signup': typeof AuthMerchantSignupRoute
   '/customer/merchant/$slug': typeof CustomerMerchantSlugRoute
   '/loyalty/qr/$token': typeof LoyaltyQrTokenRoute
+  '/pos/reports/z-report': typeof PosReportsZReportRoute
+  '/table/$token/order': typeof TableTokenOrderRoute
   '/m/$slug/table/$token': typeof MSlugTableTokenRoute
 }
 export interface FileRouteTypes {
@@ -400,6 +516,7 @@ export interface FileRouteTypes {
     | '/missions'
     | '/notifications'
     | '/offline'
+    | '/pos'
     | '/profile'
     | '/rewards'
     | '/stores'
@@ -423,12 +540,24 @@ export interface FileRouteTypes {
     | '/merchant/store'
     | '/merchant/tables'
     | '/orders/$id'
+    | '/pos/accounts'
+    | '/pos/cash-movements'
+    | '/pos/conflicts'
+    | '/pos/orders'
+    | '/pos/reports'
+    | '/pos/schedule'
+    | '/pos/settings'
+    | '/pos/staff'
+    | '/pos/staff-report'
     | '/stores/$id'
     | '/merchant/'
+    | '/pos/'
     | '/auth/merchant/login'
     | '/auth/merchant/signup'
     | '/customer/merchant/$slug'
     | '/loyalty/qr/$token'
+    | '/pos/reports/z-report'
+    | '/table/$token/order'
     | '/m/$slug/table/$token'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -465,12 +594,24 @@ export interface FileRouteTypes {
     | '/merchant/store'
     | '/merchant/tables'
     | '/orders/$id'
+    | '/pos/accounts'
+    | '/pos/cash-movements'
+    | '/pos/conflicts'
+    | '/pos/orders'
+    | '/pos/reports'
+    | '/pos/schedule'
+    | '/pos/settings'
+    | '/pos/staff'
+    | '/pos/staff-report'
     | '/stores/$id'
     | '/merchant'
+    | '/pos'
     | '/auth/merchant/login'
     | '/auth/merchant/signup'
     | '/customer/merchant/$slug'
     | '/loyalty/qr/$token'
+    | '/pos/reports/z-report'
+    | '/table/$token/order'
     | '/m/$slug/table/$token'
   id:
     | '__root__'
@@ -485,6 +626,7 @@ export interface FileRouteTypes {
     | '/missions'
     | '/notifications'
     | '/offline'
+    | '/pos'
     | '/profile'
     | '/rewards'
     | '/stores'
@@ -508,12 +650,24 @@ export interface FileRouteTypes {
     | '/merchant/store'
     | '/merchant/tables'
     | '/orders/$id'
+    | '/pos/accounts'
+    | '/pos/cash-movements'
+    | '/pos/conflicts'
+    | '/pos/orders'
+    | '/pos/reports'
+    | '/pos/schedule'
+    | '/pos/settings'
+    | '/pos/staff'
+    | '/pos/staff-report'
     | '/stores_/$id'
     | '/merchant/'
+    | '/pos/'
     | '/auth/merchant/login'
     | '/auth/merchant/signup'
     | '/customer/merchant/$slug'
     | '/loyalty/qr/$token'
+    | '/pos/reports/z-report'
+    | '/table/$token/order'
     | '/m/$slug/table/$token'
   fileRoutesById: FileRoutesById
 }
@@ -529,6 +683,7 @@ export interface RootRouteChildren {
   MissionsRoute: typeof MissionsRoute
   NotificationsRoute: typeof NotificationsRoute
   OfflineRoute: typeof OfflineRoute
+  PosRoute: typeof PosRouteWithChildren
   ProfileRoute: typeof ProfileRoute
   RewardsRoute: typeof RewardsRoute
   StoresRoute: typeof StoresRoute
@@ -540,6 +695,7 @@ export interface RootRouteChildren {
   OrdersIdRoute: typeof OrdersIdRoute
   StoresIdRoute: typeof StoresIdRoute
   CustomerMerchantSlugRoute: typeof CustomerMerchantSlugRoute
+  TableTokenOrderRoute: typeof TableTokenOrderRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -570,6 +726,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pos': {
+      id: '/pos'
+      path: '/pos'
+      fullPath: '/pos'
+      preLoaderRoute: typeof PosRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/offline': {
@@ -649,6 +812,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pos/': {
+      id: '/pos/'
+      path: '/'
+      fullPath: '/pos/'
+      preLoaderRoute: typeof PosIndexRouteImport
+      parentRoute: typeof PosRoute
+    }
     '/merchant/': {
       id: '/merchant/'
       path: '/'
@@ -662,6 +832,69 @@ declare module '@tanstack/react-router' {
       fullPath: '/stores/$id'
       preLoaderRoute: typeof StoresIdRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/pos/staff-report': {
+      id: '/pos/staff-report'
+      path: '/staff-report'
+      fullPath: '/pos/staff-report'
+      preLoaderRoute: typeof PosStaffReportRouteImport
+      parentRoute: typeof PosRoute
+    }
+    '/pos/staff': {
+      id: '/pos/staff'
+      path: '/staff'
+      fullPath: '/pos/staff'
+      preLoaderRoute: typeof PosStaffRouteImport
+      parentRoute: typeof PosRoute
+    }
+    '/pos/settings': {
+      id: '/pos/settings'
+      path: '/settings'
+      fullPath: '/pos/settings'
+      preLoaderRoute: typeof PosSettingsRouteImport
+      parentRoute: typeof PosRoute
+    }
+    '/pos/schedule': {
+      id: '/pos/schedule'
+      path: '/schedule'
+      fullPath: '/pos/schedule'
+      preLoaderRoute: typeof PosScheduleRouteImport
+      parentRoute: typeof PosRoute
+    }
+    '/pos/reports': {
+      id: '/pos/reports'
+      path: '/reports'
+      fullPath: '/pos/reports'
+      preLoaderRoute: typeof PosReportsRouteImport
+      parentRoute: typeof PosRoute
+    }
+    '/pos/orders': {
+      id: '/pos/orders'
+      path: '/orders'
+      fullPath: '/pos/orders'
+      preLoaderRoute: typeof PosOrdersRouteImport
+      parentRoute: typeof PosRoute
+    }
+    '/pos/conflicts': {
+      id: '/pos/conflicts'
+      path: '/conflicts'
+      fullPath: '/pos/conflicts'
+      preLoaderRoute: typeof PosConflictsRouteImport
+      parentRoute: typeof PosRoute
+    }
+    '/pos/cash-movements': {
+      id: '/pos/cash-movements'
+      path: '/cash-movements'
+      fullPath: '/pos/cash-movements'
+      preLoaderRoute: typeof PosCashMovementsRouteImport
+      parentRoute: typeof PosRoute
+    }
+    '/pos/accounts': {
+      id: '/pos/accounts'
+      path: '/accounts'
+      fullPath: '/pos/accounts'
+      preLoaderRoute: typeof PosAccountsRouteImport
+      parentRoute: typeof PosRoute
     }
     '/orders/$id': {
       id: '/orders/$id'
@@ -796,6 +1029,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthForgotPasswordRouteImport
       parentRoute: typeof AuthRoute
     }
+    '/table/$token/order': {
+      id: '/table/$token/order'
+      path: '/table/$token/order'
+      fullPath: '/table/$token/order'
+      preLoaderRoute: typeof TableTokenOrderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pos/reports/z-report': {
+      id: '/pos/reports/z-report'
+      path: '/z-report'
+      fullPath: '/pos/reports/z-report'
+      preLoaderRoute: typeof PosReportsZReportRouteImport
+      parentRoute: typeof PosReportsRoute
+    }
     '/loyalty/qr/$token': {
       id: '/loyalty/qr/$token'
       path: '/qr/$token'
@@ -915,6 +1162,46 @@ const MerchantRouteWithChildren = MerchantRoute._addFileChildren(
   MerchantRouteChildren,
 )
 
+interface PosReportsRouteChildren {
+  PosReportsZReportRoute: typeof PosReportsZReportRoute
+}
+
+const PosReportsRouteChildren: PosReportsRouteChildren = {
+  PosReportsZReportRoute: PosReportsZReportRoute,
+}
+
+const PosReportsRouteWithChildren = PosReportsRoute._addFileChildren(
+  PosReportsRouteChildren,
+)
+
+interface PosRouteChildren {
+  PosAccountsRoute: typeof PosAccountsRoute
+  PosCashMovementsRoute: typeof PosCashMovementsRoute
+  PosConflictsRoute: typeof PosConflictsRoute
+  PosOrdersRoute: typeof PosOrdersRoute
+  PosReportsRoute: typeof PosReportsRouteWithChildren
+  PosScheduleRoute: typeof PosScheduleRoute
+  PosSettingsRoute: typeof PosSettingsRoute
+  PosStaffRoute: typeof PosStaffRoute
+  PosStaffReportRoute: typeof PosStaffReportRoute
+  PosIndexRoute: typeof PosIndexRoute
+}
+
+const PosRouteChildren: PosRouteChildren = {
+  PosAccountsRoute: PosAccountsRoute,
+  PosCashMovementsRoute: PosCashMovementsRoute,
+  PosConflictsRoute: PosConflictsRoute,
+  PosOrdersRoute: PosOrdersRoute,
+  PosReportsRoute: PosReportsRouteWithChildren,
+  PosScheduleRoute: PosScheduleRoute,
+  PosSettingsRoute: PosSettingsRoute,
+  PosStaffRoute: PosStaffRoute,
+  PosStaffReportRoute: PosStaffReportRoute,
+  PosIndexRoute: PosIndexRoute,
+}
+
+const PosRouteWithChildren = PosRoute._addFileChildren(PosRouteChildren)
+
 interface MSlugRouteChildren {
   MSlugTableTokenRoute: typeof MSlugTableTokenRoute
 }
@@ -937,6 +1224,7 @@ const rootRouteChildren: RootRouteChildren = {
   MissionsRoute: MissionsRoute,
   NotificationsRoute: NotificationsRoute,
   OfflineRoute: OfflineRoute,
+  PosRoute: PosRouteWithChildren,
   ProfileRoute: ProfileRoute,
   RewardsRoute: RewardsRoute,
   StoresRoute: StoresRoute,
@@ -948,6 +1236,7 @@ const rootRouteChildren: RootRouteChildren = {
   OrdersIdRoute: OrdersIdRoute,
   StoresIdRoute: StoresIdRoute,
   CustomerMerchantSlugRoute: CustomerMerchantSlugRoute,
+  TableTokenOrderRoute: TableTokenOrderRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

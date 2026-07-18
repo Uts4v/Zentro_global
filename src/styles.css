@@ -275,3 +275,95 @@
 @utility animate-pulse-soft {
   animation: pulse-soft 2s ease-in-out infinite;
 }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   Thermal Printing / Receipt CSS
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+.receipt-print {
+  font-family: "Courier New", "Lucida Console", "Consolas", monospace;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  word-break: break-word;
+  -webkit-font-smoothing: none;
+  text-rendering: optimizeSpeed;
+}
+
+/* 58mm thermal (default) */
+.receipt-58mm {
+  width: 48mm;
+  padding: 3mm;
+  font-size: 10px;
+}
+
+/* 80mm thermal */
+.receipt-80mm {
+  width: 72mm;
+  padding: 4mm;
+  font-size: 12px;
+}
+
+/* A4 / standard paper */
+.receipt-a4 {
+  width: 190mm;
+  padding: 10mm;
+  font-size: 12px;
+}
+
+/* ── Print overrides ───────────────────────────────────────────────────────── */
+@media print {
+  /* Hide everything except the receipt */
+  body * {
+    visibility: hidden !important;
+  }
+
+  .receipt-print,
+  .receipt-print * {
+    visibility: visible !important;
+  }
+
+  .receipt-print {
+    position: absolute;
+    left: 0;
+    top: 0;
+    margin: 0;
+    border: none !important;
+    box-shadow: none !important;
+    background: #fff !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  /* 58mm */
+  @page {
+    size: 58mm auto;
+    margin: 2mm;
+  }
+}
+
+/* 80mm print */
+@media print and (min-width: 70mm) {
+  @page {
+    size: 80mm auto;
+    margin: 3mm;
+  }
+  .receipt-print {
+    width: 72mm;
+    font-size: 12px;
+  }
+}
+
+/* A4 print */
+@media print and (min-width: 150mm) {
+  @page {
+    size: A4 portrait;
+    margin: 15mm;
+  }
+  .receipt-print {
+    width: 100%;
+    max-width: 190mm;
+    font-size: 12px;
+  }
+}

@@ -1,9 +1,9 @@
 ﻿import { createFileRoute } from "@tanstack/react-router";
-import { requireAuth } from "@/lib/auth-guard";
+import { requireCustomer } from "@/lib/auth-guard";
 import { MembershipCardDetail } from "@/features/cards/components/MembershipCardDetail";
 
 export const Route = createFileRoute("/cards/$merchantSlug")({
-  beforeLoad: requireAuth,
+  beforeLoad: requireCustomer,
   head: () => ({ meta: [{ title: "Card · Zentro" }] }),
   component: CardDetailPage,
 });

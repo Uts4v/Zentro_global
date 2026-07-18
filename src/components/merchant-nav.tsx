@@ -1,6 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import type { LucideIcon } from "lucide-react";
 
 interface NavItem {
@@ -55,6 +56,11 @@ export function MerchantNav({ navItems, onSignOut, onLinkClick }: MerchantNavPro
           );
         })}
       </nav>
+
+      {/* Theme toggle */}
+      <div className="px-2 py-2">
+        <ThemeToggle />
+      </div>
 
       {/* Sign out */}
       <button

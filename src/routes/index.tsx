@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useStore, cartTotal, type MenuItem } from "@/lib/store";
 import { merchantApi, menuApi, customerApi, specialApi, punchCardApi, missionApi, type TodaySpecial, type CustomerPunchCard, type MissionView } from "@/lib/api";
 import { MobileShell, TopBar } from "@/components/MobileShell";
-import { Plus, ShoppingBag, Flame, Search, X as XIcon, ArrowLeftRight, QrCode, SendHorizontal, UserPlus, Loader2 } from "lucide-react";
+import { Plus, ShoppingBag, Flame, Search, X as XIcon, ArrowLeftRight, QrCode, SendHorizontal, UserPlus, Loader2, ScanLine } from "lucide-react";
 import { requireAuth } from "@/lib/auth-guard";
 import { lazy, Suspense, useState, useEffect, useMemo } from "react";
 import { TodaySpecialPopup } from "@/features/merchant-management/components/TodaySpecialPopup";
@@ -13,6 +13,7 @@ import { PunchCardProofModal } from "@/components/PunchCardProofModal";
 import { useMerchantTheme, withAlpha } from "@/lib/merchant-theme";
 
 const PersonalQR = lazy(() => import("@/features/transfers/components/PersonalQR").then(m => ({ default: m.PersonalQR })));
+const TableQRScanner = lazy(() => import("@/features/pos/screens/TableQRScanner").then(m => ({ default: m.TableQRScanner })));
 
 export const Route = createFileRoute("/")({
   beforeLoad: requireAuth,
@@ -94,6 +95,7 @@ function Index() {
   const [joined, setJoined] = useState(false);
   const [joining, setJoining] = useState(false);
   const [missions, setMissions] = useState<MissionView[]>([]);
+  const [showTableScanner, setShowTableScanner] = useState(false);
 
   useEffect(() => {
     if (!selectedMerchantId) {
@@ -249,6 +251,23 @@ function Index() {
             </p>
           )}
         </div>
+      </section>
+
+      {/* Scan Table QR */}
+      <section className="px-5 mt-4">
+        <button
+          onClick={() => setShowTableScanner(true)}
+          className="glass-strong flex w-full items-center gap-3 rounded-[20px] px-5 py-3.5 text-left transition-all active:scale-[0.98]"
+        >
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-ember/10 text-ember">
+            <ScanLine className="h-5 w-5" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-foreground">Scan Table QR</p>
+            <p className="text-xs text-muted-foreground">Point your camera at a table QR code to order</p>
+          </div>
+          <QrCode className="h-4 w-4 shrink-0 text-muted-foreground" />
+        </button>
       </section>
 
       {/* Join merchant banner */}
@@ -576,6 +595,12 @@ function Index() {
             }
           }}
         />
+      )}
+
+      {showTableScanner && (
+        <Suspense fallback={null}>
+          <TableQRScanner onClose={() => setShowTableScanner(false)} />
+        </Suspense>
       )}
     </MobileShell>
   );

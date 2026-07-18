@@ -54,6 +54,54 @@ class MerchantProfile(models.Model):
         help_text="Allow customers to transfer points to other members of this business",
     )
 
+    # ── POS feature flags ─────────────────────────────────────────────────────
+    pos_enabled = models.BooleanField(
+        default=False,
+        help_text="Enable the Point of Sale system for this merchant",
+    )
+    offline_pos_enabled = models.BooleanField(
+        default=False,
+        help_text="Allow POS to queue orders offline and sync later",
+    )
+    credit_accounts_enabled = models.BooleanField(
+        default=False,
+        help_text="Allow customers to purchase on credit",
+    )
+    discounts_enabled = models.BooleanField(
+        default=False,
+        help_text="Allow staff to apply discounts at POS",
+    )
+    shift_management_enabled = models.BooleanField(
+        default=False,
+        help_text="Require cash shifts for POS operations",
+    )
+    receipt_printing_enabled = models.BooleanField(
+        default=False,
+        help_text="Enable receipt printing from POS",
+    )
+
+    # POS settings
+    max_worker_discount_percent = models.DecimalField(
+        max_digits=5, decimal_places=2, default=0,
+        help_text="Maximum discount percentage a worker can apply without manager approval",
+    )
+    manager_approval_threshold = models.DecimalField(
+        max_digits=10, decimal_places=2, default=0,
+        help_text="Discount amount above which manager approval is required",
+    )
+    offline_discounts_allowed = models.BooleanField(
+        default=False,
+        help_text="Allow applying discounts while offline",
+    )
+    offline_credit_allowed = models.BooleanField(
+        default=False,
+        help_text="Allow credit sales while offline",
+    )
+    debit_accounts_enabled = models.BooleanField(
+        default=False,
+        help_text="Enable prepaid debit accounts (customer wallet / stored value)",
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

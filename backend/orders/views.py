@@ -382,6 +382,31 @@ def update_order_status(request, pk):
             status=status.HTTP_400_BAD_REQUEST,
         )
 
+    # Validate status transition
+    if not order.can_transition_to(new_status):
+        allowed = Order.VALID_TRANSITIONS.get(order.status, set())
+        return Response(
+            {
+                "error": f"Cannot transition from '{order.status}' to '{new_status}'.",
+                "current_status": order.status,
+                "allowed_transitions": list(allowed),
+            },
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    # Optimistic concurrency check
+    client_version = request.data.get("version")
+    if client_version is not None and client_version != order.version:
+        return Response(
+            {
+                "error": "This order has been modified by another device.",
+                "code": "VERSION_CONFLICT",
+                "server_version": order.version,
+                "client_version": client_version,
+            },
+            status=status.HTTP_409_CONFLICT,
+        )
+
     # When order is completed:
     # - Regular orders: award loyalty points, punch card stamps, mission progress
     # - Reward redemption orders: deduct the held points from customer wallet
@@ -389,6 +414,7 @@ def update_order_status(request, pk):
         new_status == Order.STATUS_COMPLETED
         and not order.loyalty_awarded
         and order.status != Order.STATUS_CANCELLED
+        and order.customer is not None  # Only award loyalty for identified customers
     ):
         if (
             order.order_type == Order.ORDER_TYPE_REWARD_REDEMPTION
@@ -400,25 +426,28 @@ def update_order_status(request, pk):
         order.loyalty_awarded = True
 
     order.status = new_status
-    order.save(update_fields=["status", "loyalty_awarded", "updated_at"])
+    order.version += 1
+    order.save(update_fields=["status", "loyalty_awarded", "version", "updated_at"])
 
     status_msg = {
-        "confirmed": "Your order has been accepted! ✅",
-        "preparing": "Your order is being prepared ☕",
-        "ready":     "Your order is ready for pickup! 🔔",
-        "completed": "Order complete — enjoy! 🎉",
+        "confirmed": "Your order has been accepted!",
+        "preparing": "Your order is being prepared",
+        "ready":     "Your order is ready for pickup!",
+        "completed": "Order complete!",
     }.get(new_status, f"Your order is now {new_status}.")
 
-    transaction.on_commit(lambda: _notify_safe(
-        user=order.customer.user,
-        title="Order update",
-        message=status_msg,
-        notification_type=Notification.TYPE_ORDER_UPDATE,
-        merchant_name=order.merchant.business_name,
-        context_url=f"/orders/{order.id}",
-        order_id=order.id,
-        merchant_id=order.merchant.id,
-    ))
+    # Notify customer (only if order has an associated customer)
+    if order.customer and order.customer.user:
+        transaction.on_commit(lambda: _notify_safe(
+            user=order.customer.user,
+            title="Order update",
+            message=status_msg,
+            notification_type=Notification.TYPE_ORDER_UPDATE,
+            merchant_name=order.merchant.business_name,
+            context_url=f"/orders/{order.id}",
+            order_id=order.id,
+            merchant_id=order.merchant.id,
+        ))
 
     return Response(OrderSerializer(order).data)
 

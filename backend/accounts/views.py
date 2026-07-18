@@ -125,6 +125,18 @@ def register(request):
             slug=slug,
             is_approved=True,  # Auto-approve for easier testing
             onboarding_complete=False,
+            # POS feature flags (default False)
+            pos_enabled=False,
+            offline_pos_enabled=False,
+            credit_accounts_enabled=False,
+            debit_accounts_enabled=False,
+            discounts_enabled=False,
+            shift_management_enabled=False,
+            receipt_printing_enabled=False,
+            offline_discounts_allowed=False,
+            offline_credit_allowed=False,
+            max_worker_discount_percent=0,
+            manager_approval_threshold=0,
         )
 
     # Issue tokens immediately so the user is logged in after registering

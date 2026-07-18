@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     "loyalty",
     "orders",
     "notifications",
+    "pos",
 ]
 
 # Switch from WSGI to ASGI
@@ -171,6 +172,8 @@ CORS_ALLOW_HEADERS = [
     "user-agent",
     "x-csrftoken",
     "x-requested-with",
+    "x-pos-device-id",
+    "x-pos-device-token",
 ]
 
 # ── Django REST Framework ─────────────────────────────────────────────────────

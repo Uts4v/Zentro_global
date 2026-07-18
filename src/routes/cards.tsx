@@ -1,6 +1,6 @@
 ﻿import { useState } from "react";
 import { createFileRoute, Outlet, useMatches, useNavigate } from "@tanstack/react-router";
-import { requireAuth } from "@/lib/auth-guard";
+import { requireCustomer } from "@/lib/auth-guard";
 import { MobileShell, TopBar } from "@/components/MobileShell";
 import { MembershipCardStack } from "@/features/cards/components/MembershipCardStack";
 import { QRScanner } from "@/features/transfers/components/QRScanner";
@@ -8,7 +8,7 @@ import { InstallBanner, UpdateBanner } from "@/features/pwa/InstallZentroButton"
 import { Scan } from "lucide-react";
 
 export const Route = createFileRoute("/cards")({
-  beforeLoad: requireAuth,
+  beforeLoad: requireCustomer,
   head: () => ({ meta: [{ title: "My Cards · Zentro" }] }),
   component: CardsPage,
 });
