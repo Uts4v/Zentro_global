@@ -13,10 +13,15 @@ class OrderItemSerializer(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     items         = OrderItemSerializer(many=True, read_only=True)
     merchant_name = serializers.CharField(source="merchant.business_name", read_only=True)
-    customer_name = serializers.CharField(
-        source="customer.full_name", read_only=True, default=None
-    )
+    customer_name = serializers.SerializerMethodField()
     merchant_id   = serializers.IntegerField(source="merchant.id",         read_only=True)
+
+    def get_customer_name(self, obj):
+        if obj.customer:
+            return obj.customer.full_name
+        if obj.guest_name_snapshot:
+            return obj.guest_name_snapshot
+        return None
 
     # Display helpers for redemption orders — null for regular orders
     reward_name = serializers.CharField(
@@ -52,6 +57,8 @@ class OrderSerializer(serializers.ModelSerializer):
             "table_id", "table_name_snapshot", "table_number_snapshot",
             "processed_by_worker", "worker_name",
             "pos_device", "cash_shift",
+            "guest_session_id", "guest_name_snapshot",
+            "kot_number",
             "version", "client_mutation_id", "client_created_at",
             "created_at", "updated_at",
         ]
@@ -78,6 +85,20 @@ class CreateOrderSerializer(serializers.Serializer):
         required=False, allow_blank=True, default="",
         help_text="Public token of the scanned table (required for dine-in)",
     )
+
+    def validate_items(self, value):
+        if not value:
+            raise serializers.ValidationError("Order must contain at least one item.")
+        return value
+
+
+class CreateGuestOrderSerializer(serializers.Serializer):
+    merchant_id = serializers.IntegerField()
+    items       = CreateOrderItemSerializer(many=True)
+    notes       = serializers.CharField(required=False, allow_blank=True, default="")
+    table_token = serializers.CharField()
+    guest_session_id = serializers.CharField(max_length=64)
+    guest_name  = serializers.CharField(max_length=255, required=False, allow_blank=True, default="")
 
     def validate_items(self, value):
         if not value:

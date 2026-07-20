@@ -1,5 +1,9 @@
-﻿// routes/m.$slug.tsx — QR entry → redirects to merchant-specific customer dashboard
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+﻿// routes/m.$slug.tsx — Layout route for /m/$slug/*
+//
+// This is a parent layout route. Child routes (like table/$token) render via <Outlet />.
+// For the bare /m/$slug path (no table), we show the merchant landing page.
+
+import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Loader2, ArrowRight, MapPin } from "lucide-react";
 import { merchantApi, type MerchantProfile } from "@/lib/api";
@@ -7,11 +11,12 @@ import { useAuth } from "@/lib/auth";
 
 export const Route = createFileRoute("/m/$slug")({
   head: () => ({ meta: [{ title: "Store · Zentro" }] }),
-  component: MerchantEntryRedirect,
+  component: MerchantEntryLayout,
 });
 
-function MerchantEntryRedirect() {
+function MerchantEntryLayout() {
   const { slug } = Route.useParams();
+  const routerState = useRouterState();
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
 
@@ -19,7 +24,8 @@ function MerchantEntryRedirect() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const dashboardPath = `/customer/merchant/${slug}`;
+  // Check if a child route is matched (e.g. /m/$slug/table/$token)
+  const hasChildRoute = routerState.location.pathname.includes(`/m/${slug}/`);
 
   // Fetch merchant by slug
   useEffect(() => {
@@ -36,24 +42,25 @@ function MerchantEntryRedirect() {
     return () => { cancelled = true; };
   }, [slug]);
 
-  // Redirect based on role once both auth and merchant are loaded
+  // Redirect based on role (only for bare /m/$slug, not child routes)
   useEffect(() => {
-    if (authLoading || loading || !merchant) return;
+    if (hasChildRoute || authLoading || loading || !merchant) return;
 
     if (user?.role === "merchant") {
-      // Merchant viewing their own QR → send to their store dashboard
       navigate({ to: "/merchant/store" as any, replace: true });
       return;
     }
 
     if (user?.role === "customer") {
-      // Customer → merchant loyalty page
       navigate({ to: "/customer/merchant/$slug", params: { slug }, replace: true });
       return;
     }
+  }, [hasChildRoute, authLoading, loading, merchant, user, slug, navigate]);
 
-    // Not logged in → stay on this page (guest landing shown below)
-  }, [authLoading, loading, merchant, user, slug, navigate]);
+  // If a child route is active, just render the child
+  if (hasChildRoute) {
+    return <Outlet />;
+  }
 
   // ── Loading state ─────────────────────────────────────────────────────────
   if (loading || authLoading) {
@@ -94,7 +101,7 @@ function MerchantEntryRedirect() {
     );
   }
 
-  // ── Guest landing — not logged in ─────────────────────────────────────────
+  // ── Guest landing — not logged in (bare /m/$slug without table) ───────────
   return (
     <div className="mx-auto flex min-h-dvh max-w-[480px] flex-col px-5 pb-10 pt-10">
       <Link to="/" className="font-display text-2xl text-foreground">
@@ -144,7 +151,7 @@ function MerchantEntryRedirect() {
         </p>
         <Link
           to="/auth"
-          search={{ redirect: dashboardPath }}
+          search={{ redirect: `/customer/merchant/${slug}` }}
           className="mt-5 inline-flex h-12 w-full items-center justify-center gap-2 rounded-2xl text-sm font-medium text-primary-foreground"
           style={{ backgroundColor: merchant.store_theme_color || "var(--ink)" }}
         >

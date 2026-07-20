@@ -1,6 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { orderApi } from "@/lib/api";
+import { orderApi } from "@/lib/api/orders";
 
 export type MenuItem = {
   id: string;
@@ -34,6 +34,12 @@ export type TableOrderContext = {
   scannedAt: number;
 };
 
+export type GuestSession = {
+  guestId: string;
+  guestName: string;
+  joinedAt: number;
+};
+
 export type Order = {
   id: string;
   items: CartItem[];
@@ -56,14 +62,18 @@ type State = {
   selectedMerchantId: string | null;
   activeTable: TableOrderContext | null;
   fulfillmentType: FulfillmentType;
+  guestSession: GuestSession | null;
   setSelectedMerchant: (id: string | null) => void;
   setActiveTable: (ctx: TableOrderContext | null) => void;
   setFulfillmentType: (ft: FulfillmentType) => void;
+  setGuestSession: (session: GuestSession | null) => void;
+  setGuestName: (name: string) => void;
   add: (id: string) => void;
   remove: (id: string) => void;
   clearCart: () => void;
   clearTable: () => void;
   placeOrder: (menuItems: MenuItem[], notes?: string) => Promise<string>;
+  placeGuestOrder: (menuItems: MenuItem[], notes?: string, guestName?: string) => Promise<string>;
   updateOrderStatus: (id: string, s: OrderStatus) => void;
   setOrders: (orders: Order[]) => void;
   setPoints: (pts: number) => void;
@@ -82,6 +92,7 @@ export const useStore = create<State>()(
       selectedMerchantId: null,
       activeTable: null,
       fulfillmentType: "pickup" as FulfillmentType,
+      guestSession: null,
 
       setSelectedMerchant: (id) => set({ selectedMerchantId: id }),
 
@@ -92,6 +103,12 @@ export const useStore = create<State>()(
         }),
 
       setFulfillmentType: (ft) => set({ fulfillmentType: ft }),
+
+      setGuestSession: (session) => set({ guestSession: session }),
+      setGuestName: (name) =>
+        set((s) => ({
+          guestSession: s.guestSession ? { ...s.guestSession, guestName: name } : null,
+        })),
 
       add: (id) =>
         set((s) => {
@@ -158,6 +175,54 @@ export const useStore = create<State>()(
         return order.id;
       },
 
+      placeGuestOrder: async (menuItems: MenuItem[], notes = "", guestName = "") => {
+        const { cart, selectedMerchantId, activeTable, guestSession } = get();
+        if (!selectedMerchantId) throw new Error("No merchant selected");
+        if (cart.length === 0) throw new Error("Cart is empty");
+        if (!activeTable) throw new Error("No table selected");
+
+        const items = cart.map((c) => {
+          const item = menuItems.find((m) => m.id === c.itemId);
+          if (!item) throw new Error(`Item ${c.itemId} not found`);
+          return {
+            menu_item_id: c.itemId,
+            quantity: c.qty,
+            name: item.name,
+            price: item.price,
+            points_per_item: item.points_per_item ?? 0,
+          };
+        });
+
+        const apiOrder = await orderApi.createGuest({
+          merchant_id: selectedMerchantId,
+          items,
+          notes,
+          table_token: activeTable.tableToken,
+          guest_session_id: guestSession?.guestId ?? "",
+          guest_name: guestName || guestSession?.guestName || "",
+        });
+
+        const order: Order = {
+          id: apiOrder.id,
+          items: cart,
+          total: parseFloat(apiOrder.total_amount),
+          status: apiOrder.status as OrderStatus,
+          createdAt: apiOrder.created_at,
+          customerName: guestName || guestSession?.guestName || "Guest",
+          pointsEarned: 0,
+          merchantId: apiOrder.merchant_id,
+          merchantName: apiOrder.merchant_profiles?.business_name,
+          notes: apiOrder.notes,
+        };
+
+        set((s) => ({
+          orders: [order, ...s.orders],
+          cart: [],
+        }));
+
+        return order.id;
+      },
+
       updateOrderStatus: (id, status) =>
         set((s) => ({
           orders: s.orders.map((o) => (o.id === id ? { ...o, status } : o)),
@@ -178,6 +243,7 @@ export const useStore = create<State>()(
         points: state.points,
         streak: state.streak,
         customerName: state.customerName,
+        guestSession: state.guestSession,
       }),
     }
   )

@@ -220,6 +220,16 @@ class Order(models.Model):
         help_text="Kitchen Order Ticket number (sequential per merchant)",
     )
 
+    # ── Guest order fields ────────────────────────────────────────────────────
+    guest_session_id = models.CharField(
+        max_length=64, blank=True, default="",
+        help_text="Client-generated UUID for guest session (for future guest→member conversion)",
+    )
+    guest_name_snapshot = models.CharField(
+        max_length=255, blank=True, default="",
+        help_text="Guest name at time of order (preserved for historical reference)",
+    )
+
     # Optimistic concurrency and sync
     version = models.PositiveIntegerField(
         default=1,

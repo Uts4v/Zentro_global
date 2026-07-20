@@ -376,7 +376,10 @@ function OrderCard({
 }) {
   const next = NEXT_STATUS[order.status];
   const mins = Math.floor((Date.now() - new Date(order.created_at).getTime()) / 60_000);
-  const customerName = order.profiles?.full_name ?? "Customer";
+  const isGuest = !!(order as any).guest_session_id || !(order as any).customer_id || (order as any).customer_id === "";
+  const customerName = isGuest
+    ? ((order as any).guest_name_snapshot || "Guest")
+    : (order.profiles?.full_name ?? "Customer");
   const isPunchCard = (order as any).order_type === "punch_card_redemption";
   const isReward = (order as any).order_type === "reward_redemption";
   const isDineIn = order.fulfillment_type === "dine_in";
@@ -430,11 +433,26 @@ function OrderCard({
             <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
               #{String(order.id).slice(0, 8)}
             </p>
+            {(order as any).kot_number && (
+              <span className="inline-flex items-center rounded-full bg-ember-soft px-2 py-0.5 text-[10px] font-bold text-ember">
+                KOT #{String((order as any).kot_number).padStart(3, "0")}
+              </span>
+            )}
             <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium ${fulfillmentBadge.color}`}>
               {fulfillmentBadge.icon} {fulfillmentBadge.label}
             </span>
           </div>
           <h3 className="font-display mt-1 text-xl text-foreground">{customerName}</h3>
+          {isGuest && (
+            <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-600">
+              👤 Guest Order
+            </div>
+          )}
+          {!isGuest && (order as any).customer_id && (
+            <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-600">
+              ⭐ Member
+            </div>
+          )}
         </div>
         <span className={`rounded-full px-3 py-1 text-[10px] uppercase tracking-widest font-medium ${STATUS_COLOR[order.status]}`}>
           {order.status}

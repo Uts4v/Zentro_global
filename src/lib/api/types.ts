@@ -81,6 +81,9 @@ export interface Order {
   table_id?: number | null;
   table_name_snapshot?: string;
   table_number_snapshot?: number | null;
+  guest_session_id?: string;
+  guest_name_snapshot?: string;
+  kot_number?: number | null;
   created_at: string;
   updated_at: string;
   order_items: OrderItem[];
@@ -103,6 +106,21 @@ export interface CreateOrderPayload {
   notes?: string;
   fulfillment_type?: FulfillmentType;
   table_token?: string;
+}
+
+export interface CreateGuestOrderPayload {
+  merchant_id: string;
+  items: {
+    menu_item_id: string;
+    quantity: number;
+    name: string;
+    price: number;
+    points_per_item: number;
+  }[];
+  notes?: string;
+  table_token: string;
+  guest_session_id: string;
+  guest_name: string;
 }
 
 export interface Notification {

@@ -26,15 +26,15 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                          ZENTRO GLOW LOYALTY                           │
+│                          ZENTRO GLOW LOYALTY                            │
 │                        Full-Stack Loyalty POS System                    │
 ├─────────────────────────────────────────────────────────────────────────┤
 │                                                                         │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                 │
-│  │  CUSTOMER    │  │  MERCHANT    │  │  POS         │                 │
-│  │  MOBILE APP  │  │  ADMIN WEB   │  │  TERMINAL    │                 │
-│  │  (React)     │  │  (React)     │  │  (React)     │                 │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘                 │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                   │
+│  │  CUSTOMER    │  │  MERCHANT    │  │  POS         │                   │
+│  │  MOBILE APP  │  │  ADMIN WEB   │  │  TERMINAL    │                   │
+│  │  (React)     │  │  (React)     │  │  (React)     │                   │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘                   │
 │         │                  │                  │                         │
 │         └──────────────────┼──────────────────┘                         │
 │                            │                                            │
@@ -43,10 +43,10 @@
 │                   │  (Django DRF)   │                                   │
 │                   ├─────────────────┤                                   │
 │                   │ PostgreSQL DB   │                                   │
-│                   │ (Supabase)      │                                   │
+│                   │                                                     │
 │                   └─────────────────┘                                   │
 │                                                                         │
-│  37 Django Models │ 157 API Endpoints │ 42+ Frontend Routes            │
+│  37 Django Models │ 157 API Endpoints │ 42+ Frontend Routes             │
 │  6 Django Apps    │ JWT Auth + Device │ Zustand State                   │
 └─────────────────────────────────────────────────────────────────────────┘
 

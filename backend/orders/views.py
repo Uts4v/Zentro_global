@@ -10,7 +10,7 @@ from accounts.models import CustomerProfile
 
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 
 from merchants.models import MerchantProfile, MenuItem
@@ -26,7 +26,7 @@ from notifications.services import send_notification
 from notifications.models import Notification
 
 from .models import Order, OrderItem
-from .serializers import OrderSerializer, CreateOrderSerializer
+from .serializers import OrderSerializer, CreateOrderSerializer, CreateGuestOrderSerializer
 
 logger = logging.getLogger(__name__)
 
@@ -324,6 +324,126 @@ def create_order(request):
         user=merchant.user,
         title="New order received 🔔",
         message=f"Order #{order.id} from {customer.full_name or 'Customer'} — NPR {total_amount}",
+        notification_type=Notification.TYPE_NEW_ORDER,
+        merchant_name=merchant.business_name,
+        context_url="/merchant/orders",
+        order_id=order.id,
+        merchant_id=merchant.id,
+    ))
+
+    return Response(OrderSerializer(order).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(["POST"])
+@permission_classes([AllowAny])
+@transaction.atomic
+def guest_create_order(request):
+    """Create an order without authentication. Requires a valid table token."""
+    serializer = CreateGuestOrderSerializer(data=request.data)
+    if not serializer.is_valid():
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    data = serializer.validated_data
+
+    try:
+        merchant = MerchantProfile.objects.get(id=data["merchant_id"])
+    except MerchantProfile.DoesNotExist:
+        return Response({"error": "Merchant not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    if not merchant.is_open:
+        return Response({"error": "This store is currently closed."}, status=status.HTTP_400_BAD_REQUEST)
+
+    if not merchant.table_ordering_enabled:
+        return Response(
+            {"error": "This merchant does not support table ordering."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    table_token = data["table_token"].strip()
+    if not table_token:
+        return Response(
+            {"error": "Table token is required for guest orders."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    from merchants.models import MerchantTable
+    try:
+        table_instance = MerchantTable.objects.get(
+            public_token=table_token,
+            merchant=merchant,
+            is_active=True,
+        )
+    except MerchantTable.DoesNotExist:
+        return Response(
+            {"error": "Invalid or inactive table. Please scan a valid table QR code."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    total_amount = 0
+    points_earned = 0
+    order_items_data = []
+
+    for item_data in data["items"]:
+        try:
+            menu_item = MenuItem.objects.get(
+                id=item_data["menu_item_id"],
+                merchant=merchant,
+                is_available=True,
+            )
+        except MenuItem.DoesNotExist:
+            return Response(
+                {"error": f"Menu item {item_data['menu_item_id']} not found or unavailable."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        quantity = item_data["quantity"]
+        subtotal = menu_item.price * quantity
+        total_amount += subtotal
+
+        if menu_item.loyalty_reward:
+            points_earned += menu_item.points_per_item * quantity
+
+        order_items_data.append({
+            "menu_item": menu_item,
+            "name": menu_item.name,
+            "price": menu_item.price,
+            "quantity": quantity,
+            "subtotal": subtotal,
+        })
+
+    # Generate KOT number
+    from django.utils import timezone as tz
+    today_start = tz.now().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_count = Order.objects.filter(
+        merchant=merchant, created_at__gte=today_start, kot_number__isnull=False,
+    ).count()
+    kot_number = today_count + 1
+
+    order = Order.objects.create(
+        customer=None,
+        merchant=merchant,
+        total_amount=total_amount,
+        points_earned=0,  # Guest orders don't earn points
+        notes=data.get("notes", ""),
+        status=Order.STATUS_PENDING,
+        order_type=Order.ORDER_TYPE_REGULAR,
+        source="table_qr",
+        fulfillment_type=Order.FULFILLMENT_DINE_IN,
+        table=table_instance,
+        table_name_snapshot=table_instance.name,
+        table_number_snapshot=table_instance.table_number,
+        guest_session_id=data.get("guest_session_id", ""),
+        guest_name_snapshot=data.get("guest_name", ""),
+        kot_number=kot_number,
+    )
+
+    for item in order_items_data:
+        OrderItem.objects.create(order=order, **item)
+
+    transaction.on_commit(lambda: _notify_safe(
+        user=merchant.user,
+        title="New guest order 🔔",
+        message=f"Guest Order #{order.id} — Table {table_instance.table_number} — NPR {total_amount}",
         notification_type=Notification.TYPE_NEW_ORDER,
         merchant_name=merchant.business_name,
         context_url="/merchant/orders",

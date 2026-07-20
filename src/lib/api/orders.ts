@@ -1,6 +1,6 @@
 import { apiUrl, djangoFetch } from "@/lib/django-api-base";
 import { djangoHeaders as authHeaders } from "@/lib/auth";
-import type { Order, CreateOrderPayload, OrderStatus } from "./types";
+import type { Order, CreateOrderPayload, CreateGuestOrderPayload, OrderStatus } from "./types";
 
 /** Normalise a Django Order response into the shape the frontend expects. */
 function normaliseOrder(o: any): Order {
@@ -11,6 +11,9 @@ function normaliseOrder(o: any): Order {
     menu_item_id: String(item.menu_item_id ?? item.menu_item ?? ""),
   }));
 
+  // For guest orders, customer_name comes from guest_name_snapshot
+  const customerName = o.customer_name ?? o.guest_name_snapshot ?? null;
+
   return {
     ...o,
     id: String(o.id),
@@ -20,8 +23,11 @@ function normaliseOrder(o: any): Order {
     table_id: o.table_id ?? o.table ?? null,
     table_name_snapshot: o.table_name_snapshot ?? "",
     table_number_snapshot: o.table_number_snapshot ?? null,
+    guest_session_id: o.guest_session_id ?? "",
+    guest_name_snapshot: o.guest_name_snapshot ?? "",
+    kot_number: o.kot_number ?? null,
     order_items: items,
-    profiles: { full_name: o.customer_name ?? null },
+    profiles: { full_name: customerName },
     merchant_profiles: { business_name: o.merchant_name ?? "" },
   };
 }
@@ -65,6 +71,26 @@ export const orderApi = {
     const data = await djangoFetch<any>(apiUrl("/orders/create/"), {
       method: "POST",
       headers: authHeaders(true),
+      body: JSON.stringify(body),
+    });
+    return normaliseOrder(data);
+  },
+
+  createGuest: async (payload: CreateGuestOrderPayload): Promise<Order> => {
+    const body = {
+      merchant_id: payload.merchant_id,
+      items: payload.items.map((i) => ({
+        menu_item_id: i.menu_item_id,
+        quantity: i.quantity,
+      })),
+      notes: payload.notes ?? "",
+      table_token: payload.table_token,
+      guest_session_id: payload.guest_session_id,
+      guest_name: payload.guest_name,
+    };
+    const data = await djangoFetch<any>(apiUrl("/orders/guest-create/"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
     });
     return normaliseOrder(data);

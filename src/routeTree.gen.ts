@@ -59,6 +59,7 @@ import { Route as AuthForgotPasswordRouteImport } from './routes/auth.forgot-pas
 import { Route as TableTokenOrderRouteImport } from './routes/table.$token.order'
 import { Route as PosReportsZReportRouteImport } from './routes/pos.reports.z-report'
 import { Route as LoyaltyQrTokenRouteImport } from './routes/loyalty.qr.$token'
+import { Route as GuestMerchantSlugRouteImport } from './routes/guest.merchant.$slug'
 import { Route as CustomerMerchantSlugRouteImport } from './routes/customer.merchant.$slug'
 import { Route as AuthMerchantSignupRouteImport } from './routes/auth.merchant.signup'
 import { Route as AuthMerchantLoginRouteImport } from './routes/auth.merchant.login'
@@ -314,6 +315,11 @@ const LoyaltyQrTokenRoute = LoyaltyQrTokenRouteImport.update({
   path: '/qr/$token',
   getParentRoute: () => LoyaltyRoute,
 } as any)
+const GuestMerchantSlugRoute = GuestMerchantSlugRouteImport.update({
+  id: '/guest/merchant/$slug',
+  path: '/guest/merchant/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CustomerMerchantSlugRoute = CustomerMerchantSlugRouteImport.update({
   id: '/customer/merchant/$slug',
   path: '/customer/merchant/$slug',
@@ -386,6 +392,7 @@ export interface FileRoutesByFullPath {
   '/auth/merchant/login': typeof AuthMerchantLoginRoute
   '/auth/merchant/signup': typeof AuthMerchantSignupRoute
   '/customer/merchant/$slug': typeof CustomerMerchantSlugRoute
+  '/guest/merchant/$slug': typeof GuestMerchantSlugRoute
   '/loyalty/qr/$token': typeof LoyaltyQrTokenRoute
   '/pos/reports/z-report': typeof PosReportsZReportRoute
   '/table/$token/order': typeof TableTokenOrderRoute
@@ -440,6 +447,7 @@ export interface FileRoutesByTo {
   '/auth/merchant/login': typeof AuthMerchantLoginRoute
   '/auth/merchant/signup': typeof AuthMerchantSignupRoute
   '/customer/merchant/$slug': typeof CustomerMerchantSlugRoute
+  '/guest/merchant/$slug': typeof GuestMerchantSlugRoute
   '/loyalty/qr/$token': typeof LoyaltyQrTokenRoute
   '/pos/reports/z-report': typeof PosReportsZReportRoute
   '/table/$token/order': typeof TableTokenOrderRoute
@@ -497,6 +505,7 @@ export interface FileRoutesById {
   '/auth/merchant/login': typeof AuthMerchantLoginRoute
   '/auth/merchant/signup': typeof AuthMerchantSignupRoute
   '/customer/merchant/$slug': typeof CustomerMerchantSlugRoute
+  '/guest/merchant/$slug': typeof GuestMerchantSlugRoute
   '/loyalty/qr/$token': typeof LoyaltyQrTokenRoute
   '/pos/reports/z-report': typeof PosReportsZReportRoute
   '/table/$token/order': typeof TableTokenOrderRoute
@@ -555,6 +564,7 @@ export interface FileRouteTypes {
     | '/auth/merchant/login'
     | '/auth/merchant/signup'
     | '/customer/merchant/$slug'
+    | '/guest/merchant/$slug'
     | '/loyalty/qr/$token'
     | '/pos/reports/z-report'
     | '/table/$token/order'
@@ -609,6 +619,7 @@ export interface FileRouteTypes {
     | '/auth/merchant/login'
     | '/auth/merchant/signup'
     | '/customer/merchant/$slug'
+    | '/guest/merchant/$slug'
     | '/loyalty/qr/$token'
     | '/pos/reports/z-report'
     | '/table/$token/order'
@@ -665,6 +676,7 @@ export interface FileRouteTypes {
     | '/auth/merchant/login'
     | '/auth/merchant/signup'
     | '/customer/merchant/$slug'
+    | '/guest/merchant/$slug'
     | '/loyalty/qr/$token'
     | '/pos/reports/z-report'
     | '/table/$token/order'
@@ -695,6 +707,7 @@ export interface RootRouteChildren {
   OrdersIdRoute: typeof OrdersIdRoute
   StoresIdRoute: typeof StoresIdRoute
   CustomerMerchantSlugRoute: typeof CustomerMerchantSlugRoute
+  GuestMerchantSlugRoute: typeof GuestMerchantSlugRoute
   TableTokenOrderRoute: typeof TableTokenOrderRoute
 }
 
@@ -1050,6 +1063,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoyaltyQrTokenRouteImport
       parentRoute: typeof LoyaltyRoute
     }
+    '/guest/merchant/$slug': {
+      id: '/guest/merchant/$slug'
+      path: '/guest/merchant/$slug'
+      fullPath: '/guest/merchant/$slug'
+      preLoaderRoute: typeof GuestMerchantSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/customer/merchant/$slug': {
       id: '/customer/merchant/$slug'
       path: '/customer/merchant/$slug'
@@ -1236,6 +1256,7 @@ const rootRouteChildren: RootRouteChildren = {
   OrdersIdRoute: OrdersIdRoute,
   StoresIdRoute: StoresIdRoute,
   CustomerMerchantSlugRoute: CustomerMerchantSlugRoute,
+  GuestMerchantSlugRoute: GuestMerchantSlugRoute,
   TableTokenOrderRoute: TableTokenOrderRoute,
 }
 export const routeTree = rootRouteImport
