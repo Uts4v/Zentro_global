@@ -27,7 +27,7 @@ class MerchantProfileSerializer(serializers.ModelSerializer):
             "description", "is_approved", "is_open",
             "onboarding_complete",
             "latitude", "longitude", "qr_code",
-            "store_theme_color",
+            "store_theme_color", "card_text_color", "card_background_image",
             "table_ordering_enabled", "allow_pickup", "allow_delivery", "allow_dine_in",
             "allow_point_transfer",
             "menu_items", "created_at", "updated_at",
@@ -57,7 +57,7 @@ class MerchantPublicSerializer(serializers.ModelSerializer):
             "address", "phone", "logo_url", "banner_url",
             "description", "is_open",
             "latitude", "longitude",
-            "store_theme_color",
+            "store_theme_color", "card_text_color", "card_background_image",
             "table_ordering_enabled", "allow_pickup", "allow_delivery", "allow_dine_in",
         ]
 

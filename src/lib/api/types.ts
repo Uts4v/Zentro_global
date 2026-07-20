@@ -155,6 +155,8 @@ export interface MerchantProfile {
   longitude?: string | null;
   qr_code?: string;
   store_theme_color?: string;
+  card_text_color?: string;
+  card_background_image?: string;
   table_ordering_enabled?: boolean;
   allow_pickup?: boolean;
   allow_delivery?: boolean;

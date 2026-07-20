@@ -11,6 +11,7 @@ export type MenuItem = {
   emoji: string;
   points_per_item: number;
   is_available?: boolean;
+  is_featured?: boolean;
   image_url?: string | null;
 };
 

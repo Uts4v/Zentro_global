@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import {
   MapPin, Clock, Loader2, Save, Check, X,
   ImageIcon, Upload, QrCode, ExternalLink, RefreshCw,
+  Palette, CreditCard,
 } from "lucide-react";
 import { merchantApi, type MerchantProfile } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -314,6 +315,9 @@ export function MerchantStorePage() {
     logo_url: "",
     banner_url: "",
     is_open: true,
+    store_theme_color: "",
+    card_text_color: "",
+    card_background_image: "",
   });
 
   const fetchProfile = useCallback(async () => {
@@ -331,6 +335,9 @@ export function MerchantStorePage() {
         logo_url: data.logo_url || "",
         banner_url: data.banner_url || "",
         is_open: data.is_open ?? true,
+        store_theme_color: data.store_theme_color || "",
+        card_text_color: data.card_text_color || "",
+        card_background_image: data.card_background_image || "",
       });
     } catch (err) {
       setError("Could not load your store profile.");
@@ -357,6 +364,9 @@ export function MerchantStorePage() {
         logo_url: updated.logo_url || "",
         banner_url: updated.banner_url || "",
         is_open: updated.is_open ?? true,
+        store_theme_color: updated.store_theme_color || "",
+        card_text_color: updated.card_text_color || "",
+        card_background_image: updated.card_background_image || "",
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -466,6 +476,141 @@ export function MerchantStorePage() {
             </p>
           </div>
         )}
+      </section>
+
+      {/* ── Card Theme ── */}
+      <section className="glass-strong rounded-3xl p-6 space-y-6">
+        <div className="flex items-center gap-2">
+          <CreditCard className="h-4 w-4 text-muted-foreground" />
+          <h2 className="font-display text-2xl text-ink">Card Theme</h2>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Customise how your loyalty card appears to customers in their home screen.
+        </p>
+
+        {/* Theme color */}
+        <div className="space-y-2">
+          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Card color</p>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              {["#1A1A1A", "#1B5E3B", "#3E2723", "#B71C1C", "#1A237E", "#D4AF37", "#F5E6D0"].map((c) => (
+                <button
+                  key={c}
+                  onClick={() => updateField("store_theme_color", c)}
+                  className={`h-8 w-8 rounded-full border-2 transition-all ${
+                    form.store_theme_color === c ? "border-ink scale-110" : "border-transparent"
+                  }`}
+                  style={{ background: c }}
+                  aria-label={`Theme ${c}`}
+                />
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={form.store_theme_color || "#1A1A1A"}
+                onChange={(e) => updateField("store_theme_color", e.target.value)}
+                className="h-8 w-8 cursor-pointer rounded-full border-0 bg-transparent"
+              />
+              <input
+                value={form.store_theme_color}
+                onChange={(e) => updateField("store_theme_color", e.target.value)}
+                placeholder="#1A1A1A"
+                className="h-9 w-28 rounded-xl bg-mist px-3 text-xs text-ink outline-none focus:ring-2 focus:ring-ember/40 font-mono"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Text color */}
+        <div className="space-y-2">
+          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Text color</p>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              {["#FFFFFF", "#1A1A1A", "#F5E6D0", "#D4AF37", "#9FA8DA"].map((c) => (
+                <button
+                  key={c}
+                  onClick={() => updateField("card_text_color", c)}
+                  className={`h-8 w-8 rounded-full border-2 transition-all ${
+                    form.card_text_color === c ? "border-ink scale-110" : "border-border"
+                  }`}
+                  style={{ background: c }}
+                  aria-label={`Text color ${c}`}
+                />
+              ))}
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="color"
+                value={form.card_text_color || "#FFFFFF"}
+                onChange={(e) => updateField("card_text_color", e.target.value)}
+                className="h-8 w-8 cursor-pointer rounded-full border-0 bg-transparent"
+              />
+              <input
+                value={form.card_text_color}
+                onChange={(e) => updateField("card_text_color", e.target.value)}
+                placeholder="#FFFFFF"
+                className="h-9 w-28 rounded-xl bg-mist px-3 text-xs text-ink outline-none focus:ring-2 focus:ring-ember/40 font-mono"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Background image */}
+        {merchantId && (
+          <InlineImageUploader
+            label="Card background image"
+            hint="Adds texture to your loyalty card. Recommended 800 × 400 px."
+            currentUrl={form.card_background_image}
+            onUpload={(url) => updateField("card_background_image", url)}
+            onClear={() => updateField("card_background_image", "")}
+            aspectClass="aspect-[2/1]"
+            shape="square"
+            merchantId={merchantId}
+            bucket="merchant-images"
+            storagePath={`${merchantId}/card-bg.webp`}
+            preset="banner"
+          />
+        )}
+
+        {/* Live card preview */}
+        <div className="space-y-2">
+          <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Preview</p>
+          <div
+            className="relative overflow-hidden rounded-3xl p-5"
+            style={{
+              background: form.card_background_image
+                ? `linear-gradient(145deg, ${form.store_theme_color || "#1A1A1A"}ee, ${form.store_theme_color || "#2C2C2C"}dd), url(${form.card_background_image})`
+                : `linear-gradient(145deg, ${form.store_theme_color || "#1A1A1A"}, ${form.store_theme_color || "#2C2C2C"}cc)`,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              color: form.card_text_color || "#FFFFFF",
+              minHeight: 180,
+            }}
+          >
+            {form.card_background_image && (
+              <img
+                src={form.card_background_image}
+                alt=""
+                className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-20"
+              />
+            )}
+            <div className="relative">
+              <div className="flex items-center gap-3">
+                {form.logo_url && (
+                  <img src={form.logo_url} alt="" className="h-10 w-10 rounded-xl object-cover" />
+                )}
+                <div>
+                  <p className="text-[9px] uppercase tracking-[0.22em] opacity-50">Membership</p>
+                  <p className="font-display text-xl">{form.business_name || "Your Store"}</p>
+                </div>
+              </div>
+              <p className="font-display mt-4 text-4xl leading-none">2,450</p>
+              <p className="mt-1 text-[10px] opacity-50">Available Points</p>
+              <p className="mt-3 text-right text-[8px] opacity-30">Powered by Zentro</p>
+            </div>
+          </div>
+        </div>
       </section>
 
       {/* ── Live preview card ── */}

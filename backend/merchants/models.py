@@ -40,6 +40,8 @@ class MerchantProfile(models.Model):
     qr_code = models.TextField(blank=True)  # stores the public URL or SVG string
 
     store_theme_color = models.CharField(max_length=7, blank=True, default="", help_text="Hex color for customer store view, e.g. #1e293b")
+    card_text_color = models.CharField(max_length=7, blank=True, default="", help_text="Hex color for loyalty card text, e.g. #ffffff")
+    card_background_image = models.URLField(blank=True, default="", help_text="Background image URL for the customer loyalty card")
 
     # Table ordering settings
     table_ordering_enabled = models.BooleanField(
