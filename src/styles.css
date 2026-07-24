@@ -289,6 +289,52 @@
   animation: card-enter 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* ══ Premium Loyalty Card — Organic / Glassmorphism ═══════════════════════ */
+
+@keyframes mascot-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+@utility animate-mascot-bounce {
+  animation: mascot-bounce 3s ease-in-out infinite;
+}
+
+@keyframes loyalty-card-float {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  33% { transform: translateY(-4px) rotate(0.15deg); }
+  66% { transform: translateY(-2px) rotate(-0.1deg); }
+}
+@utility animate-loyalty-float {
+  animation: loyalty-card-float 6s ease-in-out infinite;
+}
+
+@keyframes progress-fill {
+  from { width: 0; }
+}
+@utility animate-progress-fill {
+  animation: progress-fill 1.2s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 0.4s;
+}
+
+@keyframes blob-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  33% { transform: translate(12px, -8px) scale(1.05); }
+  66% { transform: translate(-8px, 6px) scale(0.97); }
+}
+
+@keyframes gentle-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fade-up-in {
+  0% { opacity: 0; transform: translateY(16px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@utility animate-fade-up-in {
+  animation: fade-up-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 @keyframes slide-up {
   0% {
     opacity: 0;
@@ -400,5 +446,27 @@
     width: 100%;
     max-width: 190mm;
     font-size: 12px;
+  }
+}
+
+/* ── Card Designer Grid ──────────────────────────────────────────────── */
+.card-designer-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 32px;
+  align-items: start;
+}
+
+@media (min-width: 768px) {
+  .card-designer-grid {
+    grid-template-columns: 360px 1fr;
+    gap: 36px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .card-designer-grid {
+    grid-template-columns: 420px 1fr;
+    gap: 48px;
   }
 }

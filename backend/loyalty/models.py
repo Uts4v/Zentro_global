@@ -621,6 +621,7 @@ class MerchantMembershipCardDesign(models.Model):
     show_lifetime_points = models.BooleanField(default=True)
     show_joined_date = models.BooleanField(default=True)
     show_qr_shortcut = models.BooleanField(default=True)
+    show_color_overlay = models.BooleanField(default=True)
     is_published = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

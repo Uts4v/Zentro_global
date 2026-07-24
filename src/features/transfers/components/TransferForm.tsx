@@ -103,16 +103,16 @@ export function TransferForm({ preselectedMerchantId, scannedTransferCode, onSuc
   }
 
   return (
-    <div className={`space-y-4 ${compact ? "" : "p-6"}`}>
+    <div className={`w-full max-w-full space-y-4 ${compact ? "" : "p-6"}`}>
       {showWalletSelector ? (
-        <div>
+        <div className="max-w-full">
           <label className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-muted-foreground">
             From (merchant)
           </label>
           <select
             value={selectedWalletId}
             onChange={(e) => setSelectedWalletId(e.target.value)}
-            className="w-full rounded-xl border border-border bg-transparent px-4 py-3 text-sm text-ink outline-none focus:border-ink/30"
+            className="w-full truncate rounded-xl border border-border bg-transparent px-4 py-3 text-sm text-ink outline-none focus:border-ink/30"
           >
             <option value="">Select a merchant…</option>
             {wallets.map((w) => (
@@ -123,11 +123,11 @@ export function TransferForm({ preselectedMerchantId, scannedTransferCode, onSuc
           </select>
         </div>
       ) : activeWallet && (
-        <div className="flex items-center justify-between rounded-xl bg-mist px-4 py-2.5">
-          <span className="text-xs text-muted-foreground">
+        <div className="flex min-w-0 items-center justify-between overflow-hidden rounded-xl bg-mist px-4 py-2.5">
+          <span className="min-w-0 truncate text-xs text-muted-foreground">
             From <span className="font-medium text-ink">{activeWallet.merchant_name}</span>
           </span>
-          <span className="text-xs font-medium text-ink">{activeWallet.points_balance.toLocaleString()} pts</span>
+          <span className="shrink-0 text-xs font-medium text-ink">{activeWallet.points_balance.toLocaleString()} pts</span>
         </div>
       )}
 
@@ -167,7 +167,7 @@ export function TransferForm({ preselectedMerchantId, scannedTransferCode, onSuc
         </Suspense>
       )}
 
-      <div>
+      <div className="max-w-full">
         <label className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-muted-foreground">
           Amount (points)
         </label>
@@ -180,13 +180,13 @@ export function TransferForm({ preselectedMerchantId, scannedTransferCode, onSuc
           className="w-full rounded-xl border border-border bg-transparent px-4 py-3 text-sm text-ink outline-none placeholder:text-muted-foreground/50 focus:border-ink/30"
         />
         {activeWallet && (
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="mt-1 truncate text-xs text-muted-foreground">
             Balance: {activeWallet.points_balance.toLocaleString()} pts
           </p>
         )}
       </div>
 
-      <div>
+      <div className="max-w-full">
         <label className="mb-1.5 block text-xs uppercase tracking-[0.15em] text-muted-foreground">
           Note (optional)
         </label>
@@ -201,7 +201,7 @@ export function TransferForm({ preselectedMerchantId, scannedTransferCode, onSuc
       <button
         onClick={handleSubmit}
         disabled={sending || !selectedWalletId || !receiverCode.trim() || !amount}
-        className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-full gradient-ember text-sm font-medium text-white shadow-ember transition-transform active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100"
+        className="inline-flex h-11 w-full items-center justify-center gap-2 overflow-hidden truncate rounded-full gradient-ember text-sm font-medium text-white shadow-ember transition-transform active:scale-[0.98] disabled:opacity-50 disabled:active:scale-100"
       >
         {sending ? (
           <Loader2 className="h-4 w-4 animate-spin" />

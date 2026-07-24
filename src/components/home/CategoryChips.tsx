@@ -29,8 +29,8 @@ export function CategoryChips({ categories, active, onSelect, merchantColor }: C
                       : "0 4px 14px rgba(26,26,26,0.2)",
                   }
                 : {
-                    background: "#F5F3EF",
-                    color: "#1A1A1A",
+                    background: "var(--mist)",
+                    color: "var(--foreground)",
                   }
             }
           >

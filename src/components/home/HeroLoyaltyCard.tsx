@@ -1,8 +1,10 @@
 // src/components/home/HeroLoyaltyCard.tsx
 // Premium merchant-themed loyalty card — minimalist creative gradient
 import { useMemo } from "react";
-import { Flame, Star, ShoppingBag, TrendingUp } from "lucide-react";
+import { Flame, Star, ShoppingBag, Wifi } from "lucide-react";
 import { getIllustrationSVG, type MerchantThemePreset } from "@/lib/merchant-theme-presets";
+import type { MembershipCardDesign } from "@/lib/api";
+import simImg from "@/img/sim.png";
 
 interface HeroLoyaltyCardProps {
   merchantName: string;
@@ -20,6 +22,7 @@ interface HeroLoyaltyCardProps {
   themeColor?: string;
   cardTextColor?: string;
   cardBackgroundImage?: string;
+  cardDesign?: MembershipCardDesign | null;
   joined: boolean;
   onJoin?: () => void;
   joining?: boolean;
@@ -70,35 +73,42 @@ export function HeroLoyaltyCard({
   themeColor,
   cardTextColor,
   cardBackgroundImage,
+  cardDesign,
   joined,
   onJoin,
   joining,
 }: HeroLoyaltyCardProps) {
-  const primary = theme?.primary ?? themeColor ?? "#1A1A1A";
-  const secondary = theme?.secondary ?? themeColor ?? "#2C2C2C";
+  // card_design from merchant settings takes priority over theme presets
+  const primary = cardDesign?.primary_color || theme?.primary || themeColor || "#1A1A1A";
+  const secondary = cardDesign?.secondary_color || theme?.secondary || themeColor || "#2C2C2C";
+  const accent = cardDesign?.accent_color || theme?.accent || primary;
 
-  // Resolve text color: merchant custom > preset > auto-detect
-  const resolvedTextColor = cardTextColor || "#FFFFFF";
-  const isLight = isLightColor(resolvedTextColor);
+  // Resolve text color: card_design text_mode > merchant custom > preset > auto-detect
+  const resolvedTextColor = cardDesign
+    ? (cardDesign.text_mode === "dark" ? "#1A1A1A" : "#FFFFFF")
+    : (cardTextColor || "#FFFFFF");
+  const isLight = cardDesign ? cardDesign.text_mode === "dark" : isLightColor(resolvedTextColor);
 
-  // Gradient: if merchant has a bg image, use solid color overlay; otherwise creative gradient
+  // Background image: card_design > merchant profile
+  const resolvedBgImage = (cardDesign?.background_image && cardDesign.background_image.trim()) || cardBackgroundImage || null;
+
+  // Gradient — match MembershipCardStack exactly
   const cardStyle: React.CSSProperties = useMemo(() => {
-    if (cardBackgroundImage) {
+    if (resolvedBgImage) {
       return {
-        background: `linear-gradient(165deg, ${hexToRGBA(primary, 0.92)}, ${hexToRGBA(secondary, 0.88)}), url(${cardBackgroundImage})`,
+        background: `linear-gradient(145deg, ${hexToRGBA(primary, 0.88)} 0%, ${hexToRGBA(secondary, 0.85)} 100%), url(${resolvedBgImage})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
         color: resolvedTextColor,
-        boxShadow: `0 20px 60px -12px ${hexToRGBA(primary, 0.45)}`,
+        boxShadow: `0 20px 50px -12px rgba(0,0,0,0.35), 0 4px 12px -4px rgba(0,0,0,0.15)`,
       };
     }
-    // Minimalist creative gradient — not flat, not busy
     return {
-      background: `linear-gradient(165deg, ${primary} 0%, ${secondary} 55%, ${hexToRGBA(primary, 0.7)} 100%)`,
+      background: `linear-gradient(145deg, ${primary} 0%, ${secondary} 100%)`,
       color: resolvedTextColor,
-      boxShadow: `0 20px 60px -12px ${hexToRGBA(primary, 0.45)}`,
+      boxShadow: `0 20px 50px -12px rgba(0,0,0,0.35), 0 4px 12px -4px rgba(0,0,0,0.15)`,
     };
-  }, [primary, secondary, cardBackgroundImage, resolvedTextColor]);
+  }, [primary, secondary, resolvedBgImage, resolvedTextColor]);
 
   const textSecondary = isLight ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.5)";
   const textTertiary = isLight ? "rgba(0,0,0,0.3)" : "rgba(255,255,255,0.3)";
@@ -114,12 +124,12 @@ export function HeroLoyaltyCard({
     return (
       <section className="px-5">
         <div
-          className="relative overflow-hidden rounded-[28px] p-6 text-center"
-          style={cardStyle}
+          className="relative overflow-hidden rounded-[20px] p-6 text-center"
+          style={{ ...cardStyle, aspectRatio: "1.586 / 1" }}
         >
-          {cardBackgroundImage && (
+          {resolvedBgImage && (
             <img
-              src={cardBackgroundImage}
+              src={resolvedBgImage}
               alt=""
               className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-15"
             />
@@ -162,13 +172,13 @@ export function HeroLoyaltyCard({
   return (
     <section className="px-5">
       <div
-        className="relative overflow-hidden rounded-[28px] p-6 pb-5"
-        style={{ ...cardStyle, minHeight: 310 }}
+        className="relative flex flex-col overflow-hidden rounded-[20px] p-5"
+        style={{ ...cardStyle, aspectRatio: "1.586 / 1" }}
       >
         {/* Background image overlay */}
-        {cardBackgroundImage && (
+        {resolvedBgImage && (
           <img
-            src={cardBackgroundImage}
+            src={resolvedBgImage}
             alt=""
             className="pointer-events-none absolute inset-0 h-full w-full object-cover opacity-20"
           />
@@ -184,34 +194,45 @@ export function HeroLoyaltyCard({
         {/* Subtle decorative orb — gradient accent */}
         <div
           className="pointer-events-none absolute -right-20 -top-20 h-56 w-56 rounded-full opacity-20 blur-3xl"
-          style={{ background: `radial-gradient(circle, ${theme?.accent || hexToRGBA(primary, 0.4)}, transparent)` }}
+          style={{ background: `radial-gradient(circle, ${accent || hexToRGBA(primary, 0.4)}, transparent)` }}
+        />
+
+        {/* SIM chip — right side middle */}
+        <img
+          src={simImg}
+          alt=""
+          className="pointer-events-none absolute right-4 top-1/2 h-14 w-16 -translate-y-1/2 object-contain"
+          style={{ filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.25))" }}
+        />
+
+        {/* NFC contactless icon — left of SIM */}
+        <Wifi
+          className="pointer-events-none absolute right-[78px] top-1/2 h-5 w-5 -translate-y-1/2 -rotate-90"
+          strokeWidth={1.8}
         />
 
         {/* Top row: Logo + Name + Tier */}
         <div className="relative flex items-start justify-between gap-3">
-          <div className="flex min-w-0 items-center gap-3">
+          <div className="flex min-w-0 items-center gap-2.5">
             {merchantLogo ? (
               <img
                 src={merchantLogo}
                 alt=""
-                className="h-10 w-10 shrink-0 rounded-xl object-cover"
+                className="h-9 w-9 shrink-0 rounded-xl object-cover"
                 style={{ background: overlayBg }}
               />
             ) : (
-              <div className="h-10 w-10 shrink-0 rounded-xl" style={{ background: overlayBg }} />
+              <div className="h-9 w-9 shrink-0 rounded-xl" style={{ background: overlayBg }} />
             )}
             <div className="min-w-0">
-              <p className="text-[9px] uppercase tracking-[0.22em]" style={{ color: textTertiary }}>
+              <p className="text-[8px] uppercase tracking-[0.22em]" style={{ color: textTertiary }}>
                 Membership
               </p>
-              <p className="mt-0.5 truncate font-display text-[22px] leading-tight">{merchantName}</p>
-              {merchantCategory && (
-                <p className="text-[11px]" style={{ color: textSecondary }}>{merchantCategory}</p>
-              )}
+              <p className="mt-0.5 truncate font-display text-lg leading-tight">{merchantName}</p>
             </div>
           </div>
           <span
-            className="mt-0.5 shrink-0 rounded-full px-3 py-1.5 text-[9px] font-bold uppercase tracking-[0.15em]"
+            className="mt-0.5 shrink-0 rounded-full px-2.5 py-1 text-[8px] font-bold uppercase tracking-[0.15em]"
             style={{ background: overlayBg, color: resolvedTextColor }}
           >
             {tierIcon(tier)} {tierLabel(tier)}
@@ -219,80 +240,43 @@ export function HeroLoyaltyCard({
         </div>
 
         {/* Points — large, clean */}
-        <div className="relative mt-6">
-          <p className="text-[9px] uppercase tracking-[0.22em]" style={{ color: textTertiary }}>
+        <div className="relative mt-3">
+          <p className="text-[8px] uppercase tracking-[0.22em]" style={{ color: textTertiary }}>
             Available Points
           </p>
           <p
-            className="font-display text-[56px] leading-none tracking-tight"
+            className="font-display text-[40px] leading-none tracking-tight"
             style={{ letterSpacing: "-0.03em" }}
           >
             {points.toLocaleString()}
           </p>
         </div>
 
-        {/* Stats row — 3 columns, minimal */}
-        <div className="relative mt-5 grid grid-cols-3 gap-2">
-          <div className="rounded-2xl p-3" style={{ background: overlayBg }}>
-            <div className="flex items-center gap-1">
-              <Flame className="h-3 w-3" style={{ color: theme?.accent || resolvedTextColor }} />
-              <span className="text-[9px] uppercase tracking-widest" style={{ color: textTertiary }}>Streak</span>
-            </div>
-            <p className="font-display mt-1 text-xl leading-tight">{streak}</p>
-            <p className="text-[10px]" style={{ color: textSecondary }}>days</p>
-          </div>
-          <div className="rounded-2xl p-3" style={{ background: overlayBg }}>
-            <div className="flex items-center gap-1">
-              <Star className="h-3 w-3" style={{ color: theme?.accent || resolvedTextColor }} />
-              <span className="text-[9px] uppercase tracking-widest" style={{ color: textTertiary }}>Rewards</span>
-            </div>
-            <p className="font-display mt-1 text-xl leading-tight">{freeRewards}</p>
-            <p className="text-[10px]" style={{ color: textSecondary }}>available</p>
-          </div>
-          <div className="rounded-2xl p-3" style={{ background: overlayBg }}>
-            <div className="flex items-center gap-1">
-              <ShoppingBag className="h-3 w-3" style={{ color: theme?.accent || resolvedTextColor }} />
-              <span className="text-[9px] uppercase tracking-widest" style={{ color: textTertiary }}>Orders</span>
-            </div>
-            <p className="font-display mt-1 text-xl leading-tight">{ordersCount}</p>
-            <p className="text-[10px]" style={{ color: textSecondary }}>total</p>
-          </div>
-        </div>
-
-        {/* Progress bar */}
-        <div className="relative mt-4">
+        {/* Streak + Orders — compact inline */}
+        <div className="relative mt-2 flex items-center gap-4">
           <div className="flex items-center gap-1.5">
-            <TrendingUp className="h-3 w-3" style={{ color: theme?.accent || resolvedTextColor }} />
-            <span className="text-[10px] font-medium" style={{ color: textSecondary }}>
-              {Math.round(progressPercent)}% to next tier
-            </span>
+            <Flame className="h-3 w-3" style={{ color: accent || resolvedTextColor }} />
+            <span className="text-[10px] font-medium">{streak} <span style={{ color: textSecondary }}>day streak</span></span>
           </div>
-          <div className="mt-2 h-1.5 overflow-hidden rounded-full" style={{ background: overlayBg }}>
-            <div
-              className="h-full rounded-full transition-all duration-700 ease-out"
-              style={{
-                width: `${Math.min(progressPercent, 100)}%`,
-                background: isLight
-                  ? `linear-gradient(90deg, ${primary}, ${hexToRGBA(primary, 0.7)})`
-                  : `linear-gradient(90deg, ${theme?.accent || "#FFFFFF"}, ${theme?.accent || "#FFFFFF"}88)`,
-              }}
-            />
+          <div className="flex items-center gap-1.5">
+            <ShoppingBag className="h-3 w-3" style={{ color: accent || resolvedTextColor }} />
+            <span className="text-[10px] font-medium">{ordersCount} <span style={{ color: textSecondary }}>orders</span></span>
           </div>
         </div>
 
         {/* Bottom row: member + card number */}
-        <div className="relative mt-5 flex items-end justify-between">
+        <div className="relative mt-auto flex items-end justify-between">
           <div>
-            <p className="text-[9px] uppercase tracking-widest" style={{ color: textTertiary }}>Member</p>
-            <p className="mt-0.5 text-sm font-medium">{memberName}</p>
+            <p className="text-[8px] uppercase tracking-widest" style={{ color: textTertiary }}>Member</p>
+            <p className="mt-0.5 text-xs font-medium">{memberName}</p>
           </div>
-          <p className="font-mono text-[11px] tracking-wider" style={{ color: textSecondary }}>
+          <p className="font-mono text-[10px] tracking-wider" style={{ color: textSecondary }}>
             {cardNumber}
           </p>
         </div>
 
         {/* Powered by */}
-        <p className="relative mt-3 text-right text-[8px] tracking-wide" style={{ color: textTertiary }}>
+        <p className="relative text-right text-[7px] tracking-wide" style={{ color: textTertiary }}>
           Powered by Zentro
         </p>
       </div>

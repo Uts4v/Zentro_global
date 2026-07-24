@@ -42,14 +42,14 @@ export function PersonalQR({ compact }: PersonalQRProps) {
   const qrValue = `zentro-transfer:${transferCode}`;
 
   return (
-    <div className="flex flex-col items-center gap-3">
+    <div className="flex w-full min-w-0 flex-col items-center gap-3 overflow-hidden">
       <p className="text-xs text-muted-foreground">Show this QR to receive points</p>
       <div className={`rounded-2xl bg-white ${compact ? "p-2" : "p-4"} shadow-soft`}>
         <QRCodeCanvas value={qrValue} size={compact ? 140 : 180} level="M" />
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 items-center gap-2">
         <span className="text-xs text-muted-foreground">Code:</span>
-        <span className="font-mono text-lg font-bold text-ink tracking-[0.15em] select-all">{transferCode}</span>
+        <span className="min-w-0 truncate font-mono text-lg font-bold text-ink tracking-[0.15em] select-all">{transferCode}</span>
         <button
           onClick={copyCode}
           className="grid h-8 w-8 place-items-center rounded-full bg-mist text-muted-foreground hover:text-ink transition-colors"

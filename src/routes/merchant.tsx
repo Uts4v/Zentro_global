@@ -20,6 +20,7 @@ import {
   Sparkles,
   QrCode,
   Monitor,
+  LogOut,
 } from "lucide-react";
 import { MerchantNav } from "@/components/merchant-nav";
 import { ThemeCycleButton } from "@/components/ThemeCycleButton";
@@ -104,6 +105,13 @@ function MerchantLayout() {
           </Link>
           <div className="ml-auto flex items-center gap-2">
             <ThemeCycleButton />
+            <button
+              onClick={handleSignOut}
+              className="grid h-8 w-8 place-items-center rounded-full border border-border text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              title="Sign out"
+            >
+              <LogOut className="h-3.5 w-3.5" />
+            </button>
             <div className="grid h-8 w-8 place-items-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
               {(merchantProfile?.business_name ?? "M").charAt(0).toUpperCase()}
             </div>

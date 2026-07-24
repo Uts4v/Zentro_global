@@ -1,6 +1,16 @@
-// src/components/MobileShell.tsx
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, Map, ScanLine, Gift, User, Bell, Sun, Moon } from "lucide-react";
+import {
+  Bell,
+  Gift,
+  Home,
+  Map,
+  Moon,
+  ScanLine,
+  Sun,
+  Trophy,
+  User,
+  UtensilsCrossed,
+} from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/lib/theme";
 import { useQuery } from "@tanstack/react-query";
@@ -11,78 +21,107 @@ type NavItem = { to: string; label: string; icon: typeof Home; center?: boolean 
 const nav: NavItem[] = [
   { to: "/", label: "Home", icon: Home },
   { to: "/map", label: "Discover", icon: Map },
-  { to: "/cards", label: "Scan QR", icon: ScanLine, center: true },
+  { to: "/menu", label: "Menu", icon: UtensilsCrossed },
+  { to: "/cards", label: "Scan", icon: ScanLine, center: true },
   { to: "/rewards", label: "Rewards", icon: Gift },
+  { to: "/leaderboard", label: "Ranks", icon: Trophy },
   { to: "/profile", label: "Profile", icon: User },
 ];
 
-export function MobileShell({ children }: { children: ReactNode }) {
-  const path = useRouterState({ select: (s) => s.location.pathname });
-
+/** Dark, icon-only floating capsule nav, modeled on the current Instagram tab bar. */
+function IgStyleNav({ path }: { path: string }) {
   return (
-    <div className="mx-auto flex min-h-dvh max-w-[430px] flex-col bg-[#FAF8F4] pb-28">
-      {children}
-      <nav className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-[430px]">
-        <div
-          className="mx-3 mb-3 flex items-center justify-between rounded-[22px] bg-white px-2 py-2"
-          style={{
-            boxShadow:
-              "0 1px 3px rgba(0,0,0,0.04), 0 10px 40px -8px rgba(0,0,0,0.08)",
-          }}
-        >
-          {nav.map((n) => {
-            const active = n.to === "/" ? path === n.to : path.startsWith(n.to);
-            const Icon = n.icon;
+    <nav
+      className="fixed inset-x-0 bottom-0 z-50 mx-auto max-w-[460px]"
+      aria-label="Primary"
+    >
+      <div className="mx-3 mb-[max(10px,env(safe-area-inset-bottom))]">
+        <div className="relative flex h-16 items-center justify-between rounded-[32px] bg-white px-2 shadow-[0_16px_40px_rgba(110,87,255,0.15),0_4px_12px_rgba(0,0,0,0.04)] border border-white/80">
+          {nav.map((item) => {
+            const active = item.to === "/" ? path === item.to : path.startsWith(item.to);
+            const Icon = item.icon;
 
-            if (n.center) {
+            if (item.center) {
               return (
                 <Link
-                  key={n.to}
-                  to={n.to as any}
-                  className="relative -mt-7 grid h-[52px] w-[52px] shrink-0 place-items-center rounded-full text-white transition-transform active:scale-90"
-                  style={{
-                    background: "linear-gradient(135deg, #E85D3A 0%, #D44828 100%)",
-                    boxShadow: "0 4px 16px rgba(232,93,58,0.35), 0 1px 4px rgba(232,93,58,0.2)",
-                  }}
-                  aria-label={n.label}
+                  key={item.to}
+                  to={item.to as any}
+                  aria-label={item.label}
+                  className="relative -mt-6 flex flex-col items-center"
                 >
-                  <Icon className="h-5 w-5" strokeWidth={2} />
+                  <span className="flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-tr from-[#5E46F8] to-[#8D7CFF] text-white shadow-[0_10px_25px_rgba(94,70,248,0.4)] transition-transform active:scale-90">
+                    <Icon size={24} strokeWidth={2.2} />
+                  </span>
+                  <span className="mt-0.5 text-[9px] font-bold text-[#6E57FF]">{item.label}</span>
                 </Link>
               );
             }
 
             return (
               <Link
-                key={n.to}
-                to={n.to as any}
-                className={`flex h-12 flex-1 flex-col items-center justify-center gap-0.5 rounded-xl text-[10px] font-medium transition-colors ${
-                  active ? "text-[#1A1A1A]" : "text-[#1A1A1A]/35"
-                }`}
+                key={item.to}
+                to={item.to as any}
+                aria-label={item.label}
+                className="relative flex flex-1 flex-col items-center justify-center py-1"
               >
-                <Icon className="h-[18px] w-[18px]" strokeWidth={active ? 2 : 1.4} />
-                <span className="tracking-wide">{n.label}</span>
+                <Icon
+                  size={20}
+                  strokeWidth={active ? 2.2 : 1.6}
+                  className={active ? "text-[#6E57FF]" : "text-[#9494B0]"}
+                />
+                <span
+                  className={`mt-0.5 text-[9px] font-bold transition-colors ${
+                    active ? "text-[#6E57FF]" : "text-[#9494B0]"
+                  }`}
+                >
+                  {item.label}
+                </span>
+                {active && (
+                  <span className="mt-0.5 h-1 w-1 rounded-full bg-[#6E57FF]" />
+                )}
               </Link>
             );
           })}
         </div>
-      </nav>
+      </div>
+    </nav>
+  );
+}
+export function MobileShell({ children, homeMode = false }: { children: ReactNode; homeMode?: boolean }) {
+  const path = useRouterState({ select: (state) => state.location.pathname });
+
+  if (homeMode) {
+    return (
+      <div className="zh-shell">
+        {children}
+        <IgStyleNav path={path} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative mx-auto flex min-h-dvh max-w-[460px] flex-col overflow-x-hidden bg-[#FAF8F4] pb-28">
+      <div className="relative z-10 flex min-h-dvh flex-col">
+        {children}
+      </div>
+      <IgStyleNav path={path} />
     </div>
   );
 }
 
 function getGreeting(): string {
-  const h = new Date().getHours();
-  if (h < 12) return "Good morning";
-  if (h < 17) return "Good afternoon";
+  const hour = new Date().getHours();
+  if (hour < 12) return "Good morning";
+  if (hour < 17) return "Good afternoon";
   return "Good evening";
 }
 
 function getInitial(name: string | null | undefined): string {
-  if (!name) return "✦";
+  if (!name) return "Z";
   return name.trim().charAt(0).toUpperCase();
 }
 
-export function TopBar({ title, right }: { title?: string; right?: ReactNode }) {
+export function TopBar({ title, right, homeMode = false }: { title?: string; right?: ReactNode; homeMode?: boolean }) {
   const { user, loading } = useAuth();
   const { data } = useQuery({
     queryKey: ["notifications", "unreadCount"],
@@ -92,11 +131,9 @@ export function TopBar({ title, right }: { title?: string; right?: ReactNode }) 
     refetchInterval: 60_000,
     retry: false,
   });
-
   const unreadCount = data?.unread_count ?? 0;
   const firstName = user?.first_name ?? null;
-  const initial = getInitial(user?.first_name);
-  const greeting = getGreeting();
+  const initial = getInitial(firstName);
   const { resolved, setTheme, theme } = useTheme();
 
   function cycleTheme() {
@@ -105,71 +142,124 @@ export function TopBar({ title, right }: { title?: string; right?: ReactNode }) 
     else setTheme("light");
   }
 
+  if (homeMode) {
+    return (
+      <header className="zh-header">
+        <div className="zh-header-copy">
+          <Link to="/" className="zh-brand">zentro<span>.</span></Link>
+          {title ? (
+            <h1 className="zh-page-title">{title}</h1>
+          ) : loading ? (
+            <div className="zh-greeting-skeleton" />
+          ) : (
+            <div className="zh-greeting">
+              <p>{getGreeting()},</p>
+              <h1>{firstName || "Welcome"} <span aria-hidden>👋</span></h1>
+            </div>
+          )}
+        </div>
+
+        <div className="zh-header-actions">
+          {right}
+          <button type="button" onClick={cycleTheme} aria-label="Change appearance" className="zh-circle-button">
+            {resolved === "dark" ? <Moon size={20} /> : <Sun size={20} />}
+          </button>
+          <Link to={"/notifications" as any} aria-label="Notifications" className="zh-circle-button zh-bell-button">
+            <Bell size={22} />
+            {unreadCount > 0 && <span>{unreadCount > 9 ? "9+" : unreadCount}</span>}
+          </Link>
+          <Link to={"/profile" as any} aria-label="Profile" className="zh-avatar">
+            {user?.avatar_url ? <img src={user.avatar_url} alt="Profile" /> : <span>{initial}</span>}
+          </Link>
+        </div>
+      </header>
+    );
+  }
+
   return (
-    <header className="relative z-40 px-5 pb-4 pt-6">
-      <div className="flex items-center justify-between">
-        {/* Left: branding */}
-        <Link to="/" className="font-display text-[26px] tracking-tight text-[#1A1A1A]">
-          zentro<span className="text-[#E85D3A]">.</span>
-        </Link>
-
-        {title && (
-          <p className="text-xs uppercase tracking-[0.18em] text-[#1A1A1A]/40">{title}</p>
-        )}
-
-        {/* Right: theme, notifications, avatar */}
-        <div className="flex items-center gap-2">
+    <header className="relative z-40 px-6 pb-2 pt-[max(28px,env(safe-area-inset-top))]">
+      <div className="flex items-start justify-between gap-4">
+        {/* Left: Logo + Greeting */}
+        <div className="min-w-0 flex-1">
+          <Link
+            to="/"
+            className="inline-flex items-center text-[18px] font-extrabold tracking-[-0.03em] text-[#1B1B3A]"
+          >
+            zentro<span className="text-[#6E57FF]">.</span>
+          </Link>
+          {title ? (
+            <h1 className="mt-3 text-[28px] font-semibold text-[#1B1B3A]">{title}</h1>
+          ) : (
+            <div className="mt-2">
+              <p
+                className="text-[15px] font-medium"
+                style={{ color: "#7D7D9C" }}
+              >
+                {getGreeting()},
+              </p>
+              <h1
+                className="mt-0.5 text-[36px] font-extrabold leading-tight tracking-[-0.04em]"
+                style={{ color: "#1B1B3A" }}
+              >
+                {firstName || "Welcome"}{" "}
+                <span className="relative inline-block" aria-hidden>
+                  👋
+                  <svg className="absolute -top-3.5 left-0.5 h-4 w-4 opacity-75" viewBox="0 0 24 24">
+                    <line x1="12" y1="2" x2="12" y2="8" stroke="#8D7CFF" strokeWidth="3" strokeLinecap="round" />
+                    <line x1="4" y1="8" x2="9" y2="12" stroke="#8D7CFF" strokeWidth="3" strokeLinecap="round" />
+                    <line x1="20" y1="8" x2="15" y2="12" stroke="#8D7CFF" strokeWidth="3" strokeLinecap="round" />
+                  </svg>
+                </span>
+              </h1>
+            </div>
+          )}
+        </div>
+        {/* Right: Action buttons */}
+        <div className="flex shrink-0 items-center gap-2.5 pt-1">
           {right}
           <button
+            type="button"
             onClick={cycleTheme}
-            aria-label="Toggle theme"
-            className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#F5F3EF] text-[#1A1A1A]/50 transition-colors hover:bg-[#EDEBE7]"
+            className="grid h-11 w-11 place-items-center rounded-full bg-white text-[#1B1B3A] transition-transform active:scale-95"
+            style={{ boxShadow: "0 4px 16px rgba(0,0,0,.06)" }}
           >
-            {resolved === "dark" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+            {resolved === "dark" ? <Moon size={18} /> : <Sun size={18} />}
           </button>
           <Link
             to={"/notifications" as any}
-            aria-label="Notifications"
-            className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#F5F3EF] text-[#1A1A1A]/50 transition-colors hover:bg-[#EDEBE7]"
+            className="relative grid h-12 w-12 place-items-center rounded-full bg-white transition-transform active:scale-95"
+            style={{ boxShadow: "0 12px 40px rgba(0,0,0,.08)" }}
           >
-            <Bell className="h-4 w-4" />
-            {unreadCount > 0 ? (
-              <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-[1rem] items-center justify-center rounded-full bg-[#E85D3A] px-1 text-[9px] font-bold text-white">
+            <Bell size={20} className="text-[#1B1B3A]" />
+            {unreadCount > 0 && (
+              <span className="absolute -right-0.5 -top-0.5 grid h-5 min-w-5 place-items-center rounded-full bg-[#6E57FF] px-1 text-[10px] font-bold text-white">
                 {unreadCount > 9 ? "9+" : unreadCount}
               </span>
-            ) : null}
+            )}
           </Link>
           <Link
             to={"/profile" as any}
-            aria-label="Profile"
-            className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[#1A1A1A] text-xs font-medium text-white overflow-hidden"
+            className="grid h-12 w-12 place-items-center overflow-hidden rounded-full transition-transform active:scale-95"
+            style={{
+              boxShadow: "0 4px 16px rgba(0,0,0,.06)",
+              background: "linear-gradient(135deg, #E8E0FF, #D6CCFF)",
+              padding: "2px",
+            }}
           >
             {user?.avatar_url ? (
               <img
                 src={user.avatar_url}
-                alt={`${user?.first_name} ${user?.last_name}`}
-                className="h-full w-full object-cover"
+                alt="Profile"
+                className="h-full w-full rounded-full object-cover"
               />
             ) : (
-              <span>{initial}</span>
+              <span className="flex h-full w-full items-center justify-center rounded-full bg-[#1B1B3A] text-[14px] font-bold text-white">
+                {initial}
+              </span>
             )}
           </Link>
         </div>
       </div>
-
-      {/* Greeting */}
-      {!title && (
-        <div className="mt-3">
-          {loading ? (
-            <div className="h-4 w-32 animate-pulse rounded-full bg-[#F5F3EF]" />
-          ) : (
-            <p className="text-[13px] text-[#1A1A1A]/50">
-              {greeting},{" "}
-              <span className="font-semibold text-[#1A1A1A]">{firstName || "there"}</span> 👋
-            </p>
-          )}
-        </div>
-      )}
     </header>
   );
 }

@@ -409,6 +409,7 @@ class MembershipCardSerializer(serializers.ModelSerializer):
                 "show_lifetime_points": design.show_lifetime_points,
                 "show_joined_date": design.show_joined_date,
                 "show_qr_shortcut": design.show_qr_shortcut,
+                "show_color_overlay": design.show_color_overlay,
             }
         except MerchantMembershipCardDesign.DoesNotExist:
             return None
@@ -452,6 +453,7 @@ class MerchantCardDesignSerializer(serializers.ModelSerializer):
             "show_lifetime_points",
             "show_joined_date",
             "show_qr_shortcut",
+            "show_color_overlay",
             "is_published",
             "created_at",
             "updated_at",

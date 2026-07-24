@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { Gift, CreditCard } from "lucide-react";
+import { Gift, Sparkles, Ticket } from "lucide-react";
 import type { CustomerPunchCard } from "@/lib/api";
 
 interface PremiumPunchCardProps {
@@ -8,7 +7,22 @@ interface PremiumPunchCardProps {
   redeeming?: boolean;
 }
 
-export function PremiumPunchCard({ card, onRedeem, redeeming }: PremiumPunchCardProps) {
+function withAlpha(color: string | undefined, alpha: number): string {
+  if (!color?.startsWith("#") || color.length < 7) {
+    return `rgba(109, 94, 247, ${alpha})`;
+  }
+
+  const r = parseInt(color.slice(1, 3), 16);
+  const g = parseInt(color.slice(3, 5), 16);
+  const b = parseInt(color.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+export function PremiumPunchCard({
+  card,
+  onRedeem,
+  redeeming,
+}: PremiumPunchCardProps) {
   const config = card.punch_card;
   if (!config) return null;
 
@@ -16,80 +30,81 @@ export function PremiumPunchCard({ card, onRedeem, redeeming }: PremiumPunchCard
   const punchCount = card.current_stamps;
   const freeRewardReady = card.is_completed && !card.is_redeemed;
   const remaining = Math.max(punchesNeeded - punchCount, 0);
+  const accent = config.color_scheme || "#6D5EF7";
+  const progress = Math.min(100, (punchCount / Math.max(punchesNeeded, 1)) * 100);
 
   return (
-    <div
-      className="rounded-[28px] bg-card p-5 shadow-[0_8px_30px_rgba(0,0,0,0.06)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.3)]"
-      style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}
+    <article
+      className="relative overflow-hidden rounded-[30px] border border-black/[0.04] bg-card p-5 dark:border-white/[0.07]"
+      style={{
+        backgroundImage: config.animated_gif_background || config.background_image
+          ? `linear-gradient(120deg, rgba(255,255,255,0.93), rgba(255,255,255,0.78)), url(${config.animated_gif_background || config.background_image})`
+          : `linear-gradient(135deg, ${withAlpha(accent, 0.14)} 0%, rgba(255,255,255,0.96) 58%, ${withAlpha("#B7FF8A", 0.22)} 100%)`,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        boxShadow: "0 22px 55px -38px rgba(31, 26, 54, 0.55)",
+      }}
     >
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className="h-5 w-5 rounded border border-border flex items-center justify-center">
-            <CreditCard className="h-3 w-3 text-muted-foreground" />
+      <div
+        className="pointer-events-none absolute -right-10 -top-12 h-32 w-32 rounded-full blur-3xl"
+        style={{ background: withAlpha(accent, 0.22) }}
+      />
+
+      <div className="relative flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <div className="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.16em] text-[#484153] backdrop-blur-xl">
+            <Ticket className="h-3 w-3" />
+            Reward card
           </div>
-          <span className="text-[15px] font-semibold text-foreground">Punch Card</span>
+          <h3 className="mt-3 text-[20px] font-semibold leading-tight tracking-[-0.04em] text-[#18151F]">
+            {freeRewardReady ? "Your reward is ready" : `Only ${remaining} more to go`}
+          </h3>
+          <p className="mt-1 max-w-[235px] text-[11px] leading-relaxed text-[#6F6876]">
+            {config.reward_text}
+          </p>
         </div>
-        <span className="text-[15px] font-medium text-muted-foreground">
-          {punchCount} / {punchesNeeded} punches
-        </span>
+
+        <div
+          className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl text-white shadow-lg"
+          style={{ background: accent }}
+        >
+          {freeRewardReady ? (
+            <Gift className="h-5 w-5" />
+          ) : (
+            <Sparkles className="h-5 w-5" />
+          )}
+        </div>
       </div>
 
-      {/* Reward text */}
-      <p className="mt-2 text-[14px] font-medium text-muted-foreground">
-        Reward: <span className="font-semibold text-foreground">{config.reward_text}</span>
-      </p>
-
-      {/* Punch strip */}
-      <div
-        className="relative mt-4 h-[52px] rounded-full overflow-hidden"
-        style={{
-          backgroundImage:
-            config.animated_gif_background || config.background_image
-              ? `url(${config.animated_gif_background || config.background_image})`
-              : undefined,
-          backgroundSize: "cover",
-          backgroundPosition: "center",
-          backgroundColor:
-            config.animated_gif_background || config.background_image
-              ? undefined
-              : config.color_scheme || "#1e293b",
-        }}
-      >
-        <div className="relative flex items-center justify-between h-full px-3">
-          {Array.from({ length: punchesNeeded }).map((_, i) => {
-            const filled = i < punchCount || freeRewardReady;
-            const isFreeSlot = freeRewardReady && i === punchesNeeded - 1;
+      <div className="relative mt-5 overflow-x-auto pb-1">
+        <div className="flex min-w-max items-center gap-2">
+          {Array.from({ length: punchesNeeded }).map((_, index) => {
+            const filled = index < punchCount || freeRewardReady;
+            const finalReward = freeRewardReady && index === punchesNeeded - 1;
 
             return (
               <div
-                key={i}
-                className="w-[30px] h-[30px] rounded-full flex items-center justify-center transition-all duration-300"
+                key={index}
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-full border text-[12px] font-bold transition-all duration-300"
                 style={{
-                  background: filled
-                    ? isFreeSlot
-                      ? config.color_scheme || "#10b981"
-                      : "rgba(255,255,255,0.95)"
-                    : "rgba(255,255,255,0.75)",
-                  backdropFilter: filled ? undefined : "blur(8px)",
-                  color: filled && !isFreeSlot ? config.color_scheme || "#202124" : "#6B7280",
-                  boxShadow: filled ? "0 2px 8px rgba(0,0,0,0.12)" : undefined,
+                  background: filled ? accent : "rgba(255,255,255,0.68)",
+                  borderColor: filled ? withAlpha(accent, 0.12) : "rgba(30,24,42,0.08)",
+                  color: filled ? "#FFFFFF" : "#8A8390",
+                  boxShadow: filled ? `0 8px 18px -10px ${withAlpha(accent, 0.9)}` : undefined,
                 }}
               >
-                {isFreeSlot ? (
-                  <Gift className="h-4 w-4 text-white" />
+                {finalReward ? (
+                  <Gift className="h-4 w-4" />
+                ) : filled && config.stamp_gif_url ? (
+                  <img
+                    src={config.stamp_gif_url}
+                    alt=""
+                    className="h-6 w-6 rounded-full object-cover"
+                  />
                 ) : filled ? (
-                  config.stamp_gif_url ? (
-                    <img
-                      src={config.stamp_gif_url}
-                      alt=""
-                      className="w-5 h-5 rounded-full object-cover"
-                    />
-                  ) : (
-                    <span className="text-sm">{config.stamp_icon || "✨"}</span>
-                  )
+                  <span>{config.stamp_icon || "✦"}</span>
                 ) : (
-                  <span className="text-[13px] font-medium text-gray-500 dark:text-gray-400">{i + 1}</span>
+                  index + 1
                 )}
               </div>
             );
@@ -97,39 +112,31 @@ export function PremiumPunchCard({ card, onRedeem, redeeming }: PremiumPunchCard
         </div>
       </div>
 
-      {/* Progress bar */}
-      <div className="mt-3 h-[5px] rounded-full bg-muted overflow-hidden">
-        <div
-          className="h-full rounded-full bg-foreground transition-all duration-500"
-          style={{ width: `${(punchCount / punchesNeeded) * 100}%` }}
-        />
-      </div>
-
-      {/* Reward card */}
-      <div className="mt-4 rounded-[22px] bg-muted p-4">
-        <div className="flex items-center justify-between">
-          <span className="text-[18px] font-semibold text-foreground">
-            Get {remaining > 0 ? `${remaining} more` : "reward ready"}
-          </span>
-          <span className="text-[15px] font-medium text-muted-foreground">
-            {remaining > 0 ? `${remaining} more` : "Done!"}
-          </span>
+      <div className="relative mt-4">
+        <div className="h-1.5 overflow-hidden rounded-full bg-black/[0.07]">
+          <div
+            className="h-full rounded-full transition-all duration-700"
+            style={{ width: `${progress}%`, background: accent }}
+          />
         </div>
-        <p className="mt-1 text-[14px] text-muted-foreground">
-          {punchesNeeded} punches → 🎁 {config.reward_text}
-        </p>
+        <div className="mt-2 flex items-center justify-between text-[10px] font-medium text-[#77707D]">
+          <span>{punchCount} collected</span>
+          <span>{punchesNeeded} needed</span>
+        </div>
       </div>
 
-      {/* Redeem button */}
       {freeRewardReady && onRedeem && (
         <button
+          type="button"
           onClick={() => onRedeem(card.id)}
           disabled={redeeming}
-          className="mt-4 w-full rounded-2xl py-3 text-[15px] font-semibold text-primary-foreground transition-opacity disabled:opacity-50 gradient-ember"
+          className="relative mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-[12px] font-bold text-white transition hover:-translate-y-0.5 active:scale-[0.98] disabled:opacity-50"
+          style={{ background: accent }}
         >
-          {redeeming ? "Redeeming..." : "Redeem Free Reward"}
+          <Gift className="h-4 w-4" />
+          {redeeming ? "Preparing reward…" : "Claim reward"}
         </button>
       )}
-    </div>
+    </article>
   );
 }

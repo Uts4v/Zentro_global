@@ -3,8 +3,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
   MapPin, Clock, Loader2, Save, Check, X,
-  ImageIcon, Upload, QrCode, ExternalLink, RefreshCw, LocateFixed, Palette, CreditCard, Send,
+  ImageIcon, Upload, QrCode, ExternalLink, RefreshCw, LocateFixed, Palette, CreditCard, Send, Wifi,
 } from "lucide-react";
+import simImg from "@/img/sim.png";
 import { merchantApi, type MerchantProfile, merchantCardDesignApi, type MembershipCardDesign } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { optimizeImage } from "@/lib/image-optimize";
@@ -334,6 +335,7 @@ function StoreConfig() {
     show_lifetime_points: true,
     show_joined_date: true,
     show_qr_shortcut: true,
+    show_color_overlay: true,
     is_published: false,
   });
   const [cardDesignSaving, setCardDesignSaving] = useState(false);
@@ -420,8 +422,20 @@ function StoreConfig() {
   async function handleSaveCardDesign(publish = false) {
     setCardDesignSaving(true);
     try {
-      const payload = { ...cardDesign, background_pattern: PATTERN_MAP[cardDesign.background_pattern || ""] || cardDesign.background_pattern };
-      const updated = await merchantCardDesignApi.update(payload);
+      const raw: Record<string, unknown> = {
+        ...cardDesign,
+        background_pattern: PATTERN_MAP[cardDesign.background_pattern || ""] || cardDesign.background_pattern || "",
+      };
+      // URLFields on backend reject null — must be "" (blank=True)
+      if (!raw.background_image) raw.background_image = "";
+      if (!raw.logo) raw.logo = "";
+      // Only send fields the backend serializer accepts
+      const allowed = ["card_title","card_subtitle","primary_color","secondary_color","accent_color","text_mode","background_type","background_image","background_pattern","logo","tier_style","points_label","membership_label","show_lifetime_points","show_joined_date","show_qr_shortcut","show_color_overlay","is_published"];
+      const payload: Record<string, unknown> = {};
+      for (const k of allowed) {
+        if (k in raw) payload[k] = raw[k];
+      }
+      const updated = await merchantCardDesignApi.update(payload as Partial<MembershipCardDesign>);
       if (publish) {
         await merchantCardDesignApi.publish();
         toast.success("Card design published!");
@@ -656,299 +670,390 @@ function StoreConfig() {
         </section>
       )}
 
-      {/* ── Membership Card Design ─────────────────────────────────────────── */}
-      <section className="glass-strong rounded-3xl p-6">
+      {/* ── Membership Card Designer ────────────────────────────────────────── */}
+      <section className="glass-strong rounded-3xl p-6 lg:p-8">
         <div className="flex items-center gap-2">
           <CreditCard className="h-4 w-4 text-muted-foreground" />
-          <h2 className="font-display text-2xl text-ink">Membership Card Design</h2>
+          <h2 className="font-display text-2xl text-ink">Membership Card Designer</h2>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          Customise how your loyalty card looks for customers. Changes are live once published.
+          Customize how your loyalty card looks for customers. Changes update in real time.
         </p>
 
-        {/* ── Live Preview ─────────────────────────────────────────────────── */}
-        <div className="mt-6 flex flex-col items-center">
-          <p className="mb-3 text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Live Preview</p>
-          <div
-            className="relative w-[320px] h-[200px] rounded-[28px] overflow-hidden shadow-lg"
-            style={{
-              background: cardDesign.background_image
-                ? "rgba(0,0,0,0.25)"
-                : `linear-gradient(145deg, ${cardDesign.primary_color} 0%, ${cardDesign.secondary_color} 100%)`,
-              color: cardDesign.text_mode === "light" ? "#ffffff" : "#1a1a1a",
-            }}
-          >
-            {/* Background image */}
-            {cardDesign.background_image && (
-              <img
-                src={cardDesign.background_image}
-                alt=""
-                className="pointer-events-none absolute inset-0 h-full w-full object-cover"
-              />
-            )}
-
-            {/* Pattern overlays */}
-            {cardDesign.background_pattern === "dots" && (
-              <div
-                className="pointer-events-none absolute inset-0"
-                style={{
-                  backgroundImage: `radial-gradient(${cardDesign.text_mode === "light" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)"} 1.5px, transparent 1.5px)`,
-                  backgroundSize: "16px 16px",
-                }}
-              />
-            )}
-            {cardDesign.background_pattern === "diamonds" && (
-              <div
-                className="pointer-events-none absolute inset-0"
-                style={{
-                  backgroundImage: `linear-gradient(45deg, ${cardDesign.text_mode === "light" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"} 25%, transparent 25%, transparent 75%, ${cardDesign.text_mode === "light" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"} 75%), linear-gradient(45deg, ${cardDesign.text_mode === "light" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"} 25%, transparent 25%, transparent 75%, ${cardDesign.text_mode === "light" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"} 75%)`,
-                  backgroundSize: "24px 24px",
-                  backgroundPosition: "0 0, 12px 12px",
-                }}
-              />
-            )}
-            {cardDesign.background_pattern === "geometric" && (
-              <div
-                className="pointer-events-none absolute inset-0"
-                style={{
-                  backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 30px, ${cardDesign.text_mode === "light" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"} 30px, ${cardDesign.text_mode === "light" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"} 31px), repeating-linear-gradient(90deg, transparent, transparent 30px, ${cardDesign.text_mode === "light" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"} 30px, ${cardDesign.text_mode === "light" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"} 31px)`,
-                }}
-              />
-            )}
-
-            {/* Decorative blurs */}
-            <div
-              className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full"
-              style={{ background: "rgba(255,255,255,0.07)", filter: "blur(40px)" }}
-            />
-            <div
-              className="pointer-events-none absolute -bottom-14 -left-14 h-36 w-36 rounded-full"
-              style={{ background: "rgba(255,255,255,0.04)", filter: "blur(40px)" }}
-            />
-
-            {/* Card content */}
-            <div className="relative flex h-full flex-col p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-[9px] uppercase tracking-[0.22em] opacity-45">
-                    {cardDesign.card_title || "Membership"}
-                  </p>
-                  <p className="mt-0.5 font-display text-[22px] leading-tight">
-                    {profile?.business_name || "Your Store"}
-                  </p>
+        {/* ── CSS Grid: 420px | 1fr ────────────────────────────────────── */}
+        <div className="card-designer-grid mt-8">
+          {/* ── LEFT: Sticky Preview ───────────────────────────────────── */}
+          <div className="sticky top-6 hidden lg:flex flex-col items-center gap-6">
+            {/* Phone Mockup */}
+            <div className="relative overflow-hidden rounded-[40px] border-[3px] border-foreground/10 bg-foreground/[0.03] p-3 shadow-2xl shadow-foreground/5" style={{ width: 280, height: 560 }}>
+              {/* Status bar */}
+              <div className="flex items-center justify-between px-4 pb-2 pt-1">
+                <span className="text-[9px] font-semibold text-foreground/50">9:41</span>
+                <div className="flex items-center gap-1">
+                  <div className="h-1 w-3 rounded-full bg-foreground/25" />
+                  <div className="h-1 w-3 rounded-full bg-foreground/25" />
+                  <div className="h-1 w-4 rounded-full bg-foreground/25" />
                 </div>
-                <span
-                  className="mt-0.5 shrink-0 rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase tracking-widest"
-                  style={{ background: "rgba(255,255,255,0.15)", color: cardDesign.text_mode === "light" ? "#ffffff" : "#1a1a1a" }}
-                >
-                  Bronze
-                </span>
               </div>
 
-              <div className="mt-auto">
-                <p className="text-[9px] uppercase tracking-[0.22em] opacity-45">
-                  {cardDesign.points_label || "POINTS"}
-                </p>
-                <p
-                  className="font-display text-[52px] leading-none tracking-tight"
-                  style={{ letterSpacing: "-0.03em", color: cardDesign.accent_color }}
-                >
-                  0
-                </p>
+              {/* App header */}
+              <div className="px-4 pb-3">
+                <p className="font-display text-sm font-semibold text-foreground">My Cards</p>
+                <p className="text-[9px] text-muted-foreground">1 joined</p>
               </div>
 
-              <div className="mt-4 flex items-end justify-between">
-                <div>
-                  <p className="text-[9px] uppercase tracking-widest opacity-35">
-                    {cardDesign.membership_label || "MEMBERSHIP"}
-                  </p>
-                  {cardDesign.show_joined_date && (
-                    <p className="mt-0.5 font-mono text-[11px] tracking-wider opacity-60">
-                      •••• ••••
-                    </p>
-                  )}
+              {/* Loyalty card inside phone */}
+              <div className="px-3">
+                <div
+                  className="relative w-full overflow-hidden rounded-[16px] p-4"
+                  style={{
+                    aspectRatio: "1.586 / 1",
+                    background: cardDesign.background_image && cardDesign.background_image.trim()
+                      ? cardDesign.show_color_overlay !== false
+                        ? `linear-gradient(145deg, ${cardDesign.primary_color}cc 0%, ${cardDesign.secondary_color}cc 100%), url(${cardDesign.background_image})`
+                        : `url(${cardDesign.background_image})`
+                      : `linear-gradient(145deg, ${cardDesign.primary_color} 0%, ${cardDesign.secondary_color} 100%)`,
+                    backgroundSize: cardDesign.background_image ? "cover" : undefined,
+                    backgroundPosition: cardDesign.background_image ? "center" : undefined,
+                    color: cardDesign.text_mode === "light" ? "#ffffff" : "#1a1a1a",
+                  }}
+                >
+                  <img src={simImg} alt="" className="pointer-events-none absolute right-3 top-1/2 h-8 w-10 -translate-y-1/2 object-contain" style={{ filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.2))", opacity: 0.85 }} />
+                  <Wifi className="pointer-events-none absolute right-[48px] top-1/2 h-3 w-3 -translate-y-1/2 -rotate-90" strokeWidth={1.8} style={{ color: cardDesign.text_mode === "light" ? "#ffffff" : "#1a1a1a", opacity: 0.4 }} />
+
+                  <div className="relative flex h-full flex-col">
+                    <p className="text-[6px] uppercase tracking-[0.2em] opacity-40">{cardDesign.card_title || "Membership"}</p>
+                    <p className="mt-0.5 font-display text-sm leading-tight">{profile?.business_name || "Your Store"}</p>
+                    <div className="mt-auto">
+                      <p className="text-[6px] uppercase tracking-[0.2em] opacity-40">{cardDesign.points_label || "POINTS"}</p>
+                      <p className="font-display text-2xl leading-none" style={{ letterSpacing: "-0.03em" }}>0</p>
+                    </div>
+                    <div className="mt-1.5 flex items-end justify-between">
+                      <p className="text-[6px] uppercase tracking-widest opacity-30">{cardDesign.membership_label || "MEMBER"}</p>
+                      <p className="text-[5px] opacity-20">Powered by Zentro</p>
+                    </div>
+                  </div>
                 </div>
-                <p className="text-right text-[8px] opacity-25 tracking-wide">
-                  Powered by Zentro
-                </p>
+
+                {/* Dots */}
+                <div className="mt-3 flex justify-center gap-1.5">
+                  <div className="h-1 w-5 rounded-full bg-[#E85D3A]" />
+                  <div className="h-1 w-1.5 rounded-full bg-foreground/15" />
+                </div>
+              </div>
+
+              {/* Bottom nav inside phone */}
+              <div className="absolute bottom-3 inset-x-3">
+                <div className="mx-2 flex items-center justify-between rounded-[16px] bg-card px-3 py-2 shadow-sm">
+                  {["Home", "Discover", "Menu", "Scan", "Rewards", "Profile"].map((l, i) => (
+                    <div key={l} className="flex flex-col items-center gap-0.5">
+                      <div className={`h-3.5 w-3.5 rounded-full ${i === 2 ? "bg-[#E85D3A]" : "bg-foreground/12"}`} />
+                      <span className="text-[6px] text-muted-foreground">{l}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Standalone card preview */}
+            <div>
+              <p className="mb-2.5 text-center text-[10px] uppercase tracking-[0.18em] text-muted-foreground/70">Card Preview</p>
+              <div
+                className="relative w-[320px] overflow-hidden rounded-[20px] shadow-xl shadow-foreground/8"
+                style={{
+                  aspectRatio: "1.586 / 1",
+                  background: cardDesign.background_image && cardDesign.background_image.trim()
+                    ? cardDesign.show_color_overlay !== false
+                      ? `linear-gradient(145deg, ${cardDesign.primary_color}cc 0%, ${cardDesign.secondary_color}cc 100%), url(${cardDesign.background_image})`
+                      : `url(${cardDesign.background_image})`
+                    : `linear-gradient(145deg, ${cardDesign.primary_color} 0%, ${cardDesign.secondary_color} 100%)`,
+                  backgroundSize: cardDesign.background_image ? "cover" : undefined,
+                  backgroundPosition: cardDesign.background_image ? "center" : undefined,
+                  color: cardDesign.text_mode === "light" ? "#ffffff" : "#1a1a1a",
+                }}
+              >
+                {/* Pattern overlays */}
+                {cardDesign.background_pattern === "dots" && (
+                  <div className="pointer-events-none absolute inset-0" style={{ backgroundImage: `radial-gradient(${cardDesign.text_mode === "light" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)"} 1.5px, transparent 1.5px)`, backgroundSize: "16px 16px" }} />
+                )}
+                {cardDesign.background_pattern === "diamonds" && (
+                  <div className="pointer-events-none absolute inset-0" style={{ backgroundImage: `linear-gradient(45deg, ${cardDesign.text_mode === "light" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"} 25%, transparent 25%, transparent 75%, ${cardDesign.text_mode === "light" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"} 75%), linear-gradient(45deg, ${cardDesign.text_mode === "light" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"} 25%, transparent 25%, transparent 75%, ${cardDesign.text_mode === "light" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"} 75%)`, backgroundSize: "24px 24px", backgroundPosition: "0 0, 12px 12px" }} />
+                )}
+                {cardDesign.background_pattern === "geometric" && (
+                  <div className="pointer-events-none absolute inset-0" style={{ backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 30px, ${cardDesign.text_mode === "light" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"} 30px, ${cardDesign.text_mode === "light" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"} 31px), repeating-linear-gradient(90deg, transparent, transparent 30px, ${cardDesign.text_mode === "light" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"} 30px, ${cardDesign.text_mode === "light" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"} 31px)` }} />
+                )}
+
+                <img src={simImg} alt="" className="pointer-events-none absolute right-4 top-1/2 h-14 w-16 -translate-y-1/2 object-contain" style={{ filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.25))" }} />
+                <Wifi className="pointer-events-none absolute right-[78px] top-1/2 h-5 w-5 -translate-y-1/2 -rotate-90" strokeWidth={1.8} style={{ color: cardDesign.text_mode === "light" ? "#ffffff" : "#1a1a1a", opacity: 0.5 }} />
+
+                <div className="relative flex h-full flex-col p-5">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="text-[8px] uppercase tracking-[0.22em] opacity-45">{cardDesign.card_title || "Membership"}</p>
+                      <p className="mt-0.5 font-display text-lg leading-tight">{profile?.business_name || "Your Store"}</p>
+                    </div>
+                    <span className="mt-0.5 shrink-0 rounded-full px-2.5 py-1 text-[8px] font-semibold uppercase tracking-widest" style={{ background: "rgba(255,255,255,0.15)" }}>Bronze</span>
+                  </div>
+
+                  <div className="relative mt-3">
+                    <p className="text-[8px] uppercase tracking-[0.22em] opacity-45">{cardDesign.points_label || "POINTS"}</p>
+                    <p className="font-display text-[40px] leading-none tracking-tight" style={{ letterSpacing: "-0.03em", color: cardDesign.accent_color }}>0</p>
+                  </div>
+
+                  <div className="relative mt-2 h-1 overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.15)" }}>
+                    <div className="h-full w-1/4 rounded-full" style={{ background: "rgba(255,255,255,0.4)" }} />
+                  </div>
+
+                  <div className="relative mt-auto flex items-end justify-between">
+                    <div>
+                      <p className="text-[8px] uppercase tracking-widest opacity-35">{cardDesign.membership_label || "MEMBER"}</p>
+                      {cardDesign.show_joined_date && (
+                        <p className="mt-0.5 font-mono text-[10px] tracking-wider opacity-60">•••• ••••</p>
+                      )}
+                    </div>
+                    <p className="text-right text-[7px] opacity-25 tracking-wide">Powered by Zentro</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* ── Card Settings ─────────────────────────────────────────────────── */}
-        <div className="mt-8 space-y-5">
-          {/* Card title & subtitle */}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="block">
-              <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Card Title</span>
-              <input
-                value={cardDesign.card_title ?? ""}
-                onChange={(e) => setCardDesign((p) => ({ ...p, card_title: e.target.value }))}
-                placeholder="Membership"
-                className="mt-1.5 h-12 w-full rounded-2xl bg-mist px-4 text-sm text-ink outline-none transition-all focus:ring-2 focus:ring-ember/40"
-              />
-            </label>
-            <label className="block">
-              <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Card Subtitle</span>
-              <input
-                value={cardDesign.card_subtitle ?? ""}
-                onChange={(e) => setCardDesign((p) => ({ ...p, card_subtitle: e.target.value }))}
-                placeholder="Optional subtitle"
-                className="mt-1.5 h-12 w-full rounded-2xl bg-mist px-4 text-sm text-ink outline-none transition-all focus:ring-2 focus:ring-ember/40"
-              />
-            </label>
-          </div>
-
-          {/* Colors */}
-          {([
-            { key: "primary_color", label: "Primary Color" },
-            { key: "secondary_color", label: "Secondary Color" },
-            { key: "accent_color", label: "Accent Color" },
-          ] as const).map(({ key, label }) => (
-            <div key={key}>
-              <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{label}</span>
-              <div className="mt-2 flex items-center gap-3">
-                <input
-                  type="color"
-                  value={(cardDesign[key] as string) || "#000000"}
-                  onChange={(e) => setCardDesign((p) => ({ ...p, [key]: e.target.value }))}
-                  className="h-12 w-12 shrink-0 cursor-pointer rounded-xl border border-border"
-                />
-                <input
-                  value={(cardDesign[key] as string) ?? ""}
-                  onChange={(e) => setCardDesign((p) => ({ ...p, [key]: e.target.value }))}
-                  placeholder="#000000"
-                  className="h-12 flex-1 rounded-2xl bg-mist px-4 text-sm text-ink font-mono outline-none transition-all focus:ring-2 focus:ring-ember/40"
-                />
+          {/* ── Mobile preview (visible below lg) ──────────────────────── */}
+          <div className="lg:hidden">
+            <p className="mb-3 text-[11px] uppercase tracking-[0.18em] text-muted-foreground/70">Live Preview</p>
+            <div
+              className="relative w-full max-w-[320px] mx-auto overflow-hidden rounded-[20px] shadow-xl shadow-foreground/8"
+              style={{
+                aspectRatio: "1.586 / 1",
+                background: cardDesign.background_image && cardDesign.background_image.trim()
+                  ? cardDesign.show_color_overlay !== false
+                    ? `linear-gradient(145deg, ${cardDesign.primary_color}cc 0%, ${cardDesign.secondary_color}cc 100%), url(${cardDesign.background_image})`
+                    : `url(${cardDesign.background_image})`
+                  : `linear-gradient(145deg, ${cardDesign.primary_color} 0%, ${cardDesign.secondary_color} 100%)`,
+                backgroundSize: cardDesign.background_image ? "cover" : undefined,
+                backgroundPosition: cardDesign.background_image ? "center" : undefined,
+                color: cardDesign.text_mode === "light" ? "#ffffff" : "#1a1a1a",
+              }}
+            >
+              {cardDesign.background_pattern === "dots" && <div className="pointer-events-none absolute inset-0" style={{ backgroundImage: `radial-gradient(${cardDesign.text_mode === "light" ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)"} 1.5px, transparent 1.5px)`, backgroundSize: "16px 16px" }} />}
+              {cardDesign.background_pattern === "diamonds" && <div className="pointer-events-none absolute inset-0" style={{ backgroundImage: `linear-gradient(45deg, ${cardDesign.text_mode === "light" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"} 25%, transparent 25%, transparent 75%, ${cardDesign.text_mode === "light" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"} 75%), linear-gradient(45deg, ${cardDesign.text_mode === "light" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"} 25%, transparent 25%, transparent 75%, ${cardDesign.text_mode === "light" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"} 75%)`, backgroundSize: "24px 24px", backgroundPosition: "0 0, 12px 12px" }} />}
+              {cardDesign.background_pattern === "geometric" && <div className="pointer-events-none absolute inset-0" style={{ backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 30px, ${cardDesign.text_mode === "light" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"} 30px, ${cardDesign.text_mode === "light" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"} 31px), repeating-linear-gradient(90deg, transparent, transparent 30px, ${cardDesign.text_mode === "light" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"} 30px, ${cardDesign.text_mode === "light" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.03)"} 31px)` }} />}
+              <img src={simImg} alt="" className="pointer-events-none absolute right-4 top-1/2 h-14 w-16 -translate-y-1/2 object-contain" style={{ filter: "drop-shadow(0 2px 6px rgba(0,0,0,0.25))" }} />
+              <Wifi className="pointer-events-none absolute right-[78px] top-1/2 h-5 w-5 -translate-y-1/2 -rotate-90" strokeWidth={1.8} style={{ color: cardDesign.text_mode === "light" ? "#ffffff" : "#1a1a1a", opacity: 0.5 }} />
+              <div className="relative flex h-full flex-col p-5">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <p className="text-[8px] uppercase tracking-[0.22em] opacity-45">{cardDesign.card_title || "Membership"}</p>
+                    <p className="mt-0.5 font-display text-lg leading-tight">{profile?.business_name || "Your Store"}</p>
+                  </div>
+                  <span className="mt-0.5 shrink-0 rounded-full px-2.5 py-1 text-[8px] font-semibold uppercase tracking-widest" style={{ background: "rgba(255,255,255,0.15)" }}>Bronze</span>
+                </div>
+                <div className="relative mt-3">
+                  <p className="text-[8px] uppercase tracking-[0.22em] opacity-45">{cardDesign.points_label || "POINTS"}</p>
+                  <p className="font-display text-[40px] leading-none tracking-tight" style={{ letterSpacing: "-0.03em", color: cardDesign.accent_color }}>0</p>
+                </div>
+                <div className="relative mt-2 h-1 overflow-hidden rounded-full" style={{ background: "rgba(255,255,255,0.15)" }}>
+                  <div className="h-full w-1/4 rounded-full" style={{ background: "rgba(255,255,255,0.4)" }} />
+                </div>
+                <div className="relative mt-auto flex items-end justify-between">
+                  <div>
+                    <p className="text-[8px] uppercase tracking-widest opacity-35">{cardDesign.membership_label || "MEMBER"}</p>
+                    {cardDesign.show_joined_date && <p className="mt-0.5 font-mono text-[10px] tracking-wider opacity-60">•••• ••••</p>}
+                  </div>
+                  <p className="text-right text-[7px] opacity-25 tracking-wide">Powered by Zentro</p>
+                </div>
               </div>
             </div>
-          ))}
-
-          {/* Text mode */}
-          <div>
-            <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Text Mode</span>
-            <div className="mt-2 flex gap-2">
-              {(["light", "dark"] as const).map((mode) => (
-                <button
-                  key={mode}
-                  onClick={() => setCardDesign((p) => ({ ...p, text_mode: mode }))}
-                  className={`flex h-10 items-center gap-2 rounded-full px-5 text-xs font-medium transition-all ${
-                    cardDesign.text_mode === mode
-                      ? "bg-ink text-primary-foreground"
-                      : "border border-border text-muted-foreground hover:border-ink hover:text-ink"
-                  }`}
-                >
-                  {mode === "light" ? "Light Text" : "Dark Text"}
-                </button>
-              ))}
-            </div>
           </div>
 
-          {/* Background image */}
-          {merchantId && (
-            <InlineImageUploader
-              label="Card Background Image"
-              hint="Recommended 800 × 500 px"
-              currentUrl={cardDesign.background_image}
-              onUpload={(url) => setCardDesign((p) => ({ ...p, background_image: url, background_type: "image" }))}
-              onClear={() => setCardDesign((p) => ({ ...p, background_image: null, background_type: "solid" }))}
-              aspectClass="aspect-[16/10]"
-              shape="square"
-              merchantId={merchantId}
-              bucket="card-images"
-              storagePath={`${merchantId}/card-bg.webp`}
-              preset="banner"
-            />
-          )}
+          {/* ── RIGHT: Form Controls ──────────────────────────────────── */}
+          <div className="space-y-6 min-w-0">
 
-          {/* Background pattern */}
-          <div>
-            <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Background Pattern</span>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {(["none", "dots", "geometric", "diamonds"] as const).map((pat) => (
-                <button
-                  key={pat}
-                  onClick={() => setCardDesign((p) => ({ ...p, background_pattern: pat }))}
-                  className={`flex h-9 items-center rounded-full px-4 text-xs font-medium capitalize transition-all ${
-                    cardDesign.background_pattern === pat
-                      ? "bg-ink text-primary-foreground"
-                      : "border border-border text-muted-foreground hover:border-ink hover:text-ink"
-                  }`}
-                >
-                  {pat}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Labels */}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="block">
-              <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Points Label</span>
-              <input
-                value={cardDesign.points_label ?? ""}
-                onChange={(e) => setCardDesign((p) => ({ ...p, points_label: e.target.value }))}
-                placeholder="POINTS"
-                className="mt-1.5 h-12 w-full rounded-2xl bg-mist px-4 text-sm text-ink outline-none transition-all focus:ring-2 focus:ring-ember/40"
-              />
-            </label>
-            <label className="block">
-              <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Membership Label</span>
-              <input
-                value={cardDesign.membership_label ?? ""}
-                onChange={(e) => setCardDesign((p) => ({ ...p, membership_label: e.target.value }))}
-                placeholder="MEMBERSHIP"
-                className="mt-1.5 h-12 w-full rounded-2xl bg-mist px-4 text-sm text-ink outline-none transition-all focus:ring-2 focus:ring-ember/40"
-              />
-            </label>
-          </div>
-
-          {/* Toggle options */}
-          <div className="space-y-3">
-            {([
-              { key: "show_lifetime_points" as const, label: "Show Lifetime Points" },
-              { key: "show_joined_date" as const, label: "Show Joined Date" },
-            ]).map(({ key, label }) => (
-              <div key={key} className="flex items-center justify-between">
-                <span className="text-sm text-ink">{label}</span>
-                <button
-                  type="button"
-                  onClick={() => setCardDesign((p) => ({ ...p, [key]: !p[key] }))}
-                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors ${
-                    cardDesign[key] ? "bg-ink" : "bg-border"
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform mt-0.5 ${
-                      cardDesign[key] ? "translate-x-[22px]" : "translate-x-0.5"
-                    }`}
+            {/* Card Title & Subtitle */}
+            <div className="rounded-2xl bg-mist/50 p-5 space-y-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Card Text</p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <label className="block">
+                  <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Card Title</span>
+                  <input
+                    value={cardDesign.card_title ?? ""}
+                    onChange={(e) => setCardDesign((p) => ({ ...p, card_title: e.target.value }))}
+                    placeholder="Membership"
+                    className="mt-1.5 h-12 w-full rounded-2xl bg-card px-4 text-sm text-ink outline-none transition-all focus:ring-2 focus:ring-ember/40"
                   />
-                </button>
+                </label>
+                <label className="block">
+                  <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Card Subtitle</span>
+                  <input
+                    value={cardDesign.card_subtitle ?? ""}
+                    onChange={(e) => setCardDesign((p) => ({ ...p, card_subtitle: e.target.value }))}
+                    placeholder="Optional subtitle"
+                    className="mt-1.5 h-12 w-full rounded-2xl bg-card px-4 text-sm text-ink outline-none transition-all focus:ring-2 focus:ring-ember/40"
+                  />
+                </label>
               </div>
-            ))}
-          </div>
-        </div>
+            </div>
 
-        {/* ── Actions ───────────────────────────────────────────────────────── */}
-        <div className="mt-8 flex items-center justify-end gap-3">
-          <button
-            onClick={() => handleSaveCardDesign(false)}
-            disabled={cardDesignSaving}
-            className="inline-flex h-11 items-center gap-2 rounded-full border border-border px-5 text-xs font-medium text-muted-foreground transition-colors hover:border-ink hover:text-ink disabled:opacity-50"
-          >
-            {cardDesignSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-            {cardDesignSaving ? "Saving…" : "Save Draft"}
-          </button>
-          <button
-            onClick={() => handleSaveCardDesign(true)}
-            disabled={cardDesignSaving}
-            className="inline-flex h-12 items-center gap-2 rounded-full bg-ink px-7 text-sm font-medium text-primary-foreground shadow-ember transition-all disabled:opacity-50"
-          >
-            {cardDesignSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-            {cardDesignSaving ? "Publishing…" : "Publish"}
-          </button>
-        </div>
+            {/* Colors */}
+            <div className="rounded-2xl bg-mist/50 p-5 space-y-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Colors</p>
+              {([
+                { key: "primary_color", label: "Primary Color" },
+                { key: "secondary_color", label: "Secondary Color" },
+                { key: "accent_color", label: "Accent Color" },
+              ] as const).map(({ key, label }) => (
+                <div key={key}>
+                  <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{label}</span>
+                  <div className="mt-1.5 flex items-center gap-3">
+                    <input
+                      type="color"
+                      value={(cardDesign[key] as string) || "#000000"}
+                      onChange={(e) => setCardDesign((p) => ({ ...p, [key]: e.target.value }))}
+                      className="h-12 w-12 shrink-0 cursor-pointer rounded-xl border border-border"
+                    />
+                    <input
+                      value={(cardDesign[key] as string) ?? ""}
+                      onChange={(e) => setCardDesign((p) => ({ ...p, [key]: e.target.value }))}
+                      placeholder="#000000"
+                      className="h-12 flex-1 rounded-2xl bg-card px-4 text-sm text-ink font-mono outline-none transition-all focus:ring-2 focus:ring-ember/40"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Text Mode */}
+            <div className="rounded-2xl bg-mist/50 p-5">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Text Mode</p>
+              <div className="mt-2 flex gap-2">
+                {(["light", "dark"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    onClick={() => setCardDesign((p) => ({ ...p, text_mode: mode }))}
+                    className={`flex h-10 items-center gap-2 rounded-full px-5 text-xs font-medium transition-all ${
+                      cardDesign.text_mode === mode
+                        ? "bg-ink text-primary-foreground"
+                        : "border border-border text-muted-foreground hover:border-ink hover:text-ink"
+                    }`}
+                  >
+                    {mode === "light" ? "Light Text" : "Dark Text"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Background Image */}
+            {merchantId && (
+              <div className="rounded-2xl bg-mist/50 p-5">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground mb-3">Background Image</p>
+                <InlineImageUploader
+                  label=""
+                  hint="Recommended 800 × 500 px"
+                  currentUrl={cardDesign.background_image}
+                  onUpload={(url) => setCardDesign((p) => ({ ...p, background_image: url, background_type: "image" }))}
+                  onClear={() => setCardDesign((p) => ({ ...p, background_image: "", background_type: "solid" }))}
+                  aspectClass="aspect-[16/10]"
+                  shape="square"
+                  merchantId={merchantId}
+                  bucket="card-images"
+                  storagePath={`${merchantId}/card-bg.webp`}
+                  preset="banner"
+                />
+
+                {/* Gradient overlay toggle — only when image is set */}
+                {cardDesign.background_image && cardDesign.background_image.trim() && (
+                  <div className="mt-4 flex items-center justify-between">
+                    <div>
+                      <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">Gradient Overlay</span>
+                      <p className="mt-0.5 text-[11px] text-muted-foreground/60">Blend gradient on top of the image</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setCardDesign((p) => ({ ...p, show_color_overlay: !p.show_color_overlay }))}
+                      className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors ${
+                        cardDesign.show_color_overlay ? "bg-ink" : "bg-border"
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform mt-0.5 ${
+                          cardDesign.show_color_overlay ? "translate-x-[22px]" : "translate-x-0.5"
+                        }`}
+                      />
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Background Pattern */}
+            <div className="rounded-2xl bg-mist/50 p-5">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Background Pattern</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {(["none", "dots", "geometric", "diamonds"] as const).map((pat) => (
+                  <button
+                    key={pat}
+                    onClick={() => setCardDesign((p) => ({ ...p, background_pattern: pat }))}
+                    className={`flex h-9 items-center rounded-full px-4 text-xs font-medium capitalize transition-all ${
+                      cardDesign.background_pattern === pat
+                        ? "bg-ink text-primary-foreground"
+                        : "border border-border text-muted-foreground hover:border-ink hover:text-ink"
+                    }`}
+                  >
+                    {pat}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Toggle Options */}
+            <div className="rounded-2xl bg-mist/50 p-5 space-y-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">Display Options</p>
+              {([
+                { key: "show_lifetime_points" as const, label: "Show Lifetime Points" },
+                { key: "show_joined_date" as const, label: "Show Joined Date" },
+                { key: "show_qr_shortcut" as const, label: "Show QR Shortcut" },
+              ]).map(({ key, label }) => (
+                <div key={key} className="flex items-center justify-between">
+                  <span className="text-sm text-ink">{label}</span>
+                  <button
+                    type="button"
+                    onClick={() => setCardDesign((p) => ({ ...p, [key]: !p[key] }))}
+                    className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors ${
+                      cardDesign[key] ? "bg-ink" : "bg-border"
+                    }`}
+                  >
+                    <span
+                      className={`inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform mt-0.5 ${
+                        cardDesign[key] ? "translate-x-[22px]" : "translate-x-0.5"
+                      }`}
+                    />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Save Actions */}
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                onClick={() => handleSaveCardDesign(false)}
+                disabled={cardDesignSaving}
+                className="inline-flex h-11 items-center gap-2 rounded-full border border-border px-5 text-xs font-medium text-muted-foreground transition-colors hover:border-ink hover:text-ink disabled:opacity-50"
+              >
+                {cardDesignSaving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                {cardDesignSaving ? "Saving…" : "Save Draft"}
+              </button>
+              <button
+                onClick={() => handleSaveCardDesign(true)}
+                disabled={cardDesignSaving}
+                className="inline-flex h-12 items-center gap-2 rounded-full bg-ink px-7 text-sm font-medium text-primary-foreground shadow-ember transition-all disabled:opacity-50"
+              >
+                {cardDesignSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                {cardDesignSaving ? "Publishing…" : "Publish"}
+              </button>
+            </div>
+
+          </div>{/* end right column */}
+        </div>{/* end grid */}
       </section>
 
       <section className="glass-strong rounded-3xl p-6">

@@ -4,67 +4,19 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { membershipCardApi, type MembershipCard } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { QRCodeSVG } from "qrcode.react";
+import { LoyaltyCard } from "@/components/LoyaltyCard";
 import {
   QrCode,
   ChevronRight,
   Sparkles,
-  ArrowRightLeft,
-  Flame,
   X,
 } from "lucide-react";
 
-/* ── Helpers ─────────────────────────────────────────────────────────────── */
-
-function cardGradient(design: MembershipCard["card_design"], merchantName: string) {
-  if (design) {
-    return {
-      background: `linear-gradient(145deg, ${design.primary_color} 0%, ${design.secondary_color} 100%)`,
-      color: design.text_mode === "light" ? "#ffffff" : "#1a1a1a",
-    };
-  }
-  const safe = merchantName || "Zentro";
-  const h = safe.split("").reduce((acc, c) => (acc * 31 + c.charCodeAt(0)) | 0, 0);
-  const hue = Math.abs(h) % 360;
-  return {
-    background: `linear-gradient(145deg, hsl(${hue}, 32%, 17%) 0%, hsl(${(hue + 25) % 360}, 38%, 25%) 100%)`,
-    color: "#ffffff",
-  };
-}
-
-function tierLabel(tier: string) {
-  return tier.charAt(0).toUpperCase() + tier.slice(1);
-}
-
-function tierBadgeBg(tier: string, isDark: boolean) {
-  if (isDark) {
-    switch (tier) {
-      case "platinum":
-        return "rgba(255,255,255,0.18)";
-      case "gold":
-        return "rgba(217,169,78,0.25)";
-      case "silver":
-        return "rgba(255,255,255,0.12)";
-      default:
-        return "rgba(255,255,255,0.08)";
-    }
-  }
-  switch (tier) {
-    case "platinum":
-      return "rgba(255,255,255,0.22)";
-    case "gold":
-      return "rgba(180,130,40,0.18)";
-    case "silver":
-      return "rgba(255,255,255,0.15)";
-    default:
-      return "rgba(255,255,255,0.10)";
-  }
-}
-
 /* ── Card peek height constants (px) ───────────────────────────────────── */
 
-const PEEK_1 = 52;
-const PEEK_2 = 40;
-const STACK_GAP = 10;
+const PEEK_1 = 28;
+const PEEK_2 = 22;
+const STACK_GAP = 6;
 
 /* ── QR Modal ──────────────────────────────────────────────────────────── */
 
@@ -129,163 +81,14 @@ function QrModal({
   );
 }
 
-/* ── Single Card Face ─────────────────────────────────────────────────── */
-
-function CardFace({
-  card,
-  isDark,
-  compact,
-  onQrTap,
-}: {
-  card: MembershipCard;
-  isDark: boolean;
-  compact?: boolean;
-  onQrTap?: () => void;
-}) {
-  const merchantName = card.merchant?.name || "Zentro";
-  const style = cardGradient(card.card_design, merchantName);
-  const tier = card.wallet?.tier ?? "bronze";
-  const points = card.wallet?.points_balance ?? 0;
-  const isLightText = style.color === "#ffffff";
-
-  if (compact) {
-    return (
-      <div className="flex items-center gap-3 px-5 py-3.5" style={{ color: style.color }}>
-        {card.merchant.logo ? (
-          <img
-            src={card.merchant.logo}
-            alt=""
-            className="h-7 w-7 shrink-0 rounded-lg object-cover"
-          />
-        ) : (
-          <div
-            className="h-7 w-7 shrink-0 rounded-lg"
-            style={{ background: "rgba(255,255,255,0.15)" }}
-          />
-        )}
-        <p className="min-w-0 flex-1 truncate font-display text-[17px]">{merchantName}</p>
-        <span
-          className="shrink-0 rounded-full px-2.5 py-0.5 text-[9px] font-semibold uppercase tracking-widest"
-          style={{ background: tierBadgeBg(tier, isLightText), color: style.color }}
-        >
-          {tierLabel(tier)}
-        </span>
-      </div>
-    );
-  }
-
-  return (
-    <div className="relative flex h-full flex-col p-5" style={{ color: style.color }}>
-      {/* Decorative */}
-      <div
-        className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full"
-        style={{ background: "rgba(255,255,255,0.07)", filter: "blur(40px)" }}
-      />
-      <div
-        className="pointer-events-none absolute -bottom-14 -left-14 h-36 w-36 rounded-full"
-        style={{ background: "rgba(255,255,255,0.04)", filter: "blur(40px)" }}
-      />
-
-      {/* Top row */}
-      <div className="relative flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2.5">
-          {card.merchant.logo ? (
-            <img
-              src={card.merchant.logo}
-              alt=""
-              className="h-9 w-9 shrink-0 rounded-xl object-cover"
-            />
-          ) : null}
-          <div className="min-w-0">
-            <p className="text-[9px] uppercase tracking-[0.22em] opacity-45">
-              {card.card_design?.card_title || "Membership"}
-            </p>
-            <p className="mt-0.5 truncate font-display text-[22px] leading-tight">{merchantName}</p>
-          </div>
-        </div>
-        <span
-          className="mt-0.5 shrink-0 rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase tracking-widest"
-          style={{ background: tierBadgeBg(tier, isLightText), color: style.color }}
-        >
-          {tierLabel(tier)}
-        </span>
-      </div>
-
-      {/* Points */}
-      <div className="relative mt-auto">
-        <p className="text-[9px] uppercase tracking-[0.22em] opacity-45">
-          {card.card_design?.points_label || "Available Points"}
-        </p>
-        <p
-          className="font-display text-[52px] leading-none tracking-tight"
-          style={{ letterSpacing: "-0.03em" }}
-        >
-          {points.toLocaleString()}
-        </p>
-        {card.card_design?.show_lifetime_points && card.wallet && (
-          <p className="mt-1 text-[11px] opacity-40">
-            {card.wallet.lifetime_points.toLocaleString()} lifetime pts
-          </p>
-        )}
-      </div>
-
-      {/* Bottom row */}
-      <div className="relative mt-4 flex items-end justify-between">
-        <div>
-          <p className="text-[9px] uppercase tracking-widest opacity-35">
-            {card.card_design?.membership_label || "Member"}
-          </p>
-          <p className="mt-0.5 font-mono text-[11px] tracking-wider opacity-60">
-            {card.membership.membership_number_masked}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {card.wallet && (card.wallet.streak_days ?? 0) > 0 && (
-            <span
-              className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[9px] font-semibold uppercase tracking-widest"
-              style={{ background: "rgba(255,255,255,0.15)" }}
-            >
-              <Flame className="h-3 w-3" /> {card.wallet.streak_days} day streak
-            </span>
-          )}
-          {card.transfer_enabled && (
-            <span
-              className="flex items-center gap-1 rounded-full px-2 py-1 text-[8px] uppercase tracking-widest opacity-50"
-              style={{ background: "rgba(255,255,255,0.10)" }}
-            >
-              <ArrowRightLeft className="h-2.5 w-2.5" /> Transfer
-            </span>
-          )}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onQrTap?.();
-            }}
-            className="flex items-center gap-1 rounded-full px-2.5 py-1 text-[9px] font-medium uppercase tracking-wider active:scale-95 transition-transform"
-            style={{ background: "rgba(255,255,255,0.10)" }}
-          >
-            <QrCode className="h-3 w-3" /> QR
-          </button>
-        </div>
-      </div>
-
-      {/* Powered by */}
-      <p className="relative mt-3 text-right text-[8px] opacity-25 tracking-wide">
-        Powered by Zentro
-      </p>
-    </div>
-  );
-}
-
 /* ── Skeleton ──────────────────────────────────────────────────────────── */
 
 function CardSkeletonStack() {
   return (
-    <div className="relative" style={{ height: 300 }}>
-      <div className="absolute left-0 right-0 top-0 h-[52px] animate-pulse rounded-t-[24px] bg-muted opacity-60" />
-      <div className="absolute left-0 right-0 top-[44px] h-[52px] animate-pulse rounded-t-[24px] bg-muted opacity-40" />
-      <div className="absolute inset-x-0 top-[80px] bottom-0 animate-pulse rounded-[24px] bg-muted" />
+    <div className="relative" style={{ height: 250 }}>
+      <div className="absolute left-0 right-0 top-0 h-[44px] animate-pulse rounded-t-[20px] bg-muted opacity-60" />
+      <div className="absolute left-0 right-0 top-[36px] h-[44px] animate-pulse rounded-t-[20px] bg-muted opacity-40" />
+      <div className="absolute inset-x-0 top-[68px] bottom-0 animate-pulse rounded-[20px] bg-muted" />
     </div>
   );
 }
@@ -417,6 +220,7 @@ export function MembershipCardStack() {
         transform: `translateY(${dragOffset}px) scale(1)`,
         opacity: 1,
         zIndex: 100 - dist,
+        boxShadow: "0 20px 50px -12px rgba(0,0,0,0.35), 0 4px 12px -4px rgba(0,0,0,0.15)",
         transition:
           dragOffset !== 0
             ? "none"
@@ -425,22 +229,24 @@ export function MembershipCardStack() {
     }
     if (dist === 1) {
       return {
-        transform: `translateY(${PEEK_1}px) scale(0.975)`,
+        transform: `translateY(${PEEK_1}px) scale(0.97)`,
         opacity: 1,
         zIndex: 100 - dist,
+        boxShadow: "0 8px 24px -8px rgba(0,0,0,0.25)",
         transition: `transform 0.5s cubic-bezier(0.16,1,0.3,1), opacity 0.4s ease`,
       };
     }
     if (dist === 2) {
       return {
-        transform: `translateY(${PEEK_1 + PEEK_2 + STACK_GAP - 4}px) scale(0.955)`,
-        opacity: 0.95,
+        transform: `translateY(${PEEK_1 + PEEK_2}px) scale(0.94)`,
+        opacity: 0.9,
         zIndex: 100 - dist,
+        boxShadow: "0 4px 16px -6px rgba(0,0,0,0.2)",
         transition: `transform 0.5s cubic-bezier(0.16,1,0.3,1), opacity 0.4s ease`,
       };
     }
     return {
-      transform: `translateY(${PEEK_1 + PEEK_2 + STACK_GAP + 30}px) scale(0.94)`,
+      transform: `translateY(${PEEK_1 + PEEK_2 + STACK_GAP + 20}px) scale(0.92)`,
       opacity: 0,
       zIndex: 0,
       pointerEvents: "none",
@@ -450,10 +256,10 @@ export function MembershipCardStack() {
 
   const walletHeight =
     cards.length <= 1
-      ? 300
+      ? 250
       : cards.length === 2
-        ? 300 + PEEK_1 + 8
-        : 300 + PEEK_1 + PEEK_2 + STACK_GAP + 8;
+        ? 250 + PEEK_1 + 8
+        : 250 + PEEK_1 + PEEK_2 + STACK_GAP + 8;
 
   const activeCard = cards[activeIdx];
 
@@ -530,7 +336,6 @@ export function MembershipCardStack() {
               const s = stackStyle(idx);
               const isActive = dist === 0;
               const merchantName = card.merchant?.name || "Zentro";
-              const bg = cardGradient(card.card_design, merchantName);
 
               return (
                 <div
@@ -539,20 +344,11 @@ export function MembershipCardStack() {
                   role="option"
                   aria-label={`${merchantName} membership card — ${card.wallet?.points_balance ?? 0} points, ${card.wallet?.tier ?? "bronze"} tier`}
                   aria-selected={isActive}
-                  className="absolute left-0 right-0 cursor-pointer"
+                  className="absolute left-0 right-0 cursor-pointer overflow-hidden rounded-[20px]"
                   style={{
                     top: 0,
-                    height: 290,
+                    aspectRatio: "1.586 / 1",
                     ...s,
-                    borderRadius: 24,
-                    background: card.card_design?.background_image && isActive
-                      ? "rgba(0,0,0,0.25)"
-                      : bg.background,
-                    color: bg.color,
-                    boxShadow: isActive
-                      ? "0 20px 50px -12px rgba(0,0,0,0.35), 0 4px 12px -4px rgba(0,0,0,0.15)"
-                      : "0 6px 20px -6px rgba(0,0,0,0.2)",
-                    overflow: "hidden",
                   }}
                   onClick={() => {
                     if (isActive) {
@@ -562,18 +358,10 @@ export function MembershipCardStack() {
                     }
                   }}
                 >
-                  {card.card_design?.background_image && isActive && (
-                    <img
-                      src={card.card_design.background_image}
-                      alt=""
-                      className="pointer-events-none absolute inset-0 h-full w-full object-cover"
-                      style={{ borderRadius: 24 }}
-                    />
-                  )}
-                  <CardFace
+                  <LoyaltyCard
                     card={card}
-                    isDark={isLightText(bg.color)}
-                    compact={!isActive}
+                    compact={false}
+                    isActive={isActive}
                     onQrTap={isActive ? () => openQr(card.merchant.slug, merchantName) : undefined}
                   />
                 </div>
@@ -629,11 +417,3 @@ export function MembershipCardStack() {
   );
 }
 
-/* ── Tiny helper ───────────────────────────────────────────────────────── */
-
-function isLightText(color: string): boolean {
-  if (color === "#1a1a1a") return false;
-  if (color === "#ffffff") return true;
-  // Fallback: assume dark bg → light text
-  return color.length < 8;
-}

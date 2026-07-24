@@ -1104,6 +1104,7 @@ export interface MembershipCardDesign {
   show_lifetime_points: boolean;
   show_joined_date: boolean;
   show_qr_shortcut: boolean;
+  show_color_overlay: boolean;
   is_published: boolean;
 }
 
